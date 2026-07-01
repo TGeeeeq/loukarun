@@ -1,5 +1,9 @@
 # 🎵 Louka Run – prompty pro AI generování hudby
 
+> **Poznámka:** Hra má vestavěnou generativní hudbu, takže hraje i bez těchto
+> souborů. Skladby vytvořené podle promptů níže ji po nahrání do `assets/music/`
+> automaticky nahradí – budou znít plněji a profesionálněji.
+
 Prompty jsou připravené pro **Suno** (doporučeno, verze 3.5+), fungují ale i v jiných
 nástrojích (Udio, Google MusicFX / Gemini…). Prompty jsou v angličtině, protože s ní
 tyto nástroje pracují nejlépe. U každé skladby je uvedeno, **kam soubor uložit** –

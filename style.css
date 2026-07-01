@@ -254,6 +254,35 @@ html, body {
 }
 #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* výzva k otočení telefonu */
+#rotate-overlay {
+  position: fixed; inset: 0;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: linear-gradient(180deg, #55a13c, #2d6e3a);
+  color: #fff;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.4rem;
+  padding: 30px;
+}
+#rotate-overlay span { font-size: 1rem; font-weight: 600; opacity: 0.85; }
+.rotate-phone {
+  font-size: 4.5rem;
+  animation: rotatePhone 1.6s ease-in-out infinite;
+}
+@keyframes rotatePhone {
+  0%, 25% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(90deg); }
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-overlay { display: flex; }
+}
+
 @media (max-height: 560px) {
   .menu-top { margin-top: 1vh; }
   .game-title { font-size: 2.6rem; }

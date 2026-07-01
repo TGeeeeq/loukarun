@@ -205,13 +205,15 @@ const GFX = (() => {
     },
     signpost(ctx, s, extra) {
       ctx.fillStyle = '#8a6a45';
-      rr(ctx, -4 * s, -80 * s, 8 * s, 80 * s, 3 * s); ctx.fill();
+      rr(ctx, -5 * s, -92 * s, 10 * s, 92 * s, 3 * s); ctx.fill();
       ctx.fillStyle = '#c9a06b';
-      rr(ctx, -55 * s, -78 * s, 110 * s, 24 * s, 5 * s); ctx.fill();
+      rr(ctx, -72 * s, -90 * s, 144 * s, 32 * s, 6 * s); ctx.fill();
+      ctx.strokeStyle = '#a8845a'; ctx.lineWidth = 2 * s;
+      rr(ctx, -68 * s, -86 * s, 136 * s, 24 * s, 4 * s); ctx.stroke();
       ctx.fillStyle = '#4a3220';
-      ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
+      ctx.font = `bold ${14 * s}px "Baloo 2", sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(extra || 'Mrkvov 2 km', 0, -61 * s);
+      ctx.fillText(extra || 'Mrkvov 2 km', 0, -69 * s, 126 * s);
     },
     appletree(ctx, s) {
       ctx.fillStyle = '#7a5a38';

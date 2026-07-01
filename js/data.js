@@ -265,11 +265,12 @@ const DATA = (() => {
   /* ---------- OBCHOD / EKONOMIKA ---------- */
   const ECONOMY = {
     coinValue: 1,
-    carrotEnergy: 14,
-    goldenCarrotEnergy: 45,
-    hitPenalty: 16,
+    carrotEnergy: 7,
+    goldenCarrotEnergy: 26,
+    hitPenalty: 18,
     startEnergy: 100,
-    drainPerSecond: 1.55, // základ, násobí se statistikou postavy a rychlostí
+    drainPerSecond: 1.8,  // základ, násobí se statistikou postavy, rychlostí a vzdáleností
+    drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
   };
 
   return { CHARACTERS, ENVS, OBSTACLES, SIGNS, EVENTS, ECONOMY };

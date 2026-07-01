@@ -145,7 +145,7 @@
   function resetWorld(demo) {
     S.worldX = 0;
     S.obstacles = []; S.pickups = []; S.decor = []; S.particles = []; S.floaters = [];
-    S.nextObstacleX = demo ? Infinity : 1000;
+    S.nextObstacleX = demo ? Infinity : 1600;
     S.nextPickupX = demo ? Infinity : 650;
     S.nextDecorX = 100;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0;
@@ -153,8 +153,22 @@
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
   }
 
+  function goLandscapeFullscreen() {
+    // na mobilu při startu běhu: celá obrazovka + zámek na šířku
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    Promise.resolve(req.call(el)).then(() => {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    }).catch(() => {});
+  }
+
   function startRun() {
     AUDIO.ensureCtx();
+    goLandscapeFullscreen();
     S.char = charById(save.selected) || CHARACTERS[0];
     S.stats = S.char.stats;
     S.energy = ECONOMY.startEnergy;
@@ -162,6 +176,7 @@
     S.ramLeft = S.stats.ram || 0;
     S.speed = S.baseSpeed * S.stats.speed;
     S.demo = false;
+    S.lastEnvId = null; // ať hned naskočí hudba prvního prostředí
     resetWorld(false);
     S.mode = 'run';
     showScreen(null);
@@ -200,6 +215,7 @@
      SPAWNOVÁNÍ
      ========================================================= */
   function spawnObstacle() {
+    const distM = S.worldX / PX_PER_M;
     const pool = OBSTACLES;
     const ob = pool[Math.floor(Math.random() * pool.length)];
     const o = {
@@ -209,58 +225,91 @@
       broken: false,
     };
     S.obstacles.push(o);
-    // mezera podle rychlosti – vždy dost času zareagovat
-    const reaction = S.speed * (0.85 + Math.random() * 0.9);
-    S.nextObstacleX += Math.max(340, reaction);
 
-    // občas mince nad překážkou
+    // občas mince nebo mrkev nad překážkou – odměna za přesný skok
     if (Math.random() < 0.45 && !o.flying) {
+      const carrot = Math.random() < 0.4;
       for (let i = 0; i < 3; i++) {
-        S.pickups.push({ kind: 'coin', x: o.x - 26 + i * 26, h: o.h + 70 + Math.sin(i / 2 * Math.PI) * 24 });
+        S.pickups.push({
+          kind: carrot ? 'carrot' : 'coin',
+          x: o.x - 26 + i * 26,
+          h: o.h + 70 + Math.sin(i / 2 * Math.PI) * 24,
+        });
       }
     }
+
+    // dál v běhu občas dvojitá pozemní překážka (skok–skok)
+    if (distM > 450 && !o.flying && Math.random() < 0.22) {
+      const groundPool = pool.filter(p => !p.flying);
+      const ob2 = groundPool[Math.floor(Math.random() * groundPool.length)];
+      S.obstacles.push({ ...ob2, x: o.x + 340 + Math.random() * 140, y: 0, broken: false });
+      S.nextObstacleX = o.x + 340 + 140;
+    }
+
+    // mezera podle rychlosti – s ujetou vzdáleností se zmenšuje
+    const tighten = Math.max(0.6, 1 - distM / 4000);
+    const reaction = S.speed * (1.0 + Math.random() * 0.9) * tighten;
+    S.nextObstacleX += Math.max(380, reaction);
   }
 
   function spawnPickups() {
     const x0 = S.nextPickupX;
+    const distM = S.worldX / PX_PER_M;
+    // s ujetou vzdáleností jsou svačiny vzácnější
+    const scarcity = 1 + distM / 2200;
     const roll = Math.random();
-    if (roll < 0.42) {
-      // řada mrkví na zemi
-      const n = 3 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: 26 });
-      S.nextPickupX = x0 + n * 46 + 420 + Math.random() * 380;
-    } else if (roll < 0.72) {
+    let width = 0;
+
+    if (roll < 0.30) {
+      // mrkve ve vzduchu – musí se pro ně skočit
+      const n = 2 + (Math.random() < 0.5 ? 1 : 0);
+      const h = 95 + Math.random() * 40;
+      for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: h + i * 6 });
+      width = n * 46;
+    } else if (roll < 0.60) {
       // oblouk mincí ve vzduchu
       const n = 5;
       for (let i = 0; i < n; i++) {
         S.pickups.push({ kind: 'coin', x: x0 + i * 40, h: 60 + Math.sin(i / (n - 1) * Math.PI) * 70 });
       }
-      S.nextPickupX = x0 + n * 40 + 420 + Math.random() * 380;
-    } else if (roll < 0.78) {
-      // ZLATÁ MRKEV
-      S.pickups.push({ kind: 'golden', x: x0, h: 96 });
-      S.nextPickupX = x0 + 700 + Math.random() * 500;
+      width = n * 40;
+    } else if (roll < 0.75) {
+      // krátká řada mrkví na zemi (vzácná odměna zadarmo)
+      const n = 2;
+      for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: 26 });
+      width = n * 46;
+    } else if (roll < 0.83) {
+      // ZLATÁ MRKEV – vysoko, chce to dvojskok
+      S.pickups.push({ kind: 'golden', x: x0, h: 130 });
+      width = 40;
     } else {
-      // mrkve ve vzduchu (za dvojskok)
-      const n = 3;
-      for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 44, h: 120 + i * 8 });
-      S.nextPickupX = x0 + n * 44 + 460 + Math.random() * 400;
+      // řádka mincí na zemi
+      const n = 4;
+      for (let i = 0; i < n; i++) S.pickups.push({ kind: 'coin', x: x0 + i * 40, h: 28 });
+      width = n * 40;
     }
+    S.nextPickupX = x0 + width + (520 + Math.random() * 480) * scarcity;
   }
+
+  // malé kytičky apod. smí do popředí; všechno velké patří dozadu,
+  // aby se nepletlo s překážkami na pěšině
+  const NEAR_PROPS = new Set(['flower', 'mushroom', 'stump', 'basket', 'gnome', 'campfire']);
 
   function spawnDecor() {
     const env = currentEnv().env;
     const props = env.props;
     const p = props[Math.floor(Math.random() * props.length)];
-    const far = Math.random() < 0.5;
+    const far = !NEAR_PROPS.has(p) || Math.random() < 0.4;
+    const isSign = p === 'signpost';
     S.decor.push({
       prop: p,
       x: S.nextDecorX,
       far,
-      s: far ? 0.55 + Math.random() * 0.25 : 0.8 + Math.random() * 0.4,
-      extra: p === 'signpost' ? SIGNS[Math.floor(Math.random() * SIGNS.length)] : null,
+      // cedule schválně větší, ať se dají číst
+      s: isSign ? 0.95 + Math.random() * 0.2 : (far ? 0.55 + Math.random() * 0.25 : 0.75 + Math.random() * 0.3),
+      extra: isSign ? SIGNS[Math.floor(Math.random() * SIGNS.length)] : null,
     });
-    S.nextDecorX += 260 + Math.random() * 420;
+    S.nextDecorX += 280 + Math.random() * 440;
   }
 
   /* =========================================================
@@ -341,7 +390,7 @@
 
     // zrychlování
     if (running) {
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + (S.worldX / PX_PER_M) * 0.35, 760);
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + (S.worldX / PX_PER_M) * 0.45, 860);
     }
 
     S.worldX += spd * dt * (S.stumble > 0 ? 0.55 : 1);
@@ -387,9 +436,11 @@
     }
 
     if (running) {
-      // energie
-      const speedFactor = (S.speed - S.baseSpeed) / 400;
-      S.energy -= ECONOMY.drainPerSecond * S.stats.drain * (1 + speedFactor * 0.5) * dt;
+      // energie – ubývá rychleji s tempem i vzdáleností, ať běh nemůže trvat věčně
+      const distM = S.worldX / PX_PER_M;
+      const speedFactor = Math.max(0, (S.speed - S.baseSpeed) / 400);
+      const ramp = 1 + speedFactor * 0.6 + distM / ECONOMY.drainRampDist;
+      S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt;
       if (S.energy <= 25 && !S.saidLowEnergy) {
         S.saidLowEnergy = true;
         sayBubble(randomQuote(EVENTS.lowEnergy));
@@ -561,20 +612,22 @@
     GFX.drawHills(ctx, W, H, pal, S.worldX, groundY);
     GFX.drawGround(ctx, W, H, pal, S.worldX, groundY);
 
-    // dekorace (vzdálené za bližšími)
+    // dekorace – ztlumená, ať je na první pohled jasné, že to není překážka
     for (const d of S.decor) {
       if (!d.far) continue;
       const sx = (d.x - S.worldX) * 0.75 + px;
-      if (sx < -200 || sx > W + 200) continue;
-      ctx.globalAlpha = 0.85;
-      GFX.drawProp(ctx, d.prop, sx, groundY + 6, d.s, d.extra, S.t);
+      if (sx < -220 || sx > W + 220) continue;
+      ctx.globalAlpha = d.prop === 'signpost' ? 0.85 : 0.62;
+      GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }
     for (const d of S.decor) {
       if (d.far) continue;
       const sx = d.x - S.worldX + px;
       if (sx < -200 || sx > W + 200) continue;
+      ctx.globalAlpha = 0.8;
       GFX.drawProp(ctx, d.prop, sx, groundY + 58, d.s, d.extra, S.t);
+      ctx.globalAlpha = 1;
     }
 
     // sběratelné
@@ -587,16 +640,24 @@
       else GFX.drawCarrot(ctx, sx, sy, S.t, p.kind === 'golden');
     }
 
-    // překážky
+    // překážky – plná sytost, stín na zemi a obrys, ať jasně vystupují
     for (const o of S.obstacles) {
       if (o.broken) continue;
       const sx = o.x - S.worldX + px;
       if (sx < -160 || sx > W + 160) continue;
       o.screenX = sx;
+      ctx.fillStyle = 'rgba(20, 14, 6, 0.28)';
+      GFX.ell(ctx, sx, groundY + 8, o.w / 2 + 8, 9);
+      ctx.fill();
+      ctx.save();
+      ctx.shadowColor = 'rgba(30, 20, 8, 0.4)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 3;
       GFX.drawObstacle(ctx, {
         ...o, x: sx,
         y: o.flying ? groundY - o.clearance : groundY,
       }, S.t);
+      ctx.restore();
     }
 
     // stín hráče
