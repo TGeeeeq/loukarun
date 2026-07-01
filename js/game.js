@@ -742,8 +742,9 @@
     GFX.ell(ctx, px, groundY + 6, 44 * shScale, 8 * shScale);
     ctx.fill();
 
-    // hráč
-    const ch = S.char || charById(save.selected) || CHARACTERS[0];
+    // hráč – v menu a obchodě běhá vždy právě vybrané zvířátko,
+    // během běhu (a na kartě po doběhnutí) drží postava z běhu
+    const ch = (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
     const flash = S.invuln > 0 && Math.floor(S.t / 80) % 2 === 0;
     if (!flash) {
       GFX.drawCharacter(ctx, ch, px, groundY - S.py, 1, {

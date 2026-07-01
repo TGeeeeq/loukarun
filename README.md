@@ -60,6 +60,9 @@ připravených promptů v **[HUDBA_PROMPTY.md](HUDBA_PROMPTY.md)** a nahraj do
 
 ## 📱 Cesta do Google Play a App Store
 
+> **Podrobný postup krok za krokem (účty, buildy, obchody, checklist) je
+> v samostatném souboru [VYDANI_APLIKACE.md](VYDANI_APLIKACE.md).**
+
 Hra je napsaná jako webová aplikace právě proto, aby šla zabalit do nativní
 aplikace přes **[Capacitor](https://capacitorjs.com/)**:
 
