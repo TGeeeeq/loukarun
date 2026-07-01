@@ -16,7 +16,8 @@ const DATA = (() => {
       unlock: { type: 'free' },
       perk: 'Vyvážený běžec. Srdce azylu.',
       stats: { speed: 1.0, jump: 1.0, drain: 1.0 },
-      colors: { body: '#8d7b6c', belly: '#c9bcae', mane: '#4e4238', muzzle: '#d9cec1', ear: '#8d7b6c', earIn: '#bfae9e' },
+      // černý osel s bílým čumákem a světlými kroužky kolem očí
+      colors: { body: '#45403c', belly: '#93887f', mane: '#211d1a', muzzle: '#efe7da', ear: '#45403c', earIn: '#b5a89a', eyeRing: '#c6bab0', hoof: '#26221e' },
       quotes: [
         'Hýkám, tedy jsem!',
         'Tuhle mrkev si zasloužím. A tamtu taky.',
@@ -42,7 +43,8 @@ const DATA = (() => {
       unlock: { type: 'coins', price: 250 },
       perk: 'Perk: PRUŽINKA – skáče výš a dvojskok má delší.',
       stats: { speed: 1.0, jump: 1.18, drain: 1.0 },
-      colors: { body: '#f2ede4', belly: '#ffffff', mane: '#e4dccd', muzzle: '#5b5148', ear: '#5b5148', earIn: '#8c7f73' },
+      // krémová vlna, hnědá tvářička a tmavé nožky
+      colors: { body: '#f2ede2', belly: '#ffffff', mane: '#e2d8c6', muzzle: '#9a8268', ear: '#9a8268', earIn: '#c2a888', legs: '#8a7460', hoof: '#463c32' },
       quotes: [
         'Bééžím jako o závod!',
         'Pogo! Pogo! Pogo! …to je moje jméno i sport.',
@@ -67,7 +69,8 @@ const DATA = (() => {
       unlock: { type: 'coins', price: 500 },
       perk: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
       stats: { speed: 1.08, jump: 1.0, drain: 1.0, carrotBonus: 1.3 },
-      colors: { body: '#6b4f3a', belly: '#e8ddcf', mane: '#4a3527', muzzle: '#e3b8a5', ear: '#6b4f3a', earIn: '#c79a86', spots: '#4a3527' },
+      // hnědo-bílá strakatá kravka s malými růžky
+      colors: { body: '#8a5638', belly: '#eee1d2', mane: '#5c3822', muzzle: '#e8b7a0', ear: '#8a5638', earIn: '#cb9c82', spots: '#f2ece0', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
         'Búúrned kalorie? Já je předběhla!',
         'Louka je moje běžecká dráha!',
@@ -92,7 +95,8 @@ const DATA = (() => {
       unlock: { type: 'coins', price: 900 },
       perk: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
       stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 140 },
-      colors: { body: '#f2b5a0', belly: '#fbd4c4', mane: '#e09a84', muzzle: '#f7c5b2', ear: '#f2b5a0', earIn: '#e09a84', spots: '#d98d76' },
+      // šedivé prasátko s černými fleky a růžovošedým rypáčkem
+      colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
         'Chro chro! Kdo běží, ten si zaslouží drbání!',
         'Bláto není špína, bláto je wellness!',
@@ -117,7 +121,8 @@ const DATA = (() => {
       unlock: { type: 'premium', price: '49 Kč' },
       perk: 'Perk: BERANIDLO – 3× za běh prorazí překážku bez ztráty energie.',
       stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 3 },
-      colors: { body: '#9c6f4e', belly: '#e8d9c6', mane: '#6e4a30', muzzle: '#d9c3ab', ear: '#9c6f4e', earIn: '#c49a77', horns: '#d8c39a' },
+      // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
+      colors: { body: '#6b4830', belly: '#e6dac6', mane: '#4c3120', muzzle: '#e9dfcd', ear: '#6b4830', earIn: '#c2996f', horns: '#c7ad85', spots: '#cbb896', pattern: 'saddle', legs: '#5a3c28', hoof: '#31261e' },
       quotes: [
         'Rohy! Já mám rohy! K čemu asi jsou?',
         'Tak schválně, co tohle vydrží!',
@@ -142,7 +147,8 @@ const DATA = (() => {
       unlock: { type: 'premium', price: '49 Kč' },
       perk: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
-      colors: { body: '#e8e2d6', belly: '#f7f3ea', mane: '#3d3d3d', muzzle: '#e8b7a4', ear: '#e8e2d6', earIn: '#cbb9ae', spots: '#3d3d3d' },
+      // bílá kravka s velkými černými fleky, bez rohů
+      colors: { body: '#f0ebe0', belly: '#faf6ec', mane: '#3a3835', muzzle: '#e8b0a0', ear: '#f0ebe0', earIn: '#cbb9ae', spots: '#33302c', pattern: 'holstein', noHorns: true, hoof: '#46423e' },
       quotes: [
         'Spěchám. Pomalu, ale spěchám.',
         'Klid je taky rychlost. Jen jiná.',

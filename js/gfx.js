@@ -706,11 +706,12 @@ const GFX = (() => {
       ctx.save();
       ctx.translate(offX, legY);
       ctx.rotate(a * (sliding ? 0.2 : 1));
-      ctx.fillStyle = back ? shade(c.body, -0.08) : c.body;
+      const legCol = c.legs || c.body;
+      ctx.fillStyle = back ? shade(legCol, -0.08) : legCol;
       rr(ctx, -5, 0, 10, legLen, 5);
       ctx.fill();
       // kopýtko
-      ctx.fillStyle = shade(c.mane, -0.1);
+      ctx.fillStyle = c.hoof || shade(c.mane, -0.1);
       rr(ctx, -5.5, legLen - 7, 11, 8, 3);
       ctx.fill();
       ctx.restore();
@@ -740,27 +741,53 @@ const GFX = (() => {
     }
     ctx.restore();
 
-    // --- tělo ---
-    ctx.fillStyle = c.body;
-    ell(ctx, 0, -40, 42, 26); ctx.fill();
-    if (species === 'ovce') { // vlněné obláčky
-      ctx.fillStyle = c.body;
-      for (let i = 0; i < 7; i++) {
-        const a = i / 7 * Math.PI * 2;
+    // --- tělo (s jemným stínováním pro objem) ---
+    const bodyGrad = ctx.createLinearGradient(0, -68, 0, -12);
+    bodyGrad.addColorStop(0, shade(c.body, 0.07));
+    bodyGrad.addColorStop(1, shade(c.body, -0.07));
+    if (species === 'ovce') { // vlněné obláčky po obvodu
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * Math.PI * 2;
+        ctx.fillStyle = i % 2 ? shade(c.body, 0.04) : shade(c.body, -0.03);
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 20, 12, 0, Math.PI * 2);
+        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 19, 13, 0, Math.PI * 2);
         ctx.fill();
       }
     }
+    ctx.fillStyle = bodyGrad;
+    ell(ctx, 0, -40, 42, 26); ctx.fill();
     // bříško
     ctx.fillStyle = c.belly;
     ell(ctx, 2, -30, 26, 13); ctx.fill();
-    // flíčky (krávy, Flíček)
-    if (c.spots) {
+    // vzory srsti – oříznuté na tělo, ať nikam nepřečuhují
+    if (c.pattern && c.spots) {
+      ctx.save();
+      ell(ctx, 0, -40, 42, 26);
+      ctx.clip();
       ctx.fillStyle = c.spots;
-      ell(ctx, -14, -48, 12, 8, 0.4); ctx.fill();
-      ell(ctx, 16, -36, 9, 6, -0.5); ctx.fill();
-      if (species === 'prase') { ell(ctx, 4, -52, 7, 5, 0.2); ctx.fill(); }
+      if (c.pattern === 'holstein') {        // velké černé fleky (Květa)
+        ell(ctx, -24, -46, 16, 13, 0.35); ctx.fill();
+        ell(ctx, -8, -32, 10, 8, -0.3); ctx.fill();
+        ell(ctx, 18, -51, 14, 10, -0.4); ctx.fill();
+        ell(ctx, 28, -30, 9, 8, 0.5); ctx.fill();
+      } else if (c.pattern === 'patches') {  // světlé fleky na hnědé (Avala)
+        ell(ctx, -18, -31, 13, 9, 0.3); ctx.fill();
+        ell(ctx, 14, -52, 12, 8, -0.4); ctx.fill();
+        ell(ctx, 30, -36, 8, 7, 0.4); ctx.fill();
+      } else if (c.pattern === 'blotch') {   // šedočerné fleky (Flíček)
+        ell(ctx, -20, -44, 11, 8, 0.4); ctx.fill();
+        ell(ctx, 2, -53, 8, 6, -0.2); ctx.fill();
+        ell(ctx, 20, -37, 10, 7, 0.5); ctx.fill();
+        ell(ctx, -6, -28, 7, 5, 0.1); ctx.fill();
+      } else if (c.pattern === 'saddle') {   // světlé sedlo muflona
+        ell(ctx, -2, -47, 17, 11, 0.05); ctx.fill();
+      }
+      ctx.restore();
+    }
+    // oslí hříva podél hřbetu
+    if (species === 'osel') {
+      ctx.fillStyle = c.mane;
+      ell(ctx, 6, -63, 28, 6, -0.05); ctx.fill();
     }
 
     // --- přední nohy ---
@@ -798,6 +825,7 @@ const GFX = (() => {
 
     // čumák / rypáček
     if (species === 'prase') {
+      if (c.spots) { ctx.fillStyle = c.spots; ell(ctx, -3, -13, 6, 5, 0.3); ctx.fill(); }
       ctx.fillStyle = c.muzzle;
       ell(ctx, 22, -4, 8, 7); ctx.fill();
       ctx.fillStyle = shade(c.muzzle, -0.15);
@@ -817,6 +845,12 @@ const GFX = (() => {
     ctx.beginPath();
     ctx.arc(16, 1, 5, 0.2, Math.PI * 0.7);
     ctx.stroke();
+
+    // světlý kroužek kolem oka (typický pro osla)
+    if (c.eyeRing) {
+      ctx.fillStyle = c.eyeRing;
+      ell(ctx, 6, -10, 6.5, 7.5); ctx.fill();
+    }
 
     // oko
     ctx.fillStyle = '#2d2620';
@@ -861,14 +895,18 @@ const GFX = (() => {
       ctx.fillStyle = c.ear;
       ell(ctx, -8, -10, 6, 4, -0.4); ctx.fill();
     } else if (species === 'kráva') {
-      ctx.fillStyle = '#e8dcc8';
-      // růžky
-      ctx.save();
-      ctx.translate(0, -16);
-      ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-9, -8, -6, -12); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(8, -1); ctx.quadraticCurveTo(13, -9, 10, -13); ctx.stroke();
-      ctx.restore();
+      // růžky – jen když je kravka má (Květa je bez rohů)
+      if (!c.noHorns) {
+        ctx.save();
+        ctx.translate(0, -16);
+        ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-9, -8, -6, -12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(8, -1); ctx.quadraticCurveTo(13, -9, 10, -13); ctx.stroke();
+        ctx.restore();
+      }
+      // chomáček na čele
+      ctx.fillStyle = shade(c.body, species === 'kráva' && c.noHorns ? -0.02 : 0.04);
+      ell(ctx, 2, -16, 8, 5, 0); ctx.fill();
       // uši do stran
       ctx.fillStyle = c.ear;
       ell(ctx, -10, -12, 8, 5, -0.5); ctx.fill();

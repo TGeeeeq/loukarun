@@ -108,6 +108,9 @@
     AUDIO.play('slide');
   }
 
+  // fullscreen hned při prvním doteku – dřív to prohlížeč (bez gesta) nedovolí
+  window.addEventListener('pointerdown', () => goLandscapeFullscreen(), { once: true, capture: true });
+
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); uiOrJump(); }
@@ -191,6 +194,7 @@
 
   function endRun() {
     S.mode = 'over';
+    S.shake = 0;
     save.coins += S.coinsRun;
     save.runs += 1;
     const dist = Math.floor(S.worldX / PX_PER_M);
@@ -371,7 +375,7 @@
 
   function sayBubble(text) {
     S.bubble = text;
-    S.bubbleT = 2.6;
+    S.bubbleT = 4.2;
     AUDIO.play('quote');
   }
   function randomQuote(list) { return list[Math.floor(Math.random() * list.length)]; }
@@ -383,6 +387,8 @@
 
   function update(dt) {
     S.t += dt * 1000;
+    // třes musí odeznít i na obrazovkách mimo běh, jinak se menu klepe donekonečna
+    S.shake = Math.max(0, S.shake - dt * 3);
 
     if (S.mode === 'paused' || S.mode === 'over') return;
     const running = S.mode === 'run';
@@ -410,7 +416,6 @@
     S.invuln = Math.max(0, S.invuln - dt);
     S.squash *= Math.pow(0.0001, dt); // rychlé odeznění
     S.runPhase += dt * (10 + spd * 0.012);
-    S.shake = Math.max(0, S.shake - dt * 3);
 
     // mrkání
     S.blink -= dt;
@@ -460,7 +465,7 @@
       p.life -= dt;
     }
     S.particles = S.particles.filter(p => p.life > 0);
-    for (const f of S.floaters) { f.y -= 50 * dt; f.life -= dt * 0.9; }
+    for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
     S.floaters = S.floaters.filter(f => f.life > 0);
 
     // ambientní částice prostředí
@@ -682,7 +687,7 @@
 
     // bublina s hláškou
     if (S.bubbleT > 0 && S.bubble && S.mode === 'run') {
-      drawBubble(px + 10, groundY - S.py - 120, S.bubble, Math.min(1, S.bubbleT * 3));
+      drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
     }
 
     // částice
@@ -703,9 +708,9 @@
     // plovoucí texty
     for (const f of S.floaters) {
       ctx.globalAlpha = Math.min(1, f.life * 2);
-      ctx.font = 'bold 20px "Baloo 2", sans-serif';
+      ctx.font = 'bold 27px "Baloo 2", sans-serif';
       ctx.textAlign = 'center';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(0,0,0,0.35)';
       ctx.strokeText(f.txt, f.x, f.y);
       ctx.fillStyle = f.color;
@@ -726,20 +731,24 @@
   function drawBubble(x, y, text, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.font = '600 17px "Baloo 2", sans-serif';
-    const w = Math.min(ctx.measureText(text).width + 28, W - 40);
+    ctx.font = '700 23px "Baloo 2", sans-serif';
+    const w = Math.min(ctx.measureText(text).width + 40, W - 40);
     const bx = Math.min(Math.max(x - w / 2, 10), W - w - 10);
-    const by = y - 46;
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    GFX.rr(ctx, bx, by, w, 38, 18);
+    const by = y - 60;
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 3;
+    GFX.rr(ctx, bx, by, w, 50, 24);
     ctx.fill();
     // ocásek bubliny
     ctx.beginPath();
-    ctx.moveTo(x - 6, by + 37); ctx.lineTo(x + 10, by + 37); ctx.lineTo(x, by + 52);
+    ctx.moveTo(x - 7, by + 49); ctx.lineTo(x + 12, by + 49); ctx.lineTo(x, by + 68);
     ctx.closePath(); ctx.fill();
+    ctx.shadowColor = 'transparent';
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
-    ctx.fillText(text, bx + w / 2, by + 25, w - 20);
+    ctx.fillText(text, bx + w / 2, by + 33, w - 26);
     ctx.restore();
   }
 
@@ -888,8 +897,8 @@
   $('btn-shop').addEventListener('click', () => { buildShop(); showScreen('shop'); AUDIO.play('click'); });
   $('btn-shop-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-again').addEventListener('click', startRun);
-  $('btn-over-menu').addEventListener('click', () => { S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
-  $('btn-over-shop').addEventListener('click', () => { S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
+  $('btn-over-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
+  $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-resume').addEventListener('click', togglePause);
   $('btn-pause-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
