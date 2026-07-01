@@ -283,8 +283,52 @@ html, body {
   #rotate-overlay { display: flex; }
 }
 
+/* =========================================================
+   Nízké displeje (telefon na šířku) – všechno se musí vejít
+   na obrazovku bez rolování
+   ========================================================= */
 @media (max-height: 560px) {
-  .menu-top { margin-top: 1vh; }
-  .game-title { font-size: 2.6rem; }
-  .btn.big { font-size: 1.2rem; padding: 12px 32px; }
+  .screen { padding: max(8px, env(safe-area-inset-top)) 16px max(8px, env(safe-area-inset-bottom)); }
+
+  /* menu */
+  .menu-top { margin-top: 0; }
+  .game-title { font-size: clamp(1.9rem, 13vh, 3.2rem); }
+  .subtitle { margin-top: 2px; font-size: 0.85rem; }
+  .menu-mid { gap: 8px; }
+  .menu-char-info { padding: 4px 18px; border-radius: 14px; }
+  .menu-char-info .charname { font-size: 1.05rem; }
+  .menu-char-info .perk { font-size: 0.78rem; }
+  .btn { font-size: 0.92rem; padding: 8px 20px; }
+  .btn.big { font-size: 1.15rem; padding: 10px 32px; }
+  .btn.tiny { font-size: 0.76rem; padding: 6px 12px; }
+  .btn.round { width: 40px; height: 40px; line-height: 40px; font-size: 1.1rem; }
+  .hud-chip { padding: 4px 12px; font-size: 0.85rem; }
+  .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .controls-hint { width: 100%; font-size: 0.68rem; }
+
+  /* karta po doběhnutí – přeskládaná na šířku */
+  #screen-over { padding: 8px 12px; }
+  .over-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "title title"
+      "pic   story"
+      "stats story"
+      "btns  btns";
+    align-items: center;
+    gap: 6px 16px;
+    max-width: min(680px, 96vw);
+    padding: 12px 20px;
+  }
+  .over-card h2 { grid-area: title; font-size: 1.25rem; }
+  #over-portrait { grid-area: pic; width: 112px; height: 88px; justify-self: center; }
+  .over-card .story { grid-area: story; align-self: start; font-size: 0.88rem; line-height: 1.35; padding: 8px 12px; }
+  .over-stats { grid-area: stats; grid-template-columns: 1fr; gap: 2px; font-size: 0.85rem; }
+  .over-stats .stat { gap: 14px; }
+  .over-buttons { grid-area: btns; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+  /* pauza zůstává jednoduchá */
+  .over-card.small { display: flex; padding: 16px 22px; gap: 10px; }
+  .over-card.small h2 { font-size: 1.25rem; }
 }

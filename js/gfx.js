@@ -553,23 +553,38 @@ const GFX = (() => {
         break;
       }
       case 'chicken': {
+        const v = ob.v || {};
+        const body = v.body || '#f5f0e0';
+        const tail = v.tail || '#e0d8c0';
         const hop = Math.abs(Math.sin(t * 0.012)) * 6;
         ctx.translate(0, -hop);
-        ctx.fillStyle = '#f5f0e0';
+        ctx.fillStyle = body;
         ell(ctx, 0, -h * 0.45, w * 0.42, h * 0.36); ctx.fill();
+        // kropenatá varianta – tmavé tečky
+        if (v.speckled) {
+          ctx.fillStyle = 'rgba(60,50,40,0.55)';
+          for (let i = 0; i < 7; i++) {
+            const a = i * 2.4;
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * w * 0.26, -h * 0.45 + Math.sin(a * 1.7) * h * 0.2, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
         // ocásek
-        ctx.fillStyle = '#e0d8c0';
+        ctx.fillStyle = tail;
         ell(ctx, w * 0.34, -h * 0.62, 10, 14, 0.6); ctx.fill();
         // hlava
-        ctx.fillStyle = '#f5f0e0';
+        ctx.fillStyle = body;
         ctx.beginPath(); ctx.arc(-w * 0.34, -h * 0.78, 11, 0, Math.PI * 2); ctx.fill();
         // hřebínek
         ctx.fillStyle = '#e5533a';
         ctx.beginPath(); ctx.arc(-w * 0.36, -h * 0.98, 4, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(-w * 0.30, -h * 1.0, 4, 0, Math.PI * 2); ctx.fill();
-        // zobák a oko
+        // zobák a oko (s bílým podkladem, ať je vidět i na tmavém peří)
         ctx.fillStyle = '#f0a03c';
         ctx.beginPath(); ctx.moveTo(-w * 0.44, -h * 0.78); ctx.lineTo(-w * 0.56, -h * 0.74); ctx.lineTo(-w * 0.44, -h * 0.70); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(-w * 0.36, -h * 0.8, 3.2, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#333';
         ctx.beginPath(); ctx.arc(-w * 0.36, -h * 0.8, 2, 0, Math.PI * 2); ctx.fill();
         // nožky
@@ -577,6 +592,53 @@ const GFX = (() => {
         ctx.beginPath();
         ctx.moveTo(-5, -h * 0.12); ctx.lineTo(-5, 0);
         ctx.moveTo(6, -h * 0.12); ctx.lineTo(6, 0);
+        ctx.stroke();
+        break;
+      }
+      case 'goose': {
+        const v = ob.v || {};
+        const body = v.body || '#f8f6ee';
+        const wing = v.tail || '#e2ded0';
+        const bob = Math.sin(t * 0.014) * 3;
+        // tělo
+        ctx.fillStyle = body;
+        ell(ctx, 6, -h * 0.34, w * 0.46, h * 0.24); ctx.fill();
+        // zvednutý ocásek
+        ctx.fillStyle = wing;
+        ell(ctx, w * 0.44, -h * 0.48, 11, 8, -0.7); ctx.fill();
+        // křídlo
+        ell(ctx, 10, -h * 0.36, w * 0.26, h * 0.15, 0.15); ctx.fill();
+        // dlouhý krk natažený dopředu – husa syčí
+        const hx = -w * 0.46 + Math.sin(t * 0.006) * 3;
+        const hy = -h * 0.92 + bob;
+        ctx.strokeStyle = body; ctx.lineWidth = 10; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.16, -h * 0.4);
+        ctx.quadraticCurveTo(-w * 0.44, -h * 0.62, hx, hy);
+        ctx.stroke();
+        // hlava
+        ctx.fillStyle = body;
+        ctx.beginPath(); ctx.arc(hx, hy, 8.5, 0, Math.PI * 2); ctx.fill();
+        // otevřený zobák – kejhá
+        const gape = 2.5 + Math.abs(Math.sin(t * 0.02)) * 3;
+        ctx.fillStyle = '#f0862c';
+        ctx.beginPath(); ctx.moveTo(hx - 6, hy - 2); ctx.lineTo(hx - 17, hy - gape - 2); ctx.lineTo(hx - 5, hy + 1); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(hx - 6, hy + 1); ctx.lineTo(hx - 16, hy + gape + 2); ctx.lineTo(hx - 4, hy + 4); ctx.closePath(); ctx.fill();
+        // oko
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(hx - 1, hy - 3, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(hx - 2, hy - 3, 1.8, 0, Math.PI * 2); ctx.fill();
+        // syčení
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(hx - 20, hy - 5); ctx.lineTo(hx - 27, hy - 7);
+        ctx.moveTo(hx - 19, hy + 3); ctx.lineTo(hx - 26, hy + 5);
+        ctx.stroke();
+        // nožky – pochodují
+        const step = Math.sin(t * 0.014) * 4;
+        ctx.strokeStyle = '#f0862c'; ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(-2 + step, -h * 0.14); ctx.lineTo(-2 + step, 0);
+        ctx.moveTo(10 - step, -h * 0.14); ctx.lineTo(10 - step, 0);
         ctx.stroke();
         break;
       }
@@ -620,6 +682,62 @@ const GFX = (() => {
         }
         break;
       }
+    }
+    ctx.restore();
+  }
+
+  /* =========================================================
+     LETCI KROUŽÍCÍ NA OBLOZE (jen pro radost, nejsou překážka)
+     ========================================================= */
+  function drawFlyer(ctx, type, x, y, rot, flip, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(flip, 1);
+    ctx.rotate(rot);
+    if (type === 'stork') {
+      const flap = Math.sin(t * 0.008);
+      ctx.fillStyle = '#f5f2ea';
+      ell(ctx, 0, 0, 20, 6); ctx.fill();
+      // krk dopředu, červený zobák
+      ctx.strokeStyle = '#f5f2ea'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(14, -1); ctx.lineTo(26, -5); ctx.stroke();
+      ctx.strokeStyle = '#d9503a'; ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.moveTo(26, -5); ctx.lineTo(38, -4); ctx.stroke();
+      // nohy natažené dozadu
+      ctx.beginPath(); ctx.moveTo(-16, 1); ctx.lineTo(-30, 4); ctx.stroke();
+      // křídla – bílá s černými konci
+      ctx.fillStyle = '#f5f2ea';
+      ell(ctx, -2, -4 - flap * 8, 16, 5, -0.35 - flap * 0.45); ctx.fill();
+      ctx.fillStyle = '#3a3835';
+      ell(ctx, -12, -8 - flap * 12, 8, 3.4, -0.5 - flap * 0.5); ctx.fill();
+    } else if (type === 'owl') {
+      const flap = Math.sin(t * 0.012);
+      ctx.fillStyle = '#8a6a4a';
+      ell(ctx, 0, 0, 11, 8); ctx.fill();
+      ctx.fillStyle = '#c9b490';
+      ell(ctx, 4, 1, 5, 4.5); ctx.fill();
+      ctx.fillStyle = '#6e5236';
+      ell(ctx, -4, -4 - flap * 6, 10, 4, -0.4 - flap * 0.5); ctx.fill();
+      // velké oko a ouško
+      ctx.fillStyle = '#ffe88a';
+      ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(8.6, -4, 1.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#8a6a4a';
+      ctx.beginPath(); ctx.moveTo(5, -7); ctx.lineTo(8, -11); ctx.lineTo(10, -6); ctx.closePath(); ctx.fill();
+    } else { // vlaštovka
+      const flap = Math.sin(t * 0.02);
+      ctx.fillStyle = '#2e4a6e';
+      ell(ctx, 0, 0, 12, 4.5); ctx.fill();
+      ctx.fillStyle = '#f5f0e0';
+      ell(ctx, 3, 1.6, 6, 2.6); ctx.fill();
+      // vidlicový ocásek
+      ctx.fillStyle = '#2e4a6e';
+      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-20, -4); ctx.lineTo(-13, 0); ctx.lineTo(-20, 4); ctx.closePath(); ctx.fill();
+      ell(ctx, -1, -3 - flap * 6, 10, 3.2, -0.45 - flap * 0.5); ctx.fill();
+      // rezavá bradka
+      ctx.fillStyle = '#b5502e';
+      ctx.beginPath(); ctx.arc(10, -1, 2.6, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
@@ -938,7 +1056,7 @@ const GFX = (() => {
   return {
     lerp, lerpColor, shade, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround,
-    drawProp, drawObstacle, drawCarrot, drawCoin, drawCharacter,
+    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawCharacter,
     PROPS,
   };
 })();

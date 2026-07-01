@@ -235,9 +235,24 @@ const DATA = (() => {
     { id: 'rock',     w: 50,  h: 44,  type: 'jump',  label: 'šutr' },
     { id: 'branch',   w: 120, h: 30,  type: 'duck',  label: 'větev', flying: true, clearance: 62 },
     { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  label: 'slepice', moving: true },
+    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  label: 'husa', moving: true },
     { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  label: 'trakař' },
     { id: 'beeline',  w: 110, h: 26,  type: 'duck',  label: 'včelí letka', flying: true, clearance: 66 },
   ];
+
+  /* ---------- BAREVNÉ VARIANTY DRŮBEŽE ---------- */
+  const BIRD_VARIANTS = {
+    chicken: [
+      { body: '#f5f0e0', tail: '#e0d8c0' },                  // bílá
+      { body: '#c98a4a', tail: '#a86a34' },                  // hnědá
+      { body: '#4a4642', tail: '#332f2c' },                  // černá
+      { body: '#e8d8c0', tail: '#8a6a4a', speckled: true },  // kropenatá
+    ],
+    goose: [
+      { body: '#f8f6ee', tail: '#e2ded0' },                  // bílá husa
+      { body: '#c9c2b4', tail: '#8a8478' },                  // šedá husa
+    ],
+  };
 
   /* ---------- CEDULE (vtipné nápisy na rozcestnících) ---------- */
   const SIGNS = [
@@ -266,6 +281,27 @@ const DATA = (() => {
       'Ta chutná jako tisíc mrkví!',
       'Dneska mám svátek!',
     ],
+    chicken: [ // co zakřičí slepice, když do ní zvířátko vrazí
+      'Kokodák!!',
+      'Ko-ko-KATASTROFA!',
+      'Moje vajíčko!!',
+      'To řeknu kohoutovi!',
+      'Slepičí poplach!!',
+      'Kdák! Koukej, kudy běžíš!',
+    ],
+    goose: [ // husy jsou drzejší
+      'Kejhák!!',
+      'Ssss! Tady velím JÁ!',
+      'GA-GA-GAUNEŘI!',
+      'Štípanec máš u mě schovaný!',
+      'Tohle si vyříkáme u rybníka!',
+      'Pozor! Husa v protisměru!',
+    ],
+    flyer: { // hlášky kroužících letců na obloze
+      swallow: ['Píp! Letecká show zdarma!', 'Vlaštovka dělá looping!', 'Závodíme? Já to vezmu vrchem!'],
+      stork: ['Kláp kláp! Kontrola louky!', 'Čáp hlásí: dole vše veselé!', 'Doručuji dobrou náladu!'],
+      owl: ['Húú! Kdo to tam běhá?', 'Noční hlídka na obletu!', 'Húúkám ti do kroku!'],
+    },
   };
 
   /* ---------- OBCHOD / EKONOMIKA ---------- */
@@ -279,5 +315,5 @@ const DATA = (() => {
     drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
   };
 
-  return { CHARACTERS, ENVS, OBSTACLES, SIGNS, EVENTS, ECONOMY };
+  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY };
 })();

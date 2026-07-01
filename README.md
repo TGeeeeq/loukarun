@@ -27,7 +27,10 @@ příběhem – každé zvířátko má ty svoje.
 
 - Energie ⚡ postupně ubývá (a rychleji s rostoucím tempem). **Mrkvičky** ji doplňují,
   **zlatá mrkev** je jackpot. Náraz do překážky energii ubere – nikdy ale nikomu
-  neublíží: slepice s kokodáním uteče, zvířátko jen klopýtne.
+  neublíží: slepice (ve čtyřech barevných variantách) i syčící husy s křikem utečou,
+  zvířátko jen klopýtne.
+- Na obloze krouží **vlaštovky, čápi a v noci sovy** – jen tak pro radost: vlaštovka
+  nechává třpytivou stopu, čáp občas upustí pírko a všichni sem tam něco zavolají.
 - Když energie dojde, běh **pozitivně končí** – zvířátko někam doběhne a stane se
   něco vtipného (náhodný příběh podle postavy).
 - **Mince** 🪙 se přičítají do peněženky a odemykají další zvířátka.

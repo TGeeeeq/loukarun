@@ -4,7 +4,7 @@
    ========================================================= */
 
 (() => {
-  const { CHARACTERS, ENVS, OBSTACLES, SIGNS, EVENTS, ECONOMY } = DATA;
+  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY } = DATA;
 
   /* ---------- canvas ---------- */
   const canvas = document.getElementById('game');
@@ -60,7 +60,8 @@
     runPhase: 0, blink: 0,
     // svět
     obstacles: [], pickups: [], decor: [], particles: [], floaters: [],
-    nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200,
+    flyers: [],             // zvířátka kroužící na obloze
+    nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
     bubble: null, bubbleT: 0, nextQuoteAt: 6,
     saidLowEnergy: false, lastMilestone: 0,
@@ -148,9 +149,11 @@
   function resetWorld(demo) {
     S.worldX = 0;
     S.obstacles = []; S.pickups = []; S.decor = []; S.particles = []; S.floaters = [];
+    S.flyers = [];
     S.nextObstacleX = demo ? Infinity : 1600;
     S.nextPickupX = demo ? Infinity : 650;
     S.nextDecorX = 100;
+    S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null;
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
@@ -228,6 +231,9 @@
       y: 0, // dopočítá se při kreslení (svět → obrazovka)
       broken: false,
     };
+    // drůbež má náhodnou barevnou variantu
+    const variants = BIRD_VARIANTS[o.id];
+    if (variants) o.v = variants[Math.floor(Math.random() * variants.length)];
     S.obstacles.push(o);
 
     // občas mince nebo mrkev nad překážkou – odměna za přesný skok
@@ -246,7 +252,10 @@
     if (distM > 450 && !o.flying && Math.random() < 0.22) {
       const groundPool = pool.filter(p => !p.flying);
       const ob2 = groundPool[Math.floor(Math.random() * groundPool.length)];
-      S.obstacles.push({ ...ob2, x: o.x + 340 + Math.random() * 140, y: 0, broken: false });
+      const o2 = { ...ob2, x: o.x + 340 + Math.random() * 140, y: 0, broken: false };
+      const v2 = BIRD_VARIANTS[o2.id];
+      if (v2) o2.v = v2[Math.floor(Math.random() * v2.length)];
+      S.obstacles.push(o2);
       S.nextObstacleX = o.x + 340 + 140;
     }
 
@@ -314,6 +323,59 @@
       extra: isSign ? SIGNS[Math.floor(Math.random() * SIGNS.length)] : null,
     });
     S.nextDecorX += 280 + Math.random() * 440;
+  }
+
+  /* ---------- letci kroužící na obloze ---------- */
+  function spawnFlyer() {
+    const envId = currentEnv().env.id;
+    let type = Math.random() < 0.55 ? 'swallow' : 'stork';
+    if (envId === 'noc') type = 'owl';
+    else if (envId === 'les' && Math.random() < 0.5) type = 'owl';
+    const big = type === 'stork';
+    S.flyers.push({
+      type,
+      cx: S.nextFlyerX,                                      // střed kruhu ve světě
+      cy: 60 + Math.random() * Math.max(60, groundY - 300),  // výška středu na obrazovce
+      r: big ? 70 + Math.random() * 45 : 40 + Math.random() * 35,
+      w: big ? 0.45 + Math.random() * 0.2 : 0.9 + Math.random() * 0.5,
+      ph: Math.random() * Math.PI * 2,
+      dir: Math.random() < 0.5 ? -1 : 1,
+      trailT: 0, dropT: 2 + Math.random() * 4, said: false,
+    });
+    S.nextFlyerX += 900 + Math.random() * 900;
+  }
+
+  function updateFlyers(dt, running) {
+    const px = playerX();
+    for (const f of S.flyers) {
+      const ang = f.ph + S.t * 0.001 * f.w * f.dir;
+      f.sx = (f.cx - S.worldX) * 0.85 + px + Math.cos(ang) * f.r;
+      f.sy = f.cy + Math.sin(ang) * f.r * 0.5;
+      // natočení po směru letu (v zrcadleném prostoru stačí |vx|)
+      const vx = -Math.sin(ang) * f.dir;
+      f.flip = vx < 0 ? -1 : 1;
+      f.rot = Math.atan2(Math.cos(ang) * 0.5 * f.dir, Math.abs(vx) + 0.25) * 0.7;
+      if (f.type === 'swallow') {
+        // třpytivá stopa za vlaštovkou
+        f.trailT -= dt;
+        if (f.trailT <= 0 && f.sx > -40 && f.sx < W + 40) {
+          f.trailT = 0.09;
+          S.particles.push({ x: f.sx - f.flip * 14, y: f.sy + 2, vx: -20 * f.flip, vy: 8, r: 2, life: 0.9, a: 0.55, c: '#ffffff' });
+        }
+      } else if (f.type === 'stork') {
+        // čáp občas upustí pírko, které se snáší dolů
+        f.dropT -= dt;
+        if (f.dropT <= 0 && f.sx > 0 && f.sx < W) {
+          f.dropT = 5 + Math.random() * 6;
+          S.particles.push({ x: f.sx, y: f.sy + 6, vx: -30, vy: 35, r: 3, life: 4, a: 0.85, sway: Math.random() * 6, c: '#f5f2ea' });
+        }
+      }
+      // jednou za přelet něco vesele zavolá
+      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.9) {
+        f.said = true;
+        if (Math.random() < 0.45) floater(randomQuote(EVENTS.flyer[f.type]), f.sx, f.sy - 26, '#ffffff');
+      }
+    }
   }
 
   /* =========================================================
@@ -423,6 +485,9 @@
 
     // spawn
     while (S.nextDecorX < S.worldX + W + 400) spawnDecor();
+    while (S.nextFlyerX < S.worldX + W + 700) spawnFlyer();
+    S.flyers = S.flyers.filter(f => f.cx > S.worldX - 700);
+    updateFlyers(dt, running);
     if (running) {
       while (S.nextObstacleX < S.worldX + W + 300) spawnObstacle();
       while (S.nextPickupX < S.worldX + W + 300) spawnPickups();
@@ -568,11 +633,11 @@
         continue;
       }
 
-      // náraz – nenásilný: zvíře jen klopýtne, slepice uteče
+      // náraz – nenásilný: zvíře jen klopýtne, drůbež s křikem uteče
       o.broken = true;
-      if (o.id === 'chicken') {
-        burst(sx, groundY - 30, '#f5f0e0', 12); // peříčka
-        floater('Kokodák!!', sx, groundY - o.h - 26, '#e5533a');
+      if (o.id === 'chicken' || o.id === 'goose') {
+        burst(sx, groundY - 30, (o.v && o.v.body) || '#f5f0e0', o.id === 'goose' ? 16 : 12); // peříčka
+        floater(randomQuote(EVENTS[o.id]), sx, groundY - o.h - 26, '#e5533a');
       }
       const penalty = o.soft ? 8 : ECONOMY.hitPenalty;
       S.energy = Math.max(0, S.energy - penalty);
@@ -616,6 +681,12 @@
     GFX.drawClouds(ctx, W, H, pal, S.worldX, S.t);
     GFX.drawHills(ctx, W, H, pal, S.worldX, groundY);
     GFX.drawGround(ctx, W, H, pal, S.worldX, groundY);
+
+    // letci kroužící na obloze
+    for (const f of S.flyers) {
+      if (f.sx === undefined || f.sx < -60 || f.sx > W + 60) continue;
+      GFX.drawFlyer(ctx, f.type, f.sx, f.sy, f.rot, f.flip, S.t);
+    }
 
     // dekorace – ztlumená, ať je na první pohled jasné, že to není překážka
     for (const d of S.decor) {
