@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Louka Run – veselá běhací hra na podporu zvířecího azylu Nech mě růst. Běhej se zvířátky, sbírej mrkvičky a mince!">
+  <meta name="theme-color" content="#8ed4f7">
+  <title>Louka Run 🥕 – hra na podporu azylu Nech mě růst</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD během běhu -->
+  <div id="hud">
+    <div class="hud-left">
+      <div id="hud-energy">
+        <span class="energy-icon">🥕</span>
+        <div class="energy-bar"><div id="hud-energy-fill"></div></div>
+      </div>
+      <div id="hud-ram" class="hud-chip"></div>
+    </div>
+    <div class="hud-center">
+      <div id="hud-dist">0 m</div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-chip">🪙 <span id="hud-coins">0</span></div>
+      <button id="btn-pause" class="btn round" aria-label="Pauza">⏸</button>
+    </div>
+  </div>
+
+  <!-- HLAVNÍ MENU -->
+  <div id="screen-menu" class="screen">
+    <div class="menu-top">
+      <h1 class="game-title">LOUKA<span>RUN</span></h1>
+      <p class="subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
+    </div>
+    <div class="menu-mid">
+      <div class="menu-char-info">
+        <div class="charname" id="menu-charname">Osel Karel</div>
+        <div class="perk" id="menu-perk"></div>
+      </div>
+      <button id="btn-play" class="btn big">▶ &nbsp;BĚŽET!</button>
+      <button id="btn-shop" class="btn">🐾 Zvířátka &amp; obchod</button>
+    </div>
+    <div class="menu-bottom">
+      <div class="menu-stats">
+        <div class="hud-chip">🏆 <span id="menu-best">0 m</span></div>
+        <div class="hud-chip">🪙 <span id="menu-coins">0</span></div>
+      </div>
+      <div class="menu-settings">
+        <button id="btn-sfx" class="btn tiny">🔊 Zvuky</button>
+        <button id="btn-music" class="btn tiny">🎵 Hudba</button>
+      </div>
+      <p class="controls-hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</p>
+    </div>
+  </div>
+
+  <!-- OBCHOD / VÝBĚR POSTAV -->
+  <div id="screen-shop" class="screen">
+    <div class="shop-head">
+      <button id="btn-shop-back" class="btn round" aria-label="Zpět">←</button>
+      <h2>Zvířecí obyvatelé</h2>
+      <div class="hud-chip">🪙 <span id="shop-coins">0</span></div>
+    </div>
+    <p class="shop-note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
+    <div id="shop-grid"></div>
+  </div>
+
+  <!-- KONEC BĚHU -->
+  <div id="screen-over" class="screen">
+    <div class="over-card">
+      <h2 id="over-title">CÍL DNEŠNÍHO BĚHU!</h2>
+      <canvas id="over-portrait" width="190" height="150"></canvas>
+      <p id="over-story" class="story"></p>
+      <div class="over-stats">
+        <div class="stat"><span class="stat-label">Doběhnuto</span><span class="stat-val" id="over-dist">0 m</span></div>
+        <div class="stat"><span class="stat-label">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
+        <div class="stat"><span class="stat-label">Mince</span><span class="stat-val gold" id="over-coins">+0 🪙</span></div>
+        <div class="stat"><span class="stat-label">Rekord</span><span class="stat-val" id="over-best">0 m</span></div>
+      </div>
+      <div class="over-buttons">
+        <button id="btn-again" class="btn big">🐾 Běžet znovu</button>
+        <div class="row">
+          <button id="btn-over-shop" class="btn">🛍 Zvířátka</button>
+          <button id="btn-over-menu" class="btn">🏠 Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUZA -->
+  <div id="screen-pause" class="screen">
+    <div class="over-card small">
+      <h2>Přestávka na trávu 🌱</h2>
+      <button id="btn-resume" class="btn big">▶ Pokračovat</button>
+      <button id="btn-pause-menu" class="btn">🏠 Zpět do menu</button>
+    </div>
+  </div>
+
+  <!-- PREMIUM MODAL -->
+  <div id="premium-modal" class="modal">
+    <div class="modal-card">
+      <h3>⭐ Prémiové zvířátko</h3>
+      <p><strong id="premium-name"></strong> patří mezi prémiová zvířátka. V mobilní verzi hry půjde odemknout nákupem, který přímo podpoří azyl Nech mě růst.</p>
+      <p class="muted">V této demo verzi si ho můžeš vyzkoušet zdarma. A jestli chceš azylu pomoct doopravdy, mrkni na <a href="https://nechmerust.org" target="_blank" rel="noopener">nechmerust.org</a>. 💚</p>
+      <button id="btn-premium-unlock" class="btn big">Odemknout (demo)</button>
+      <button id="btn-premium-close" class="btn tiny">Zavřít</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
