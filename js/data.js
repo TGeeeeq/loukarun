@@ -362,17 +362,20 @@ const DATA = (() => {
     },
   ];
 
-  /* ---------- PŘEKÁŽKY ---------- */
+  /* ---------- PŘEKÁŽKY ----------
+     minM = od kolikátého metru se překážka objevuje. Odemykání je
+     sladěné s přechody prostředí (~550 m), takže každý nový „level“
+     přinese něco nového a začátek zůstane přívětivý. */
   const OBSTACLES = [
-    { id: 'hay',      w: 62,  h: 52,  type: 'jump',  label: { cs: 'balík sena', en: 'hay bale' } },
-    { id: 'fence',    w: 56,  h: 58,  type: 'jump',  label: { cs: 'plůtek', en: 'fence' } },
-    { id: 'mud',      w: 92,  h: 18,  type: 'jump',  label: { cs: 'kaluž bláta', en: 'mud puddle' }, soft: true },
-    { id: 'rock',     w: 50,  h: 44,  type: 'jump',  label: { cs: 'šutr', en: 'rock' } },
-    { id: 'branch',   w: 120, h: 30,  type: 'duck',  label: { cs: 'větev', en: 'branch' }, flying: true, clearance: 62 },
-    { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  label: { cs: 'slepice', en: 'chicken' }, moving: true },
-    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  label: { cs: 'husa', en: 'goose' }, moving: true },
-    { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  label: { cs: 'trakař', en: 'wheelbarrow' } },
-    { id: 'beeline',  w: 110, h: 26,  type: 'duck',  label: { cs: 'včelí letka', en: 'bee squadron' }, flying: true, clearance: 66 },
+    { id: 'hay',      w: 62,  h: 52,  type: 'jump',  minM: 0,    label: { cs: 'balík sena', en: 'hay bale' } },
+    { id: 'fence',    w: 56,  h: 58,  type: 'jump',  minM: 250,  label: { cs: 'plůtek', en: 'fence' } },
+    { id: 'mud',      w: 92,  h: 18,  type: 'jump',  minM: 0,    label: { cs: 'kaluž bláta', en: 'mud puddle' }, soft: true },
+    { id: 'rock',     w: 50,  h: 44,  type: 'jump',  minM: 550,  label: { cs: 'šutr', en: 'rock' } },
+    { id: 'branch',   w: 120, h: 30,  type: 'duck',  minM: 550,  label: { cs: 'větev', en: 'branch' }, flying: true, clearance: 62 },
+    { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  minM: 250,  label: { cs: 'slepice', en: 'chicken' }, moving: true },
+    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  minM: 1100, label: { cs: 'husa', en: 'goose' }, moving: true },
+    { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  minM: 1100, label: { cs: 'trakař', en: 'wheelbarrow' } },
+    { id: 'beeline',  w: 110, h: 26,  type: 'duck',  minM: 1650, label: { cs: 'včelí letka', en: 'bee squadron' }, flying: true, clearance: 66 },
   ];
 
   /* ---------- BAREVNÉ VARIANTY DRŮBEŽE ---------- */
@@ -518,10 +521,87 @@ const DATA = (() => {
     hitPenalty: 18,
     startEnergy: 100,
     drainPerSecond: 1.8,  // základ, násobí se statistikou postavy, rychlostí a vzdáleností
-    drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
+    drainRampDist: 3400,  // po kolika metrech se odčerpávání zdvojnásobí
     cloverDuration: 12,   // jak dlouho po sebrání čtyřlístku platí bonus (s)
     cloverCoinValue: 2,   // hodnota mince, dokud bonus běží
   };
 
-  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY };
+  /* ---------- KARLOVA ŠKOLA BĚHU ----------
+     Příběhový tutoriál prvního běhu. Karel novinky komentuje ve
+     zpomaleném čase; hra se rozjede hráčovou akcí (gate) nebo po
+     pojistce readTime. Skript jede v normálním režimu 'run', jen
+     místo náhodných spawnů vkládá objekty popořadě. */
+  const TUTORIAL = {
+    slowScale: 0.12,   // časová lupa při novince
+    easeIn: 5,         // rychlost náběhu zpomalení (1/s, reálný čas)
+    easeOut: 9,        // rychlost návratu do běhu
+    readTime: 5.0,     // pojistka – po tolika reálných s se čas rozjede sám
+    triggerX: 0.62,    // zpomalí se, když novinka dojede na 62 % šířky obrazovky
+    steps: [
+      {
+        id: 'welcome', gapM: 6, gate: 'tap',
+        text: {
+          cs: 'Vítej na mojí louce, nováčku! Já jsem Karel. Pravidlo číslo jedna: všechno tu řídím já. Pravidlo číslo dvě: běžíš ty.',
+          en: 'Welcome to my meadow, rookie! I’m Karel. Rule number one: I run this place. Rule number two: you do the running.',
+        },
+      },
+      {
+        id: 'carrots', gapM: 30, gate: 'tap',
+        spawn: { pickups: [{ kind: 'carrot', dx: 0, h: 26 }, { kind: 'carrot', dx: 46, h: 26 }, { kind: 'carrot', dx: 92, h: 26 }] },
+        text: {
+          cs: 'Mrkev! To je palivo. Bez mrkve doběhneš tak maximálně k plotu. Prostě do ní vběhni, zvládne to i husa.',
+          en: 'Carrots! That’s fuel. Without carrots you’ll make it to the fence, tops. Just run into them — even a goose can do it.',
+        },
+      },
+      {
+        id: 'chicken', gapM: 45, gate: 'jump',
+        spawn: { obstacle: 'chicken' },
+        text: {
+          cs: 'Bacha, Pepina! Jsme kámoši, ale nemá ráda, když jí někdo běhá peřím. Skoč — a pozdrav ji shora!',
+          en: 'Heads up, that’s Pepina! We’re pals, but she hates anyone jogging through her feathers. Jump — and say hi from above!',
+        },
+      },
+      {
+        id: 'branch', gapM: 50, gate: 'duck',
+        spawn: { obstacle: 'branch' },
+        text: {
+          cs: 'Větev! O tu jsem si loni… to je fuk. Skrč se, hlavu dolů — i já to zvládnu, a to mám uši jako plachty.',
+          en: 'A branch! Last year I… never mind. Duck, head down — even I can do it, and my ears are the size of sails.',
+        },
+      },
+      {
+        id: 'golden', gapM: 50, gate: 'jump',
+        spawn: { pickups: [{ kind: 'golden', dx: 0, h: 130 }] },
+        text: {
+          cs: 'ZLATÁ MRKEV! Legenda. Visí vysoko — skoč a ve vzduchu ťukni ještě jednou. Když ji mineš, budu se smát. Nahlas.',
+          en: 'GOLDEN CARROT! The legend. It hangs high — jump, then tap again mid-air. Miss it and I will laugh. Loudly.',
+        },
+      },
+      {
+        id: 'clover', gapM: 45, gate: 'tap',
+        spawn: { pickups: [{ kind: 'clover', dx: 0, h: 110 }] },
+        text: {
+          cs: 'Čtyřlístek! Chvíli po něm platí mince dvojnásob. Já bych ho snědl. Ty ho radši seber, ať z tebe něco mám.',
+          en: 'A four-leaf clover! For a while, coins count double. I’d just eat it. You’d better grab it — make yourself useful.',
+        },
+      },
+      {
+        id: 'coins', gapM: 40, gate: 'tap',
+        spawn: { pickups: [{ kind: 'coin', dx: 0, h: 28 }, { kind: 'coin', dx: 40, h: 28 }, { kind: 'coin', dx: 80, h: 28 }, { kind: 'coin', dx: 120, h: 28 }] },
+        text: {
+          cs: 'Mince! Za ně si v obchodě pořídíš moje kamarády. Mě už máš zadarmo — gratuluju, lepší už to nebude.',
+          en: 'Coins! They buy you my friends in the shop. Me you got for free — congrats, it’s all downhill from here.',
+        },
+      },
+      {
+        id: 'outro', gapM: 25, gate: null, dur: 4,
+        text: {
+          cs: 'Škola běhu skončila, jednička s hvězdičkou. Teď běž, skákej a nenaraž do husy… vlastně naraz, chci vidět, co ti řekne!',
+          en: 'Running school is over — straight A’s. Now go, jump, and don’t crash into a goose… actually do, I want to hear what she says!',
+        },
+      },
+    ],
+  };
+
+  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL };
 })();
