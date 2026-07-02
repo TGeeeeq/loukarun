@@ -2,6 +2,9 @@
    LOUKA RUN – data hry
    Postavy, hlášky, příběhy, prostředí
    Hra na podporu azylu Nech mě růst (nechmerust.org)
+
+   Texty jsou dvojjazyčné: { cs: '…', en: '…' }.
+   Aktuální jazyk vybírá I18N.pick() (js/i18n.js).
    ========================================================= */
 
 const DATA = (() => {
@@ -10,159 +13,291 @@ const DATA = (() => {
   const CHARACTERS = [
     {
       id: 'karel',
-      name: 'Osel Karel',
+      name: { cs: 'Osel Karel', en: 'Karel the Donkey' },
       species: 'osel',
-      tagline: 'Hravý osel s velkým srdcem a lehce kousavou povahou.',
+      tagline: {
+        cs: 'Hravý osel s velkým srdcem a lehce kousavou povahou.',
+        en: 'A playful donkey with a big heart and a slightly bitey sense of humor.',
+      },
       unlock: { type: 'free' },
-      perk: 'Vyvážený běžec. Srdce azylu.',
+      perk: {
+        cs: 'Vyvážený běžec. Srdce azylu.',
+        en: 'A balanced runner. The heart of the sanctuary.',
+      },
       stats: { speed: 1.0, jump: 1.0, drain: 1.0 },
       // černý osel s bílým čumákem a světlými kroužky kolem očí
       colors: { body: '#45403c', belly: '#93887f', mane: '#211d1a', muzzle: '#efe7da', ear: '#45403c', earIn: '#b5a89a', eyeRing: '#c6bab0', hoof: '#26221e' },
       quotes: [
-        'Hýkám, tedy jsem!',
-        'Tuhle mrkev si zasloužím. A tamtu taky.',
-        'Kousavý humor? To bude po mně.',
-        'Kdo běží poslední, hlídá seno!',
-        'Tvrdohlavý? Já tomu říkám cílevědomý.',
-        'Pozor, jedu! Teda… běžím!',
-        'Ušima kormidluju, ocasem brzdím.',
+        { cs: 'Hýkám, tedy jsem!', en: 'I bray, therefore I am!' },
+        { cs: 'Tuhle mrkev si zasloužím. A tamtu taky.', en: 'I deserve this carrot. And that one too.' },
+        { cs: 'Kousavý humor? To bude po mně.', en: 'Biting humor? Yeah, they get that from me.' },
+        { cs: 'Kdo běží poslední, hlídá seno!', en: 'Last one there guards the hay!' },
+        { cs: 'Tvrdohlavý? Já tomu říkám cílevědomý.', en: 'Stubborn? I call it goal-oriented.' },
+        { cs: 'Pozor, jedu! Teda… běžím!', en: 'Coming through! I mean… running through!' },
+        { cs: 'Ušima kormidluju, ocasem brzdím.', en: 'Ears for steering, tail for braking.' },
       ],
-      hitQuotes: ['Íáá! To bylo naschvál!', 'Kdo to tam postavil?!', 'Tak to jsem nevymyslel já.'],
+      hitQuotes: [
+        { cs: 'Íáá! To bylo naschvál!', en: 'Hee-haw! That was on purpose!' },
+        { cs: 'Kdo to tam postavil?!', en: 'Who put that there?!' },
+        { cs: 'Tak to jsem nevymyslel já.', en: 'Well, that wasn’t my idea.' },
+      ],
       stories: [
-        'Karel doběhl až k ceduli „Vstup zakázán“. Chvíli si ji prohlížel… a pak ji celou okousal. Teď je tam cedule „Vst_p z_k_zán“ a nikdo neví, co znamená.',
-        'Karel doběhl na trh s mrkvemi. Prodavač mu dal jednu zdarma. Karel z vděčnosti zahýkal tak nahlas, že se seběhla celá vesnice. Prodal se veškerý sortiment.',
-        'Karel doběhl k zrcadlu opřenému o stodolu. Hodinu se zdravil s „tím druhým fešákem“, než mu došlo, kdo to je. Nikomu to neříkejte.',
-        'Karel doběhl na louku plnou pampelišek, lehl si na záda a válel se tak dlouho, až vypadal jako obří žlutý knedlík. Prohlásil to za nejlepší den svého života.',
+        {
+          cs: 'Karel doběhl až k ceduli „Vstup zakázán“. Chvíli si ji prohlížel… a pak ji celou okousal. Teď je tam cedule „Vst_p z_k_zán“ a nikdo neví, co znamená.',
+          en: 'Karel ran all the way to a “No Entry” sign. He studied it for a while… then nibbled the whole thing. Now the sign reads “N_ Entr_” and nobody knows what it means.',
+        },
+        {
+          cs: 'Karel doběhl na trh s mrkvemi. Prodavač mu dal jednu zdarma. Karel z vděčnosti zahýkal tak nahlas, že se seběhla celá vesnice. Prodal se veškerý sortiment.',
+          en: 'Karel ran to the carrot market. The vendor gave him one for free. Karel brayed his thanks so loudly the whole village came running. Everything sold out.',
+        },
+        {
+          cs: 'Karel doběhl k zrcadlu opřenému o stodolu. Hodinu se zdravil s „tím druhým fešákem“, než mu došlo, kdo to je. Nikomu to neříkejte.',
+          en: 'Karel ran up to a mirror leaning against the barn. He spent an hour greeting “that other handsome fellow” before realizing who it was. Don’t tell anyone.',
+        },
+        {
+          cs: 'Karel doběhl na louku plnou pampelišek, lehl si na záda a válel se tak dlouho, až vypadal jako obří žlutý knedlík. Prohlásil to za nejlepší den svého života.',
+          en: 'Karel ran to a meadow full of dandelions, flopped onto his back and rolled around until he looked like a giant yellow dumpling. He declared it the best day of his life.',
+        },
       ],
     },
     {
       id: 'pogo',
-      name: 'Ovečka Pogo',
+      name: { cs: 'Ovečka Pogo', en: 'Pogo the Sheep' },
       species: 'ovce',
-      tagline: 'Energická ovčí kamarádka, která skáče jako na pružině.',
+      tagline: {
+        cs: 'Energická ovčí kamarádka, která skáče jako na pružině.',
+        en: 'An energetic sheep friend who jumps like she’s on springs.',
+      },
       unlock: { type: 'coins', price: 250 },
-      perk: 'Perk: PRUŽINKA – skáče výš a dvojskok má delší.',
+      perk: {
+        cs: 'Perk: PRUŽINKA – skáče výš a dvojskok má delší.',
+        en: 'Perk: SPRING LEGS – jumps higher and gets a longer double jump.',
+      },
       stats: { speed: 1.0, jump: 1.18, drain: 1.0 },
       // krémová vlna, hnědá tvářička a tmavé nožky
       colors: { body: '#f2ede2', belly: '#ffffff', mane: '#e2d8c6', muzzle: '#9a8268', ear: '#9a8268', earIn: '#c2a888', legs: '#8a7460', hoof: '#463c32' },
       quotes: [
-        'Bééžím jako o závod!',
-        'Pogo! Pogo! Pogo! …to je moje jméno i sport.',
-        'Vlna? Ta je teď v módě!',
-        'Skáču, tedy jsem. A jsem hodně.',
-        'Počítat ovce? Zkuste mě chytit!',
-        'Kudrnatá a hrdá na to!',
+        { cs: 'Bééžím jako o závod!', en: 'Baaa-cing like it’s race day!' },
+        { cs: 'Pogo! Pogo! Pogo! …to je moje jméno i sport.', en: 'Pogo! Pogo! Pogo! …that’s my name and my sport.' },
+        { cs: 'Vlna? Ta je teď v módě!', en: 'Wool? It’s so in right now!' },
+        { cs: 'Skáču, tedy jsem. A jsem hodně.', en: 'I jump, therefore I am. A lot.' },
+        { cs: 'Počítat ovce? Zkuste mě chytit!', en: 'Counting sheep? Try catching one!' },
+        { cs: 'Kudrnatá a hrdá na to!', en: 'Curly and proud of it!' },
       ],
-      hitQuotes: ['Béé! To nebylo fér!', 'Naštěstí mám vlastní polstrování.', 'Odraz se ode mě, světe!'],
+      hitQuotes: [
+        { cs: 'Béé! To nebylo fér!', en: 'Baaa! That was not fair!' },
+        { cs: 'Naštěstí mám vlastní polstrování.', en: 'Good thing I bring my own padding.' },
+        { cs: 'Odraz se ode mě, světe!', en: 'Bounce off me, world!' },
+      ],
       stories: [
-        'Pogo doběhla na trampolínovou show. Porotci jí dali samé desítky, i když se jen snažila dostat přes plot za kamarádkami.',
-        'Pogo doběhla k obrovské hromadě čerstvě posekané trávy, skočila do ní šipku a vylezla až za tři hodiny. Voněla tak krásně, že ji všichni chtěli objímat.',
-        'Pogo doběhla na louku, kde spal pes Riky. Přeskočila ho tam a zpět čtyřicetkrát. Riky se ani nevzbudil, ale ve snu prý počítal ovce.',
-        'Pogo doběhla až k fotografovi, který fotil západ slunce. Všechny fotky teď mají uprostřed nadšenou skákající ovci. Staly se virálními.',
+        {
+          cs: 'Pogo doběhla na trampolínovou show. Porotci jí dali samé desítky, i když se jen snažila dostat přes plot za kamarádkami.',
+          en: 'Pogo ran into a trampoline show. The judges gave her straight tens, even though she was just trying to get over the fence to her friends.',
+        },
+        {
+          cs: 'Pogo doběhla k obrovské hromadě čerstvě posekané trávy, skočila do ní šipku a vylezla až za tři hodiny. Voněla tak krásně, že ji všichni chtěli objímat.',
+          en: 'Pogo ran to a huge pile of freshly cut grass, dove straight in and didn’t come out for three hours. She smelled so lovely that everyone wanted to hug her.',
+        },
+        {
+          cs: 'Pogo doběhla na louku, kde spal pes Riky. Přeskočila ho tam a zpět čtyřicetkrát. Riky se ani nevzbudil, ale ve snu prý počítal ovce.',
+          en: 'Pogo ran to the meadow where Riky the dog was napping. She jumped over him back and forth forty times. Riky never woke up, but they say he counted sheep in his dream.',
+        },
+        {
+          cs: 'Pogo doběhla až k fotografovi, který fotil západ slunce. Všechny fotky teď mají uprostřed nadšenou skákající ovci. Staly se virálními.',
+          en: 'Pogo ran up to a photographer shooting the sunset. Every photo now has an enthusiastic jumping sheep in the middle. They went viral.',
+        },
       ],
     },
     {
       id: 'avala',
-      name: 'Kráva Avala',
+      name: { cs: 'Kráva Avala', en: 'Avala the Cow' },
       species: 'kráva',
-      tagline: 'Mazlivá kravička, která nejvíc ze všeho miluje běhání po louce.',
+      tagline: {
+        cs: 'Mazlivá kravička, která nejvíc ze všeho miluje běhání po louce.',
+        en: 'A cuddly cow who loves nothing more than running across the meadow.',
+      },
       unlock: { type: 'coins', price: 500 },
-      perk: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
+      perk: {
+        cs: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
+        en: 'Perk: SPRINTER – runs faster and carrots give her more energy.',
+      },
       stats: { speed: 1.08, jump: 1.0, drain: 1.0, carrotBonus: 1.3 },
       // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
-        'Búúrned kalorie? Já je předběhla!',
-        'Louka je moje běžecká dráha!',
-        'Mazlení až v cíli. Teď se běží!',
-        'Tráva zelená, kopyta rychlá!',
-        'Říkají mi blesková Avala. Teda… říkám si tak sama.',
-        'Květo, dohoň mě! …Květo?',
+        { cs: 'Búúrned kalorie? Já je předběhla!', en: 'Moo-ved past those calories before they knew it!' },
+        { cs: 'Louka je moje běžecká dráha!', en: 'The meadow is my running track!' },
+        { cs: 'Mazlení až v cíli. Teď se běží!', en: 'Cuddles at the finish line. Now we run!' },
+        { cs: 'Tráva zelená, kopyta rychlá!', en: 'Green the grass, swift the hooves!' },
+        { cs: 'Říkají mi blesková Avala. Teda… říkám si tak sama.', en: 'They call me Lightning Avala. Well… I call myself that.' },
+        { cs: 'Květo, dohoň mě! …Květo?', en: 'Květa, catch me! …Květa?' },
       ],
-      hitQuotes: ['Búú! Kdo to sem dal?', 'To mě jen tak nerozhodí. Skoro.', 'Příště to oběhnu. Možná.'],
+      hitQuotes: [
+        { cs: 'Búú! Kdo to sem dal?', en: 'Moo! Who put that here?' },
+        { cs: 'To mě jen tak nerozhodí. Skoro.', en: 'Takes more than that to rattle me. Almost.' },
+        { cs: 'Příště to oběhnu. Možná.', en: 'Next time I’ll go around it. Maybe.' },
+      ],
       stories: [
-        'Avala doběhla na vesnický maraton a omylem ho vyhrála. Pořadatelé jí předali pohár plný jetele. Slíbila, že příští rok přijde obhajovat.',
-        'Avala doběhla až k rybníku, uviděla svůj odraz a zamávala si. Odraz zamával taky. Kamarádky jsou všude, stačí se dívat!',
-        'Avala doběhla za Květou, aby jí vyprávěla, co všechno viděla. Vyprávěla tři hodiny. Květa u toho dvakrát usnula a Avale to vůbec nevadilo.',
-        'Avala doběhla na kopec, odkud je vidět celý azyl. Zabučela tak radostně, že jí odpověděla všechna zvířata. Byl to nejkrásnější sbor široko daleko.',
+        {
+          cs: 'Avala doběhla na vesnický maraton a omylem ho vyhrála. Pořadatelé jí předali pohár plný jetele. Slíbila, že příští rok přijde obhajovat.',
+          en: 'Avala ran into the village marathon and accidentally won it. The organizers handed her a trophy full of clover. She promised to come back next year to defend her title.',
+        },
+        {
+          cs: 'Avala doběhla až k rybníku, uviděla svůj odraz a zamávala si. Odraz zamával taky. Kamarádky jsou všude, stačí se dívat!',
+          en: 'Avala ran all the way to the pond, saw her reflection and waved at it. The reflection waved back. Friends are everywhere, you just have to look!',
+        },
+        {
+          cs: 'Avala doběhla za Květou, aby jí vyprávěla, co všechno viděla. Vyprávěla tři hodiny. Květa u toho dvakrát usnula a Avale to vůbec nevadilo.',
+          en: 'Avala ran to Květa to tell her everything she had seen. She talked for three hours. Květa fell asleep twice, and Avala didn’t mind one bit.',
+        },
+        {
+          cs: 'Avala doběhla na kopec, odkud je vidět celý azyl. Zabučela tak radostně, že jí odpověděla všechna zvířata. Byl to nejkrásnější sbor široko daleko.',
+          en: 'Avala ran up the hill overlooking the whole sanctuary. She mooed so joyfully that every animal answered back. It was the loveliest choir for miles around.',
+        },
       ],
     },
     {
       id: 'flicek',
-      name: 'Prasátko Flíček',
+      name: { cs: 'Prasátko Flíček', en: 'Flíček the Piglet' },
       species: 'prase',
-      tagline: 'Prasátko, které si nejvíc užívá drbání na bříšku.',
+      tagline: {
+        cs: 'Prasátko, které si nejvíc užívá drbání na bříšku.',
+        en: 'A piglet who enjoys belly rubs more than anything.',
+      },
       unlock: { type: 'coins', price: 900 },
-      perk: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
+      perk: {
+        cs: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
+        en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
+      },
       stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 140 },
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
       colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
-        'Chro chro! Kdo běží, ten si zaslouží drbání!',
-        'Bláto není špína, bláto je wellness!',
-        'Rypáček navigace zapnuta!',
-        'Já neběžím za jídlem. Jídlo běží ke mně!',
-        'Bříško napřed!',
-        'Kvík! Tohle je lepší než dieta!',
+        { cs: 'Chro chro! Kdo běží, ten si zaslouží drbání!', en: 'Oink oink! Runners earn belly rubs!' },
+        { cs: 'Bláto není špína, bláto je wellness!', en: 'Mud isn’t dirt, mud is wellness!' },
+        { cs: 'Rypáček navigace zapnuta!', en: 'Snout navigation: ON!' },
+        { cs: 'Já neběžím za jídlem. Jídlo běží ke mně!', en: 'I don’t run after food. Food runs to me!' },
+        { cs: 'Bříško napřed!', en: 'Belly first!' },
+        { cs: 'Kvík! Tohle je lepší než dieta!', en: 'Squee! Better than any diet!' },
       ],
-      hitQuotes: ['Kvíík! Moje bříško!', 'To si vypiju… teda vyválím!', 'Naštěstí jsem dobře odpružený.'],
+      hitQuotes: [
+        { cs: 'Kvíík! Moje bříško!', en: 'Squeee! My belly!' },
+        { cs: 'To si vypiju… teda vyválím!', en: 'I’ll pay for that… with a mud roll!' },
+        { cs: 'Naštěstí jsem dobře odpružený.', en: 'Luckily I come with built-in suspension.' },
+      ],
       stories: [
-        'Flíček doběhl do lázní pro prasátka. Teda… do velké louže. Ale choval se tam jako v lázních a odmítal vylézt, dokud nedostal drbání na bříšku.',
-        'Flíček doběhl na farmářské trhy a vyhrál soutěž „Nejspokojenější zvíře kraje“. Porota se shodla jednohlasně, hned jak si lehl na záda.',
-        'Flíček doběhl k záhonu s jahodami. Nesnědl ani jednu — jen si k nim lehl a hlídal je. Za odměnu dostal největší jahodu a hodinu drbání.',
-        'Flíček doběhl tak daleko, že objevil novou louži, kterou nikdo nikdy neviděl. Pojmenoval ji Flíčkovo moře. Na mapách azylu už je zakreslená.',
+        {
+          cs: 'Flíček doběhl do lázní pro prasátka. Teda… do velké louže. Ale choval se tam jako v lázních a odmítal vylézt, dokud nedostal drbání na bříšku.',
+          en: 'Flíček ran to the piglet spa. Well… a big puddle. But he acted like it was a spa and refused to come out until he got a belly rub.',
+        },
+        {
+          cs: 'Flíček doběhl na farmářské trhy a vyhrál soutěž „Nejspokojenější zvíře kraje“. Porota se shodla jednohlasně, hned jak si lehl na záda.',
+          en: 'Flíček ran to the farmers’ market and won the “Most Content Animal in the County” contest. The jury voted unanimously the moment he rolled onto his back.',
+        },
+        {
+          cs: 'Flíček doběhl k záhonu s jahodami. Nesnědl ani jednu — jen si k nim lehl a hlídal je. Za odměnu dostal největší jahodu a hodinu drbání.',
+          en: 'Flíček ran to the strawberry patch. He didn’t eat a single one — he just lay down next to them and stood guard. As a reward he got the biggest strawberry and an hour of belly rubs.',
+        },
+        {
+          cs: 'Flíček doběhl tak daleko, že objevil novou louži, kterou nikdo nikdy neviděl. Pojmenoval ji Flíčkovo moře. Na mapách azylu už je zakreslená.',
+          en: 'Flíček ran so far he discovered a brand-new puddle nobody had ever seen. He named it Flíček’s Sea. It’s already marked on the sanctuary maps.',
+        },
       ],
     },
     {
       id: 'yakul',
-      name: 'Muflon Yakul',
+      name: { cs: 'Muflon Yakul', en: 'Yakul the Mouflon' },
       species: 'muflon',
-      tagline: 'Rozverný mladík, který právě zjišťuje, k čemu má rohy.',
-      unlock: { type: 'premium', price: '49 Kč' },
-      perk: 'Perk: BERANIDLO – 3× za běh prorazí překážku bez ztráty energie.',
+      tagline: {
+        cs: 'Rozverný mladík, který právě zjišťuje, k čemu má rohy.',
+        en: 'A playful youngster still figuring out what his horns are for.',
+      },
+      unlock: { type: 'premium', price: { cs: '49 Kč', en: 'CZK 49' } },
+      perk: {
+        cs: 'Perk: BERANIDLO – 3× za běh prorazí překážku bez ztráty energie.',
+        en: 'Perk: BATTERING RAM – smashes through 3 obstacles per run without losing energy.',
+      },
       stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 3 },
       // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
       colors: { body: '#6b4830', belly: '#e6dac6', mane: '#4c3120', muzzle: '#e9dfcd', ear: '#6b4830', earIn: '#c2996f', horns: '#c7ad85', spots: '#cbb896', pattern: 'saddle', legs: '#5a3c28', hoof: '#31261e' },
       quotes: [
-        'Rohy! Já mám rohy! K čemu asi jsou?',
-        'Tak schválně, co tohle vydrží!',
-        'Z kopce, do kopce, mně je to jedno!',
-        'Frajer? Já? …No jasně!',
-        'Ten balík sena se na mě díval divně.',
-        'Jednou budu mít rohy jako věšák!',
+        { cs: 'Rohy! Já mám rohy! K čemu asi jsou?', en: 'Horns! I have horns! Wonder what they’re for?' },
+        { cs: 'Tak schválně, co tohle vydrží!', en: 'Let’s see what this thing can take!' },
+        { cs: 'Z kopce, do kopce, mně je to jedno!', en: 'Uphill, downhill, all the same to me!' },
+        { cs: 'Frajer? Já? …No jasně!', en: 'Cool guy? Me? …Obviously!' },
+        { cs: 'Ten balík sena se na mě díval divně.', en: 'That hay bale was looking at me funny.' },
+        { cs: 'Jednou budu mít rohy jako věšák!', en: 'One day my horns will make a fine coat rack!' },
       ],
-      hitQuotes: ['Mek! To mělo uhnout!', 'Zapomněl jsem nakl-ONIT hlavu!', 'Tak tohle rohy nevyřešily.'],
+      hitQuotes: [
+        { cs: 'Mek! To mělo uhnout!', en: 'Baa! That was supposed to move!' },
+        { cs: 'Zapomněl jsem nakl-ONIT hlavu!', en: 'Forgot to lower my he-e-ead!' },
+        { cs: 'Tak tohle rohy nevyřešily.', en: 'Okay, horns did not solve that one.' },
+      ],
       stories: [
-        'Yakul doběhl k obrovské dýni a konečně zjistil, k čemu má rohy: perfektně se s nimi kutálí dýně. Přikutálel ji do azylu a byla z ní hostina pro všechny.',
-        'Yakul doběhl na kopec, postavil se na skálu jako v pohádce a zapózoval. Vydržel to celé čtyři vteřiny, pak uviděl motýla a běžel za ním.',
-        'Yakul doběhl k vrbě a zamotal si rohy do větví. Než ho vymotali, tvářil se, že je to nový druh klobouku. Skoro mu to všichni uvěřili.',
-        'Yakul doběhl závod s vlastním stínem. Tvrdí, že vyhrál o rohy. Stín se k výsledku odmítl vyjádřit.',
+        {
+          cs: 'Yakul doběhl k obrovské dýni a konečně zjistil, k čemu má rohy: perfektně se s nimi kutálí dýně. Přikutálel ji do azylu a byla z ní hostina pro všechny.',
+          en: 'Yakul ran up to a giant pumpkin and finally found out what horns are for: they’re perfect for rolling pumpkins. He rolled it to the sanctuary and it became a feast for everyone.',
+        },
+        {
+          cs: 'Yakul doběhl na kopec, postavil se na skálu jako v pohádce a zapózoval. Vydržel to celé čtyři vteřiny, pak uviděl motýla a běžel za ním.',
+          en: 'Yakul ran up a hill, stood on a rock like in a fairy tale and struck a pose. He held it for a whole four seconds, then spotted a butterfly and chased after it.',
+        },
+        {
+          cs: 'Yakul doběhl k vrbě a zamotal si rohy do větví. Než ho vymotali, tvářil se, že je to nový druh klobouku. Skoro mu to všichni uvěřili.',
+          en: 'Yakul ran into a willow tree and tangled his horns in the branches. While being untangled, he insisted it was a new kind of hat. Almost everyone believed him.',
+        },
+        {
+          cs: 'Yakul doběhl závod s vlastním stínem. Tvrdí, že vyhrál o rohy. Stín se k výsledku odmítl vyjádřit.',
+          en: 'Yakul ran a race against his own shadow. He claims he won by a horn. The shadow declined to comment.',
+        },
       ],
     },
     {
       id: 'kveta',
-      name: 'Kráva Květa',
+      name: { cs: 'Kráva Květa', en: 'Květa the Cow' },
       species: 'kráva',
-      tagline: 'Klidná a tichá duše, věrná parťačka Avaly.',
-      unlock: { type: 'premium', price: '49 Kč' },
-      perk: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
+      tagline: {
+        cs: 'Klidná a tichá duše, věrná parťačka Avaly.',
+        en: 'A calm and quiet soul, Avala’s faithful companion.',
+      },
+      unlock: { type: 'premium', price: { cs: '49 Kč', en: 'CZK 49' } },
+      perk: {
+        cs: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
+        en: 'Perk: INNER PEACE – energy drains a quarter slower.',
+      },
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
       // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', noHorns: true, eyePatch: '#552a12', forelock: '#f7f2e6', hoof: '#3d3128' },
       quotes: [
-        'Spěchám. Pomalu, ale spěchám.',
-        'Klid je taky rychlost. Jen jiná.',
-        'Búú… to bylo na dlouhé vyprávění. Tak jindy.',
-        'Avalo, počkej… ale v klidu.',
-        'Dýchej. Přežvykuj. Běž.',
-        'Kdo nikam nespěchá, všechno stihne.',
+        { cs: 'Spěchám. Pomalu, ale spěchám.', en: 'I’m hurrying. Slowly, but hurrying.' },
+        { cs: 'Klid je taky rychlost. Jen jiná.', en: 'Calm is a kind of speed too. Just a different one.' },
+        { cs: 'Búú… to bylo na dlouhé vyprávění. Tak jindy.', en: 'Moo… that’s a long story. Some other time.' },
+        { cs: 'Avalo, počkej… ale v klidu.', en: 'Avala, wait up… but calmly.' },
+        { cs: 'Dýchej. Přežvykuj. Běž.', en: 'Breathe. Chew. Run.' },
+        { cs: 'Kdo nikam nespěchá, všechno stihne.', en: 'Those who never rush are never late.' },
       ],
-      hitQuotes: ['Hm. Tak to tu minule nebylo.', 'Búú. No nic, běžíme dál.', 'Klid, Květo. Klid.'],
+      hitQuotes: [
+        { cs: 'Hm. Tak to tu minule nebylo.', en: 'Hm. That wasn’t here last time.' },
+        { cs: 'Búú. No nic, běžíme dál.', en: 'Moo. Oh well, on we go.' },
+        { cs: 'Klid, Květo. Klid.', en: 'Easy, Květa. Easy.' },
+      ],
       stories: [
-        'Květa doběhla na louku, kde kvetly kopretiny. Sedla si mezi ně a hodinu se nehýbala. Včely ji prohlásily za největší květinu roku. Jmenuje se ostatně Květa.',
-        'Květa doběhla k medituijícímu turistovi. Sedla si vedle něj a přežvykovala tak klidně, že dosáhl osvícení. Poděkoval jí a ona jen pomalu mrkla.',
-        'Květa doběhla do cíle jako poslední, ale s nejkrásnějším výhledem, třemi novými kamarády a jednou sedmikráskou za uchem. Kdo je tady vlastně vítěz?',
-        'Květa doběhla za Avalou, položila jí hlavu na hřbet a obě koukaly na západ slunce. Nikdo nic neříkal. Bylo to dokonalé.',
+        {
+          cs: 'Květa doběhla na louku, kde kvetly kopretiny. Sedla si mezi ně a hodinu se nehýbala. Včely ji prohlásily za největší květinu roku. Jmenuje se ostatně Květa.',
+          en: 'Květa ran to a meadow of blooming daisies. She sat down among them and didn’t move for an hour. The bees declared her Flower of the Year. Her name does mean Blossom, after all.',
+        },
+        {
+          cs: 'Květa doběhla k medituijícímu turistovi. Sedla si vedle něj a přežvykovala tak klidně, že dosáhl osvícení. Poděkoval jí a ona jen pomalu mrkla.',
+          en: 'Květa ran up to a meditating hiker. She sat down beside him and chewed so calmly that he reached enlightenment. He thanked her, and she just blinked. Slowly.',
+        },
+        {
+          cs: 'Květa doběhla do cíle jako poslední, ale s nejkrásnějším výhledem, třemi novými kamarády a jednou sedmikráskou za uchem. Kdo je tady vlastně vítěz?',
+          en: 'Květa crossed the finish line last — but with the prettiest view, three new friends and a daisy behind her ear. So who’s the real winner here?',
+        },
+        {
+          cs: 'Květa doběhla za Avalou, položila jí hlavu na hřbet a obě koukaly na západ slunce. Nikdo nic neříkal. Bylo to dokonalé.',
+          en: 'Květa ran to Avala, rested her head on her back, and they watched the sunset together. Nobody said a word. It was perfect.',
+        },
       ],
     },
   ];
@@ -171,7 +306,7 @@ const DATA = (() => {
   // Postupně se střídají a plynule prolínají.
   const ENVS = [
     {
-      id: 'louka', name: 'Rozkvetlá louka',
+      id: 'louka', name: { cs: 'Rozkvetlá louka', en: 'Blooming Meadow' },
       skyTop: '#8ed4f7', skyBottom: '#dff3e8',
       hillFar: '#a8d8a0', hillNear: '#7cc276',
       ground: '#5aa84f', groundDark: '#4a9440', path: '#c9b485',
@@ -180,7 +315,7 @@ const DATA = (() => {
       particles: 'petals',
     },
     {
-      id: 'sad', name: 'Ovocný sad',
+      id: 'sad', name: { cs: 'Ovocný sad', en: 'Orchard' },
       skyTop: '#9fd9f2', skyBottom: '#f4e9d0',
       hillFar: '#b5d49a', hillNear: '#8cbf72',
       ground: '#6aab52', groundDark: '#589644', path: '#cdb489',
@@ -189,7 +324,7 @@ const DATA = (() => {
       particles: 'leaves',
     },
     {
-      id: 'les', name: 'Pohádkový les',
+      id: 'les', name: { cs: 'Pohádkový les', en: 'Fairy-tale Forest' },
       skyTop: '#7cc4b8', skyBottom: '#d9ecc8',
       hillFar: '#5d9c72', hillNear: '#417d56',
       ground: '#3f7a4a', groundDark: '#356a3f', path: '#a8926b',
@@ -198,7 +333,7 @@ const DATA = (() => {
       particles: 'fireflies',
     },
     {
-      id: 'vesnice', name: 'Veselá vesnice',
+      id: 'vesnice', name: { cs: 'Veselá vesnice', en: 'Merry Village' },
       skyTop: '#93c9ef', skyBottom: '#f7e8cf',
       hillFar: '#c2b7a0', hillNear: '#a8c684',
       ground: '#79a85e', groundDark: '#679250', path: '#d3bd93',
@@ -207,7 +342,7 @@ const DATA = (() => {
       particles: 'none',
     },
     {
-      id: 'zapad', name: 'Zlatá hodinka',
+      id: 'zapad', name: { cs: 'Zlatá hodinka', en: 'Golden Hour' },
       skyTop: '#f7a26b', skyBottom: '#ffd9a0',
       hillFar: '#c77b5a', hillNear: '#9c5f46',
       ground: '#8a6a45', groundDark: '#79593a', path: '#c9a06b',
@@ -216,7 +351,7 @@ const DATA = (() => {
       particles: 'petals',
     },
     {
-      id: 'noc', name: 'Hvězdná noc',
+      id: 'noc', name: { cs: 'Hvězdná noc', en: 'Starry Night' },
       skyTop: '#1d2b53', skyBottom: '#4a5a8a',
       hillFar: '#2e3c63', hillNear: '#26334f',
       ground: '#2c4038', groundDark: '#24352e', path: '#5a5f6e',
@@ -229,15 +364,15 @@ const DATA = (() => {
 
   /* ---------- PŘEKÁŽKY ---------- */
   const OBSTACLES = [
-    { id: 'hay',      w: 62,  h: 52,  type: 'jump',  label: 'balík sena' },
-    { id: 'fence',    w: 56,  h: 58,  type: 'jump',  label: 'plůtek' },
-    { id: 'mud',      w: 92,  h: 18,  type: 'jump',  label: 'kaluž bláta', soft: true },
-    { id: 'rock',     w: 50,  h: 44,  type: 'jump',  label: 'šutr' },
-    { id: 'branch',   w: 120, h: 30,  type: 'duck',  label: 'větev', flying: true, clearance: 62 },
-    { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  label: 'slepice', moving: true },
-    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  label: 'husa', moving: true },
-    { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  label: 'trakař' },
-    { id: 'beeline',  w: 110, h: 26,  type: 'duck',  label: 'včelí letka', flying: true, clearance: 66 },
+    { id: 'hay',      w: 62,  h: 52,  type: 'jump',  label: { cs: 'balík sena', en: 'hay bale' } },
+    { id: 'fence',    w: 56,  h: 58,  type: 'jump',  label: { cs: 'plůtek', en: 'fence' } },
+    { id: 'mud',      w: 92,  h: 18,  type: 'jump',  label: { cs: 'kaluž bláta', en: 'mud puddle' }, soft: true },
+    { id: 'rock',     w: 50,  h: 44,  type: 'jump',  label: { cs: 'šutr', en: 'rock' } },
+    { id: 'branch',   w: 120, h: 30,  type: 'duck',  label: { cs: 'větev', en: 'branch' }, flying: true, clearance: 62 },
+    { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  label: { cs: 'slepice', en: 'chicken' }, moving: true },
+    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  label: { cs: 'husa', en: 'goose' }, moving: true },
+    { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  label: { cs: 'trakař', en: 'wheelbarrow' } },
+    { id: 'beeline',  w: 110, h: 26,  type: 'duck',  label: { cs: 'včelí letka', en: 'bee squadron' }, flying: true, clearance: 66 },
   ];
 
   /* ---------- BAREVNÉ VARIANTY DRŮBEŽE ---------- */
@@ -288,51 +423,70 @@ const DATA = (() => {
 
   /* ---------- CEDULE (vtipné nápisy na rozcestnících) ---------- */
   const SIGNS = [
-    'Mrkvov 2 km', 'Senné Lázně 5 km', 'Pozor, zvěř! (my)', 'Azyl Nech mě růst ❤',
-    'Bláto → tudy', 'Drbání zdarma', 'Louka Wellness', 'Kopyto City 12 km',
-    'Nekrmit! (Krmit!)', 'Pomalu, spí tu kočky',
+    { cs: 'Mrkvov 2 km', en: 'Carrotville 2 km' },
+    { cs: 'Senné Lázně 5 km', en: 'Hay Spa 5 km' },
+    { cs: 'Pozor, zvěř! (my)', en: 'Beware of animals! (us)' },
+    { cs: 'Azyl Nech mě růst ❤', en: 'Nech mě růst sanctuary ❤' },
+    { cs: 'Bláto → tudy', en: 'Mud → this way' },
+    { cs: 'Drbání zdarma', en: 'Free belly rubs' },
+    { cs: 'Louka Wellness', en: 'Meadow Wellness' },
+    { cs: 'Kopyto City 12 km', en: 'Hoof City 12 km' },
+    { cs: 'Nekrmit! (Krmit!)', en: 'Do not feed! (Feed!)' },
+    { cs: 'Pomalu, spí tu kočky', en: 'Slow down, cats asleep' },
   ];
 
   /* ---------- OBECNÉ HLÁŠKY BĚHEM HRY ---------- */
   const EVENTS = {
     milestone: [ // co ~500 m
-      'Páni, to je dálka!',
-      'Azyl už je za obzorem!',
-      'Ještě kousek… nebo dva!',
-      'Tohle by měl vidět celý azyl!',
-      'Nová osobní louka… teda osobák!',
+      { cs: 'Páni, to je dálka!', en: 'Wow, what a distance!' },
+      { cs: 'Azyl už je za obzorem!', en: 'The sanctuary is beyond the horizon!' },
+      { cs: 'Ještě kousek… nebo dva!', en: 'Just a bit more… or two!' },
+      { cs: 'Tohle by měl vidět celý azyl!', en: 'The whole sanctuary should see this!' },
+      { cs: 'Nová osobní louka… teda osobák!', en: 'A new personal meadow… I mean, personal best!' },
     ],
     lowEnergy: [
-      'Kručí mi v břiše…',
-      'Mrkev! Potřebuju mrkev!',
-      'Docházej mi baterky…',
-      'Někde tu musí být svačina!',
+      { cs: 'Kručí mi v břiše…', en: 'My tummy is rumbling…' },
+      { cs: 'Mrkev! Potřebuju mrkev!', en: 'Carrot! I need a carrot!' },
+      { cs: 'Docházej mi baterky…', en: 'My batteries are running low…' },
+      { cs: 'Někde tu musí být svačina!', en: 'There must be a snack around here!' },
     ],
     goldenCarrot: [
-      'ZLATÁ MRKEV! To je legenda!',
-      'Ta chutná jako tisíc mrkví!',
-      'Dneska mám svátek!',
+      { cs: 'ZLATÁ MRKEV! To je legenda!', en: 'GOLDEN CARROT! The legend is real!' },
+      { cs: 'Ta chutná jako tisíc mrkví!', en: 'It tastes like a thousand carrots!' },
+      { cs: 'Dneska mám svátek!', en: 'This is my lucky day!' },
     ],
     chicken: [ // co zakřičí slepice, když do ní zvířátko vrazí
-      'Kokodák!!',
-      'Ko-ko-KATASTROFA!',
-      'Moje vajíčko!!',
-      'To řeknu kohoutovi!',
-      'Slepičí poplach!!',
-      'Kdák! Koukej, kudy běžíš!',
+      { cs: 'Kokodák!!', en: 'Bawk-bawk!!' },
+      { cs: 'Ko-ko-KATASTROFA!', en: 'Cluck-cluck-CATASTROPHE!' },
+      { cs: 'Moje vajíčko!!', en: 'My egg!!' },
+      { cs: 'To řeknu kohoutovi!', en: 'I’m telling the rooster!' },
+      { cs: 'Slepičí poplach!!', en: 'Chicken alarm!!' },
+      { cs: 'Kdák! Koukej, kudy běžíš!', en: 'Cluck! Watch where you’re running!' },
     ],
     goose: [ // husy jsou drzejší
-      'Kejhák!!',
-      'Ssss! Tady velím JÁ!',
-      'GA-GA-GAUNEŘI!',
-      'Štípanec máš u mě schovaný!',
-      'Tohle si vyříkáme u rybníka!',
-      'Pozor! Husa v protisměru!',
+      { cs: 'Kejhák!!', en: 'HONK!!' },
+      { cs: 'Ssss! Tady velím JÁ!', en: 'Hisss! I’m in charge here!' },
+      { cs: 'GA-GA-GAUNEŘI!', en: 'HONK-HONK-HOOLIGANS!' },
+      { cs: 'Štípanec máš u mě schovaný!', en: 'You’ve got a pinch coming, mark my words!' },
+      { cs: 'Tohle si vyříkáme u rybníka!', en: 'We’ll settle this down at the pond!' },
+      { cs: 'Pozor! Husa v protisměru!', en: 'Watch out! Goose in the opposite lane!' },
     ],
     flyer: { // hlášky kroužících letců na obloze
-      swallow: ['Píp! Letecká show zdarma!', 'Vlaštovka dělá looping!', 'Závodíme? Já to vezmu vrchem!'],
-      stork: ['Kláp kláp! Kontrola louky!', 'Čáp hlásí: dole vše veselé!', 'Doručuji dobrou náladu!'],
-      owl: ['Húú! Kdo to tam běhá?', 'Noční hlídka na obletu!', 'Húúkám ti do kroku!'],
+      swallow: [
+        { cs: 'Píp! Letecká show zdarma!', en: 'Tweet! Free air show!' },
+        { cs: 'Vlaštovka dělá looping!', en: 'Swallow doing a loop-the-loop!' },
+        { cs: 'Závodíme? Já to vezmu vrchem!', en: 'Racing? I’ll take the high road!' },
+      ],
+      stork: [
+        { cs: 'Kláp kláp! Kontrola louky!', en: 'Clatter clatter! Meadow inspection!' },
+        { cs: 'Čáp hlásí: dole vše veselé!', en: 'Stork reporting: all cheerful down below!' },
+        { cs: 'Doručuji dobrou náladu!', en: 'Delivering good moods!' },
+      ],
+      owl: [
+        { cs: 'Húú! Kdo to tam běhá?', en: 'Hoo! Who’s running down there?' },
+        { cs: 'Noční hlídka na obletu!', en: 'Night watch on patrol!' },
+        { cs: 'Húúkám ti do kroku!', en: 'Hoo-ting you a running beat!' },
+      ],
     },
   };
 

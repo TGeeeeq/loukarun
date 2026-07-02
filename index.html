@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Louka Run – veselá běhací hra na podporu zvířecího azylu Nech mě růst. Běhej se zvířátky, sbírej mrkvičky a mince!">
+  <meta name="description" content="Louka Run – veselá běhací hra na podporu zvířecího azylu Nech mě růst. Běhej se zvířátky, sbírej mrkvičky a mince! / A cheerful runner game supporting the Nech mě růst animal sanctuary.">
   <meta name="theme-color" content="#8ed4f7">
   <title>Louka Run 🥕 – hra na podporu azylu Nech mě růst</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
@@ -32,23 +32,30 @@
     </div>
     <div class="hud-right">
       <div class="hud-chip">🪙 <span id="hud-coins">0</span></div>
-      <button id="btn-pause" class="btn round" aria-label="Pauza">⏸</button>
+      <button id="btn-pause" class="btn round" aria-label="Pauza" data-i18n-label="a11y.pause">⏸</button>
     </div>
   </div>
 
-  <!-- HLAVNÍ MENU -->
+  <!-- HLAVNÍ MENU (dvojjazyčná úvodní obrazovka) -->
   <div id="screen-menu" class="screen">
+    <div class="lang-switch" role="group" aria-label="Jazyk / Language">
+      <button class="lang-btn active" data-lang="cs">🇨🇿<span class="lang-label"> Česky</span></button>
+      <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
+    </div>
     <div class="menu-top">
       <h1 class="game-title">LOUKA<span>RUN</span></h1>
-      <p class="subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
+      <p class="subtitle" data-i18n="menu.subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
+      <p class="subtitle-alt" data-i18n-other="menu.subtitle">A runner game supporting the <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> animal sanctuary 💚</p>
     </div>
     <div class="menu-mid">
       <div class="menu-char-info">
         <div class="charname" id="menu-charname">Osel Karel</div>
         <div class="perk" id="menu-perk"></div>
       </div>
-      <button id="btn-play" class="btn big">▶ &nbsp;BĚŽET!</button>
-      <button id="btn-shop" class="btn">🐾 Zvířátka &amp; obchod</button>
+      <div class="menu-actions">
+        <button id="btn-play" class="btn big play" data-i18n="menu.play">▶ &nbsp;BĚŽET!</button>
+        <button id="btn-shop" class="btn" data-i18n="menu.shop">🐾 Zvířátka &amp; obchod</button>
+      </div>
     </div>
     <div class="menu-bottom">
       <div class="menu-stats">
@@ -60,18 +67,18 @@
         <button id="btn-music" class="btn tiny">🎵 Hudba</button>
         <a class="btn tiny buy" href="https://nechmerust.org/jak-se-zapojit" target="_blank" rel="noopener">💚 Podpoř azyl</a>
       </div>
-      <p class="controls-hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz &nbsp;·&nbsp; <a class="privacy-link" href="soukromi.html">🔒 Soukromí</a></p>
+      <p class="controls-hint"><span data-i18n="menu.hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</span> &nbsp;·&nbsp; <a class="privacy-link" href="soukromi.html">🔒 Soukromí</a></p>
     </div>
   </div>
 
   <!-- OBCHOD / VÝBĚR POSTAV -->
   <div id="screen-shop" class="screen">
     <div class="shop-head">
-      <button id="btn-shop-back" class="btn round" aria-label="Zpět">←</button>
-      <h2>Zvířecí obyvatelé</h2>
+      <button id="btn-shop-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+      <h2 data-i18n="shop.title">Zvířecí obyvatelé</h2>
       <div class="hud-chip">🪙 <span id="shop-coins">0</span></div>
     </div>
-    <p class="shop-note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
+    <p class="shop-note" data-i18n="shop.note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
     <div id="shop-grid"></div>
   </div>
 
@@ -82,16 +89,16 @@
       <canvas id="over-portrait" width="190" height="150"></canvas>
       <p id="over-story" class="story"></p>
       <div class="over-stats">
-        <div class="stat"><span class="stat-label">Doběhnuto</span><span class="stat-val" id="over-dist">0 m</span></div>
-        <div class="stat"><span class="stat-label">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
-        <div class="stat"><span class="stat-label">Mince</span><span class="stat-val gold" id="over-coins">+0 🪙</span></div>
-        <div class="stat"><span class="stat-label">Rekord</span><span class="stat-val" id="over-best">0 m</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.dist">Doběhnuto</span><span class="stat-val" id="over-dist">0 m</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.carrots">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.coins">Mince</span><span class="stat-val gold" id="over-coins">+0 🪙</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.best">Rekord</span><span class="stat-val" id="over-best">0 m</span></div>
       </div>
       <div class="over-buttons">
-        <button id="btn-again" class="btn big">🐾 Běžet znovu</button>
+        <button id="btn-again" class="btn big" data-i18n="over.again">🐾 Běžet znovu</button>
         <div class="row">
-          <button id="btn-over-shop" class="btn">🛍 Zvířátka</button>
-          <button id="btn-over-menu" class="btn">🏠 Menu</button>
+          <button id="btn-over-shop" class="btn" data-i18n="over.animals">🛍 Zvířátka</button>
+          <button id="btn-over-menu" class="btn" data-i18n="over.menu">🏠 Menu</button>
         </div>
       </div>
     </div>
@@ -100,31 +107,33 @@
   <!-- PAUZA -->
   <div id="screen-pause" class="screen">
     <div class="over-card small">
-      <h2>Přestávka na trávu 🌱</h2>
-      <button id="btn-resume" class="btn big">▶ Pokračovat</button>
-      <button id="btn-pause-menu" class="btn">🏠 Zpět do menu</button>
+      <h2 data-i18n="pause.title">Přestávka na trávu 🌱</h2>
+      <button id="btn-resume" class="btn big" data-i18n="pause.resume">▶ Pokračovat</button>
+      <button id="btn-pause-menu" class="btn" data-i18n="pause.menu">🏠 Zpět do menu</button>
     </div>
   </div>
 
   <!-- PREMIUM MODAL -->
   <div id="premium-modal" class="modal">
     <div class="modal-card">
-      <h3>⭐ Prémiové zvířátko</h3>
-      <p><strong id="premium-name"></strong> patří mezi prémiová zvířátka. V mobilní verzi hry půjde odemknout nákupem, který přímo podpoří azyl Nech mě růst.</p>
-      <p class="muted">V této demo verzi si ho můžeš vyzkoušet zdarma. A jestli chceš azylu pomoct doopravdy, mrkni na <a href="https://nechmerust.org" target="_blank" rel="noopener">nechmerust.org</a>. 💚</p>
-      <button id="btn-premium-unlock" class="btn big">Odemknout (demo)</button>
-      <button id="btn-premium-close" class="btn tiny">Zavřít</button>
+      <h3 data-i18n="premium.title">⭐ Prémiové zvířátko</h3>
+      <p><strong id="premium-name"></strong> <span data-i18n="premium.body">patří mezi prémiová zvířátka. V mobilní verzi hry půjde odemknout nákupem, který přímo podpoří azyl Nech mě růst.</span></p>
+      <p class="muted" data-i18n="premium.demo">V této demo verzi si ho můžeš vyzkoušet zdarma. A jestli chceš azylu pomoct doopravdy, mrkni na <a href="https://nechmerust.org" target="_blank" rel="noopener">nechmerust.org</a>. 💚</p>
+      <button id="btn-premium-unlock" class="btn big" data-i18n="premium.unlock">Odemknout (demo)</button>
+      <button id="btn-premium-close" class="btn tiny" data-i18n="premium.close">Zavřít</button>
     </div>
   </div>
 
   <div id="toast"></div>
 
-  <!-- výzva k otočení telefonu (jen mobil na výšku) -->
+  <!-- výzva k otočení telefonu (jen mobil na výšku) – dvojjazyčná -->
   <div id="rotate-overlay">
     <div class="rotate-phone">📱</div>
     <p>Otoč telefon na šířku!<br><span>Uvidíš dál před sebe a stihneš víc. 🥕</span></p>
+    <p class="rotate-en">Turn your phone sideways!<br><span>You’ll see further ahead and react in time. 🥕</span></p>
   </div>
 
+  <script src="js/i18n.js"></script>
   <script src="js/data.js"></script>
   <script src="js/gfx.js"></script>
   <script src="js/audio.js"></script>

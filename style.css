@@ -137,6 +137,42 @@ a.btn { text-decoration: none; display: inline-block; }
   to { opacity: 1; transform: none; }
 }
 .menu-top { text-align: center; margin-top: 4vh; }
+
+/* přepínač jazyka – viditelný v rohu úvodní obrazovky */
+.lang-switch {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right, 14px));
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255,255,255,0.28);
+  border: 1px solid rgba(255,255,255,0.45);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  z-index: 5;
+}
+.lang-btn {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #fff;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  transition: background .15s, color .15s, transform .1s;
+}
+.lang-btn:active { transform: scale(0.95); }
+.lang-btn.active {
+  background: linear-gradient(180deg, #ffe08a, #ffc94a);
+  color: #4a3220;
+  text-shadow: none;
+  box-shadow: 0 2px 0 #d89b26, 0 3px 8px rgba(0,0,0,0.2);
+}
 .game-title {
   font-size: clamp(3rem, 11vw, 5.5rem);
   font-weight: 800;
@@ -155,7 +191,33 @@ a.btn { text-decoration: none; display: inline-block; }
 }
 .subtitle a { color: #ffe08a; }
 
+/* druhý jazyk pod titulkem – úvodní obrazovka je dvojjazyčná */
+.subtitle-alt {
+  margin-top: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.75);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  font-style: italic;
+}
+.subtitle-alt a { color: rgba(255,224,138,0.85); }
+
 .menu-mid { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.menu-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* zvýrazněné hlavní tlačítko – jemné pulzování */
+.btn.play { animation: playPulse 2.2s ease-in-out infinite; }
+@keyframes playPulse {
+  0%, 100% { box-shadow: 0 4px 0 #d89b26, 0 8px 18px rgba(0,0,0,0.18), 0 0 0 0 rgba(255,224,138,0.55); }
+  50%      { box-shadow: 0 4px 0 #d89b26, 0 8px 22px rgba(0,0,0,0.22), 0 0 0 12px rgba(255,224,138,0); }
+}
+
+/* jemný nástup prvků menu */
+#screen-menu.visible .menu-top   { animation: menuDrop .5s cubic-bezier(.2,.9,.3,1.2) both; }
+#screen-menu.visible .menu-mid   { animation: menuRise .5s .08s cubic-bezier(.2,.9,.3,1.2) both; }
+#screen-menu.visible .menu-bottom{ animation: menuRise .5s .16s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes menuDrop { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
+@keyframes menuRise { from { opacity: 0; transform: translateY(14px); }  to { opacity: 1; transform: none; } }
 .menu-char-info {
   text-align: center; color: #fff;
   background: rgba(0,0,0,0.28);
@@ -298,6 +360,8 @@ a.btn { text-decoration: none; display: inline-block; }
   padding: 30px;
 }
 #rotate-overlay span { font-size: 1rem; font-weight: 600; opacity: 0.85; }
+#rotate-overlay .rotate-en { font-size: 1.1rem; opacity: 0.8; }
+#rotate-overlay .rotate-en span { font-size: 0.85rem; }
 .rotate-phone {
   font-size: 4.5rem;
   animation: rotatePhone 1.6s ease-in-out infinite;
@@ -317,21 +381,65 @@ a.btn { text-decoration: none; display: inline-block; }
 @media (max-height: 560px) {
   .screen { padding: max(8px, env(safe-area-inset-top)) 16px max(8px, env(safe-area-inset-bottom)); }
 
-  /* menu */
+  /* menu na šířku – vymazlená verze */
+  #screen-menu {
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0) 34%),
+      linear-gradient(0deg, rgba(0,0,0,0.22), rgba(0,0,0,0) 30%);
+  }
+  .lang-switch { top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right, 10px)); }
+  .lang-btn { font-size: 0.74rem; padding: 5px 11px; }
+}
+
+/* na úzkém displeji na šířku zbydou z přepínače jen vlaječky, ať nekolidují s titulem */
+@media (max-height: 560px) and (max-width: 740px) {
+  .lang-label { display: none; }
+  .lang-btn { font-size: 0.95rem; padding: 4px 10px; }
+}
+
+@media (max-height: 560px) {
+
   .menu-top { margin-top: 0; }
-  .game-title { font-size: clamp(1.9rem, 13vh, 3.2rem); }
+  .game-title {
+    font-size: clamp(1.9rem, 14vh, 3.4rem);
+    text-shadow: 0 3px 0 #55a13c, 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3);
+  }
+  .game-title span { text-shadow: 0 3px 0 #d89b26, 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3); }
   .subtitle { margin-top: 2px; font-size: 0.85rem; }
-  .menu-mid { gap: 8px; }
-  .menu-char-info { padding: 4px 18px; border-radius: 14px; }
+  .subtitle-alt { margin-top: 0; font-size: 0.72rem; }
+
+  /* karta postavy + tlačítka vedle sebe ve skleněném panelu;
+     panel uhne doprava, ať je vybrané zvířátko vidět, jak běhá */
+  .menu-mid {
+    flex-direction: row;
+    align-items: stretch;
+    align-self: flex-end;
+    margin-right: max(3vw, env(safe-area-inset-right, 0px));
+    gap: 14px;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 22px;
+    padding: 12px 18px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  }
+  .menu-char-info {
+    display: flex; flex-direction: column; justify-content: center;
+    background: rgba(0,0,0,0.22);
+    padding: 6px 18px; border-radius: 16px;
+    max-width: 46vw;
+  }
   .menu-char-info .charname { font-size: 1.05rem; }
-  .menu-char-info .perk { font-size: 0.78rem; }
+  .menu-char-info .perk { font-size: 0.76rem; }
+  .menu-actions { flex-direction: column; justify-content: center; gap: 8px; }
+
   .btn { font-size: 0.92rem; padding: 8px 20px; }
   .btn.big { font-size: 1.15rem; padding: 10px 32px; }
   .btn.tiny { font-size: 0.76rem; padding: 6px 12px; }
   .btn.round { width: 40px; height: 40px; line-height: 40px; font-size: 1.1rem; }
   .hud-chip { padding: 4px 12px; font-size: 0.85rem; }
   .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  .controls-hint { width: 100%; font-size: 0.68rem; }
+  .controls-hint { width: 100%; font-size: 0.68rem; opacity: 0.9; }
 
   /* karta po doběhnutí – přeskládaná na šířku */
   #screen-over { padding: 8px 12px; }
