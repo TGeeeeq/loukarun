@@ -109,6 +109,12 @@ html, body {
 
 /* menu */
 #screen-menu { justify-content: space-between; background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0) 30%); }
+/* plynulé objevení menu po intru */
+#screen-menu.fade-in { animation: menuFadeIn .7s ease both; }
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
 .menu-top { text-align: center; margin-top: 4vh; }
 .game-title {
   font-size: clamp(3rem, 11vw, 5.5rem);
