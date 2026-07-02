@@ -321,7 +321,10 @@
     if (S.mode !== 'run' && !S.demo) return;
     tutInput('jump');
     if (S.sliding > 0) S.sliding = 0;
-    const jumpPower = 950 * (S.stats?.jump || 1);
+    // odraz 880 ≈ výška skoku 149 px, dvojskok z vrcholu přidá ~69 px –
+    // nejvyšší překážka má 58 px a zlatá mrkev visí ve 130 px, takže
+    // obojí jde v pohodě a zvíře nelétá půl obrazovky do nebe
+    const jumpPower = 880 * (S.stats?.jump || 1);
     if (!S.airborne) {
       S.vy = -jumpPower;
       S.airborne = true;
@@ -330,7 +333,7 @@
       puffs(6);
       AUDIO.play('jump');
     } else if (S.jumps === 1) {
-      S.vy = -jumpPower * 0.88;
+      S.vy = -jumpPower * 0.68;
       S.jumps = 2;
       AUDIO.play('djump');
       // obláček pod nohama při dvojskoku
