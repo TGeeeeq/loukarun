@@ -285,9 +285,13 @@ const AUDIO = (() => {
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
     if (!ensureCtx()) return;
-    if (musicEnabled && lastKey && !Proc.timer && (!musicEl || musicEl.paused)) {
-      playMusic(lastKey);
+    if (!musicEnabled || !lastKey) return;
+    // mp3 čekající na povolení má přednost – jakmile se rozjede,
+    // generovaná hudba se stáhne
+    if (musicEl && currentTrack && musicEl.paused) {
+      musicEl.play().then(() => Proc.stop(0.3)).catch(() => {});
     }
+    if (!Proc.timer && (!musicEl || musicEl.paused)) playMusic(lastKey);
   }
   window.addEventListener('pointerdown', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
