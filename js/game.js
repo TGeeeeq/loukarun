@@ -4,12 +4,13 @@
    ========================================================= */
 
 (() => {
-  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY } = DATA;
+  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY } = DATA;
 
   /* ---------- canvas ---------- */
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   let W = 0, H = 0, DPR = 1, groundY = 0;
+  let vignette = null; // cachovaný gradient vinětace
 
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -21,6 +22,7 @@
     canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     groundY = H * 0.78;
+    vignette = null;
   }
   window.addEventListener('resize', resize);
   resize();
@@ -56,6 +58,7 @@
     // hráč
     py: 0, vy: 0, airborne: false, jumps: 0,
     sliding: 0,             // zbývající čas skluzu (s)
+    jumpBuf: 0,             // zapamatované ťuknutí těsně před dopadem (s)
     stumble: 0, invuln: 0, squash: 0,
     runPhase: 0, blink: 0,
     // svět
@@ -64,6 +67,7 @@
     nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
     bubble: null, bubbleT: 0, nextQuoteAt: 6,
+    sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
     shake: 0,
     demo: true,             // atrakt mód za menu
@@ -71,6 +75,9 @@
 
   const PX_PER_M = 42;
   const GRAVITY = 2600;
+  // pozadí se posouvá pomaleji než pěšina – kulisy jsou déle na očích,
+  // takže si hráč stihne přečíst cedule a všimnout si vtípků
+  const FAR_PARALLAX = 0.45;
 
   function charById(id) { return CHARACTERS.find(c => c.id === id); }
 
@@ -326,6 +333,10 @@
           vy: Math.random() * 60 + 20, r: 5 + Math.random() * 5, life: 0.5, c: '#ffffff', a: 0.8,
         });
       }
+    } else {
+      // ťuknutí těsně před dopadem se zapamatuje a skočí se hned po doteku země,
+      // takže žádný klik nepřijde vniveč
+      S.jumpBuf = 0.16;
     }
   }
 
@@ -382,8 +393,8 @@
     S.nextPickupX = demo ? Infinity : 650;
     S.nextDecorX = 100;
     S.nextFlyerX = 400;
-    S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0;
-    S.stumble = 0; S.invuln = 0; S.bubble = null;
+    S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
+    S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
   }
 
@@ -431,11 +442,14 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
     if (isBest) save.best = dist;
+    // příběhový konec – každé zvířátko střídá své příběhy popořadě,
+    // takže tři doběhy za sebou vyprávějí tři různé konce
+    if (!save.storyIdx) save.storyIdx = {};
+    const sIdx = (save.storyIdx[S.char.id] || 0) % S.char.stories.length;
+    const story = S.char.stories[sIdx];
+    save.storyIdx[S.char.id] = sIdx + 1;
     persist();
     AUDIO.play('finish');
-
-    // příběhový konec
-    const story = S.char.stories[Math.floor(Math.random() * S.char.stories.length)];
     document.getElementById('over-title').textContent = isBest ? '🏆 NOVÝ REKORD!' : 'CÍL DNEŠNÍHO BĚHU!';
     document.getElementById('over-story').textContent = story;
     document.getElementById('over-dist').textContent = dist + ' m';
@@ -536,7 +550,24 @@
   // aby se nepletlo s překážkami na pěšině
   const NEAR_PROPS = new Set(['flower', 'mushroom', 'stump', 'basket', 'gnome', 'campfire']);
 
+  // lidští obyvatelé Louky – objevují se vzácně a střídají se
+  const HUMAN_PROPS = Object.keys(HUMANS);
+  let humanIdx = Math.floor(Math.random() * HUMAN_PROPS.length);
+
   function spawnDecor() {
+    // občas u pěšiny fandí někdo z lidí, co se o azyl starají
+    if (Math.random() < 0.13) {
+      S.decor.push({
+        prop: HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length],
+        x: S.nextDecorX,
+        far: true,
+        human: true,
+        said: false,
+        s: 0.8 + Math.random() * 0.15,
+      });
+      S.nextDecorX += 640 + Math.random() * 620;
+      return;
+    }
     const env = currentEnv().env;
     const props = env.props;
     const p = props[Math.floor(Math.random() * props.length)];
@@ -550,7 +581,7 @@
       s: isSign ? 0.95 + Math.random() * 0.2 : (far ? 0.55 + Math.random() * 0.25 : 0.75 + Math.random() * 0.3),
       extra: isSign ? SIGNS[Math.floor(Math.random() * SIGNS.length)] : null,
     });
-    S.nextDecorX += 280 + Math.random() * 440;
+    S.nextDecorX += 460 + Math.random() * 640;
   }
 
   /* ---------- letci kroužící na obloze ---------- */
@@ -599,9 +630,11 @@
         }
       }
       // jednou za přelet něco vesele zavolá
-      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.9) {
+      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.85) {
         f.said = true;
-        if (Math.random() < 0.45) floater(randomQuote(EVENTS.flyer[f.type]), f.sx, f.sy - 26, '#ffffff');
+        if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
+          S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
+        }
       }
     }
   }
@@ -701,8 +734,10 @@
         S.py = 0; S.vy = 0;
         if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
         S.airborne = false; S.jumps = 0;
+        if (S.jumpBuf > 0) { S.jumpBuf = 0; jump(); } // zapamatované ťuknutí
       }
     }
+    S.jumpBuf = Math.max(0, S.jumpBuf - dt);
     S.sliding = Math.max(0, S.sliding - dt);
     S.stumble = Math.max(0, S.stumble - dt);
     S.invuln = Math.max(0, S.invuln - dt);
@@ -714,7 +749,7 @@
     if (S.blink < -3 - Math.random() * 3) S.blink = 0.12;
 
     // spawn
-    while (S.nextDecorX < S.worldX + W + 400) spawnDecor();
+    while (S.nextDecorX < S.worldX + W / FAR_PARALLAX + 500) spawnDecor();
     while (S.nextFlyerX < S.worldX + W + 700) spawnFlyer();
     S.flyers = S.flyers.filter(f => f.cx > S.worldX - 700);
     updateFlyers(dt, running);
@@ -727,7 +762,7 @@
     const cut = S.worldX - 300;
     S.obstacles = S.obstacles.filter(o => o.x > cut);
     S.pickups = S.pickups.filter(p => p.x > cut && !p.taken);
-    S.decor = S.decor.filter(d => d.x > cut - 400);
+    S.decor = S.decor.filter(d => d.x > cut - 1300); // pomalejší parallax = déle na obrazovce
 
     // hudba podle prostředí
     if (running) {
@@ -750,6 +785,7 @@
 
       collide(dt);
       quotes(dt);
+      humanQuotes();
       updateHud(false);
     }
 
@@ -762,6 +798,8 @@
     S.particles = S.particles.filter(p => p.life > 0);
     for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
     S.floaters = S.floaters.filter(f => f.life > 0);
+    for (const b of S.sideBubbles) b.t += dt;
+    S.sideBubbles = S.sideBubbles.filter(b => b.t < b.dur);
 
     // ambientní částice prostředí
     ambientTimer -= dt;
@@ -895,6 +933,19 @@
     }
   }
 
+  // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
+  function humanQuotes() {
+    const px = playerX();
+    for (const d of S.decor) {
+      if (!d.human || d.said) continue;
+      const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
+      if (sx > W * 0.3 && sx < W * 0.85) {
+        d.said = true;
+        S.sideBubbles.push({ txt: randomQuote(HUMANS[d.prop]), t: 0, dur: 4, decor: d });
+      }
+    }
+  }
+
   /* =========================================================
      RENDER
      ========================================================= */
@@ -921,9 +972,9 @@
     // dekorace – ztlumená, ať je na první pohled jasné, že to není překážka
     for (const d of S.decor) {
       if (!d.far) continue;
-      const sx = (d.x - S.worldX) * 0.75 + px;
+      const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
       if (sx < -220 || sx > W + 220) continue;
-      ctx.globalAlpha = d.prop === 'signpost' ? 0.85 : 0.62;
+      ctx.globalAlpha = d.human ? 0.95 : (d.prop === 'signpost' ? 0.85 : 0.62);
       GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }
@@ -955,15 +1006,12 @@
       ctx.fillStyle = 'rgba(20, 14, 6, 0.28)';
       GFX.ell(ctx, sx, groundY + 8, o.w / 2 + 8, 9);
       ctx.fill();
-      ctx.save();
-      ctx.shadowColor = 'rgba(30, 20, 8, 0.4)';
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetY = 3;
+      // bez rozmazaného stínu – shadowBlur každý snímek znatelně škubal na mobilech,
+      // ostrý stín na zemi pod překážkou stačí
       GFX.drawObstacle(ctx, {
         ...o, x: sx,
         y: o.flying ? groundY - o.clearance : groundY,
       }, S.t);
-      ctx.restore();
     }
 
     if (S.mode === 'intro') {
@@ -999,16 +1047,19 @@
 
     // částice
     for (const p of S.particles) {
-      ctx.globalAlpha = Math.min(1, p.life * 2) * (p.a || 1);
-      if (p.glow) {
-        ctx.shadowColor = p.c; ctx.shadowBlur = 10;
-      }
+      const pa = Math.min(1, p.life * 2) * (p.a || 1);
       ctx.fillStyle = p.c;
       const sway = p.sway ? Math.sin(S.t * 0.004 + p.sway) * 6 : 0;
+      if (p.glow) { // levná záře místo shadowBlur – měkký kruh pod svatojánskou muškou
+        ctx.globalAlpha = pa * 0.3;
+        ctx.beginPath();
+        ctx.arc(p.x + sway, p.y, p.r * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = pa;
       ctx.beginPath();
       ctx.arc(p.x + sway, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
 
@@ -1025,13 +1076,30 @@
     }
     ctx.globalAlpha = 1;
 
+    // bublinky obyvatel a letců – plují se svým mluvčím
+    for (const b of S.sideBubbles) {
+      let ax, ay;
+      if (b.decor) {
+        ax = (b.decor.x - S.worldX) * FAR_PARALLAX + px;
+        ay = groundY - 16 - (b.decor.human ? 148 : 80) * b.decor.s;
+      } else if (b.flyer) {
+        ax = b.flyer.sx; ay = b.flyer.sy - 14;
+      }
+      if (ax === undefined) continue;
+      const fade = Math.max(0, Math.min(1, b.t * 4, (b.dur - b.t) * 2.5));
+      drawSideBubble(ax, ay, b.txt, fade);
+    }
+
     ctx.restore();
 
-    // vinětace pro filmový vzhled
-    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(0,0,0,0.22)');
-    ctx.fillStyle = vg;
+    // vinětace pro filmový vzhled – gradient se vytváří jen po změně velikosti,
+    // ne každý snímek
+    if (!vignette) {
+      vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)');
+      vignette.addColorStop(1, 'rgba(0,0,0,0.22)');
+    }
+    ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -1042,20 +1110,66 @@
     const w = Math.min(ctx.measureText(text).width + 40, W - 40);
     const bx = Math.min(Math.max(x - w / 2, 10), W - w - 10);
     const by = y - 60;
+    // ostrý stín posunutou siluetou místo shadowBlur – rychlejší a bublina se nechvěje
+    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+    GFX.rr(ctx, bx + 2, by + 4, w, 50, 24);
+    ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.96)';
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 3;
     GFX.rr(ctx, bx, by, w, 50, 24);
     ctx.fill();
     // ocásek bubliny
     ctx.beginPath();
     ctx.moveTo(x - 7, by + 49); ctx.lineTo(x + 12, by + 49); ctx.lineTo(x, by + 68);
     ctx.closePath(); ctx.fill();
-    ctx.shadowColor = 'transparent';
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
     ctx.fillText(text, bx + w / 2, by + 33, w - 26);
+    ctx.restore();
+  }
+
+  // zalomení textu na řádky podle maximální šířky (písmo už musí být nastavené)
+  function wrapLines(text, maxW) {
+    const words = text.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const word of words) {
+      const test = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = word; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // menší bublina pro postavy v pozadí – vždy celá na obrazovce,
+  // ocásek ukazuje na mluvčího, i když je bublina odsunutá od kraje
+  function drawSideBubble(ax, ay, text, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = '700 19px "Baloo 2", sans-serif';
+    const lines = wrapLines(text, Math.min(280, W * 0.42));
+    const lineH = 24;
+    let tw = 0;
+    for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
+    const w = tw + 28;
+    const h = lines.length * lineH + 16;
+    const bx = Math.min(Math.max(ax - w / 2, 8), W - w - 8);
+    const by = Math.max(ay - h - 12, 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    GFX.rr(ctx, bx + 2, by + 3, w, h, 14); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    GFX.rr(ctx, bx, by, w, h, 14); ctx.fill();
+    // ocásek – špička míří na mluvčího
+    const tipX = Math.min(Math.max(ax, bx + 10), bx + w - 10);
+    const baseX = Math.min(Math.max(tipX, bx + 18), bx + w - 18);
+    ctx.beginPath();
+    ctx.moveTo(baseX - 7, by + h - 1);
+    ctx.lineTo(baseX + 8, by + h - 1);
+    ctx.lineTo(tipX, by + h + 11);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a3230';
+    ctx.textAlign = 'center';
+    lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 24 + i * lineH));
     ctx.restore();
   }
 

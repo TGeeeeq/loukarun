@@ -69,8 +69,8 @@ const DATA = (() => {
       unlock: { type: 'coins', price: 500 },
       perk: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
       stats: { speed: 1.08, jump: 1.0, drain: 1.0, carrotBonus: 1.3 },
-      // hnědo-bílá strakatá kravka s malými růžky
-      colors: { body: '#8a5638', belly: '#eee1d2', mane: '#5c3822', muzzle: '#e8b7a0', ear: '#8a5638', earIn: '#cb9c82', spots: '#f2ece0', pattern: 'patches', hoof: '#3d3128' },
+      // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
+      colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
         'Búúrned kalorie? Já je předběhla!',
         'Louka je moje běžecká dráha!',
@@ -147,8 +147,8 @@ const DATA = (() => {
       unlock: { type: 'premium', price: '49 Kč' },
       perk: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
-      // bílá kravka s velkými černými fleky, bez rohů
-      colors: { body: '#f0ebe0', belly: '#faf6ec', mane: '#3a3835', muzzle: '#e8b0a0', ear: '#f0ebe0', earIn: '#cbb9ae', spots: '#33302c', pattern: 'holstein', noHorns: true, hoof: '#46423e' },
+      // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy
+      colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', noHorns: true, eyePatch: '#552a12', forelock: '#f7f2e6', hoof: '#3d3128' },
       quotes: [
         'Spěchám. Pomalu, ale spěchám.',
         'Klid je taky rychlost. Jen jiná.',
@@ -176,7 +176,7 @@ const DATA = (() => {
       hillFar: '#a8d8a0', hillNear: '#7cc276',
       ground: '#5aa84f', groundDark: '#4a9440', path: '#c9b485',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone'],
+      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone', 'catnap', 'frogpond'],
       particles: 'petals',
     },
     {
@@ -185,7 +185,7 @@ const DATA = (() => {
       hillFar: '#b5d49a', hillNear: '#8cbf72',
       ground: '#6aab52', groundDark: '#589644', path: '#cdb489',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['appletree', 'ladder', 'basket', 'scarecrow'],
+      props: ['appletree', 'ladder', 'basket', 'scarecrow', 'snail'],
       particles: 'leaves',
     },
     {
@@ -194,7 +194,7 @@ const DATA = (() => {
       hillFar: '#5d9c72', hillNear: '#417d56',
       ground: '#3f7a4a', groundDark: '#356a3f', path: '#a8926b',
       sun: '#f5f0c0', clouds: '#eef7ee',
-      props: ['tree', 'mushroom', 'gnome', 'stump', 'owlbox'],
+      props: ['tree', 'mushroom', 'gnome', 'stump', 'owlbox', 'frogpond', 'snail'],
       particles: 'fireflies',
     },
     {
@@ -203,7 +203,7 @@ const DATA = (() => {
       hillFar: '#c2b7a0', hillNear: '#a8c684',
       ground: '#79a85e', groundDark: '#679250', path: '#d3bd93',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['cottage', 'fencebg', 'tractor', 'laundry', 'dovecote'],
+      props: ['cottage', 'fencebg', 'tractor', 'laundry', 'dovecote', 'catnap'],
       particles: 'none',
     },
     {
@@ -212,7 +212,7 @@ const DATA = (() => {
       hillFar: '#c77b5a', hillNear: '#9c5f46',
       ground: '#8a6a45', groundDark: '#79593a', path: '#c9a06b',
       sun: '#ffce7a', clouds: '#ffd9b8',
-      props: ['haystack', 'sunflower', 'signpost', 'windmill'],
+      props: ['haystack', 'sunflower', 'signpost', 'windmill', 'catnap'],
       particles: 'petals',
     },
     {
@@ -221,7 +221,7 @@ const DATA = (() => {
       hillFar: '#2e3c63', hillNear: '#26334f',
       ground: '#2c4038', groundDark: '#24352e', path: '#5a5f6e',
       sun: '#f5f2d0', clouds: '#39466b',
-      props: ['tree', 'tent', 'campfire', 'owlbox'],
+      props: ['tree', 'tent', 'campfire', 'owlbox', 'frogpond'],
       particles: 'stars',
       night: true,
     },
@@ -251,6 +251,38 @@ const DATA = (() => {
     goose: [
       { body: '#f8f6ee', tail: '#e2ded0' },                  // bílá husa
       { body: '#c9c2b4', tail: '#8a8478' },                  // šedá husa
+    ],
+  };
+
+  /* ---------- LIDÉ Z LOUKY ----------
+     Tři lidští obyvatelé azylu fandí z pozadí.
+     Tomáš – staví (a na hlavě mu bydlí slepice)
+     Tony – pečuje o zvířata a o wi-fi signál
+     Maruška – bylinky, zpěv, malování a miminko v bříšku */
+  const HUMANS = {
+    tomas: [
+      'Neruš, stavíme!',
+      'Ta slepice je můj stavební dozor.',
+      'Ještě prkno a je z toho palác!',
+      'Změřeno dvakrát, uříznuto třikrát…',
+      'Hnízdo na hlavě? Aspoň mám vejce čerstvá!',
+      'Kdo maká, ten se nenudí!',
+    ],
+    tony: [
+      'Beran podrbán, appka nasazena.',
+      'Mám 5G i v kurníku!',
+      'AI tvrdí, že jsi nejrychlejší v okolí!',
+      'Beránek právě dostal svůj první token.',
+      'Ovce spočítány. Digitálně!',
+      'Nabíjím telefon i berana.',
+    ],
+    maruska: [
+      'Běž, běž! Zpívám ti do kroku! ♪',
+      'Miminko fandí kopáním!',
+      'Meduňka na klid, mrkev na běh!',
+      'Namaluju tě, až doběhneš!',
+      'My s bříškem fandíme oba!',
+      'Avalo, nech trávu i ostatním!',
     ],
   };
 
@@ -315,5 +347,5 @@ const DATA = (() => {
     drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
   };
 
-  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY };
+  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY };
 })();
