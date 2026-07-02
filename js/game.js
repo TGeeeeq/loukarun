@@ -67,6 +67,7 @@
     nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
     bubble: null, bubbleT: 0, nextQuoteAt: 6,
+    sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
     shake: 0,
     demo: true,             // atrakt mód za menu
@@ -393,7 +394,7 @@
     S.nextDecorX = 100;
     S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
-    S.stumble = 0; S.invuln = 0; S.bubble = null;
+    S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
   }
 
@@ -626,9 +627,11 @@
         }
       }
       // jednou za přelet něco vesele zavolá
-      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.9) {
+      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.85) {
         f.said = true;
-        if (Math.random() < 0.45) floater(randomQuote(EVENTS.flyer[f.type]), f.sx, f.sy - 26, '#ffffff');
+        if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
+          S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
+        }
       }
     }
   }
@@ -792,6 +795,8 @@
     S.particles = S.particles.filter(p => p.life > 0);
     for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
     S.floaters = S.floaters.filter(f => f.life > 0);
+    for (const b of S.sideBubbles) b.t += dt;
+    S.sideBubbles = S.sideBubbles.filter(b => b.t < b.dur);
 
     // ambientní částice prostředí
     ambientTimer -= dt;
@@ -931,10 +936,9 @@
     for (const d of S.decor) {
       if (!d.human || d.said) continue;
       const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
-      if (sx > W * 0.25 && sx < W * 0.9) {
+      if (sx > W * 0.3 && sx < W * 0.85) {
         d.said = true;
-        const fx = Math.min(Math.max(sx, 130), W - 130);
-        floater(randomQuote(HUMANS[d.prop]), fx, groundY - 20 - 150 * d.s, '#ffffff');
+        S.sideBubbles.push({ txt: randomQuote(HUMANS[d.prop]), t: 0, dur: 4, decor: d });
       }
     }
   }
@@ -1069,6 +1073,20 @@
     }
     ctx.globalAlpha = 1;
 
+    // bublinky obyvatel a letců – plují se svým mluvčím
+    for (const b of S.sideBubbles) {
+      let ax, ay;
+      if (b.decor) {
+        ax = (b.decor.x - S.worldX) * FAR_PARALLAX + px;
+        ay = groundY - 16 - (b.decor.human ? 148 : 80) * b.decor.s;
+      } else if (b.flyer) {
+        ax = b.flyer.sx; ay = b.flyer.sy - 14;
+      }
+      if (ax === undefined) continue;
+      const fade = Math.max(0, Math.min(1, b.t * 4, (b.dur - b.t) * 2.5));
+      drawSideBubble(ax, ay, b.txt, fade);
+    }
+
     ctx.restore();
 
     // vinětace pro filmový vzhled – gradient se vytváří jen po změně velikosti,
@@ -1103,6 +1121,52 @@
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
     ctx.fillText(text, bx + w / 2, by + 33, w - 26);
+    ctx.restore();
+  }
+
+  // zalomení textu na řádky podle maximální šířky (písmo už musí být nastavené)
+  function wrapLines(text, maxW) {
+    const words = text.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const word of words) {
+      const test = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = word; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // menší bublina pro postavy v pozadí – vždy celá na obrazovce,
+  // ocásek ukazuje na mluvčího, i když je bublina odsunutá od kraje
+  function drawSideBubble(ax, ay, text, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = '700 19px "Baloo 2", sans-serif';
+    const lines = wrapLines(text, Math.min(280, W * 0.42));
+    const lineH = 24;
+    let tw = 0;
+    for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
+    const w = tw + 28;
+    const h = lines.length * lineH + 16;
+    const bx = Math.min(Math.max(ax - w / 2, 8), W - w - 8);
+    const by = Math.max(ay - h - 12, 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    GFX.rr(ctx, bx + 2, by + 3, w, h, 14); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    GFX.rr(ctx, bx, by, w, h, 14); ctx.fill();
+    // ocásek – špička míří na mluvčího
+    const tipX = Math.min(Math.max(ax, bx + 10), bx + w - 10);
+    const baseX = Math.min(Math.max(tipX, bx + 18), bx + w - 18);
+    ctx.beginPath();
+    ctx.moveTo(baseX - 7, by + h - 1);
+    ctx.lineTo(baseX + 8, by + h - 1);
+    ctx.lineTo(tipX, by + h + 11);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a3230';
+    ctx.textAlign = 'center';
+    lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 24 + i * lineH));
     ctx.restore();
   }
 
