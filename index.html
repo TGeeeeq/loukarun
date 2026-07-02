@@ -7,9 +7,11 @@
   <meta name="theme-color" content="#8ed4f7">
   <title>Louka Run 🥕 – hra na podporu azylu Nech mě růst</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <!-- písmo hostujeme sami (žádné požadavky na Google = žádné starosti s GDPR) -->
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
   <link rel="preload" as="image" href="assets/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -56,8 +58,9 @@
       <div class="menu-settings">
         <button id="btn-sfx" class="btn tiny">🔊 Zvuky</button>
         <button id="btn-music" class="btn tiny">🎵 Hudba</button>
+        <a class="btn tiny buy" href="https://nechmerust.org/jak-se-zapojit" target="_blank" rel="noopener">💚 Podpoř azyl</a>
       </div>
-      <p class="controls-hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</p>
+      <p class="controls-hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz &nbsp;·&nbsp; <a class="privacy-link" href="soukromi.html">🔒 Soukromí</a></p>
     </div>
   </div>
 
@@ -126,5 +129,11 @@
   <script src="js/gfx.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/game.js"></script>
+  <script>
+    // PWA: hra jde nainstalovat na plochu a funguje offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+  </script>
 </body>
 </html>
