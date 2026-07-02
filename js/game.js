@@ -1244,6 +1244,7 @@
     $('menu-perk').textContent = I18N.pick(ch.perk);
     $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
     $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
+    $('btn-install').textContent = I18N.t('menu.install');
   }
 
   /* ---------- obchod ---------- */
@@ -1426,6 +1427,28 @@
     if (save.music) AUDIO.playMusic('menu');
   });
 
+  /* ---------- instalace PWA ----------
+     Chrome na Androidu žádnou nabídku sám od sebe neukazuje – appka musí
+     zachytit beforeinstallprompt a nabídnout instalaci vlastním tlačítkem. */
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    $('btn-install').hidden = false;
+  });
+  $('btn-install').addEventListener('click', async () => {
+    if (!installPrompt) return;
+    AUDIO.play('click');
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+    $('btn-install').hidden = true;
+  });
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    $('btn-install').hidden = true;
+  });
+
   /* ---------- přepínač jazyka ---------- */
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1457,5 +1480,8 @@
   initMenu();
   initIntro();
   showScreen('intro'); // schová menu i HUD, vidět je jen canvas
+  // hudba běží od úplného začátku – když prohlížeč autoplay nedovolí,
+  // rozjede ji první dotek/klávesa (AUDIO si to pohlídá sám)
+  AUDIO.playMusic('intro');
   requestAnimationFrame(frame);
 })();

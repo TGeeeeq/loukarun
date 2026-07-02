@@ -3,6 +3,7 @@
   "short_name": "Louka Run",
   "description": "Veselá běhací hra se zvířátky z azylu Nech mě růst. Běhej, skákej, sbírej mrkvičky!",
   "lang": "cs",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

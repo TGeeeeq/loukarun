@@ -17,6 +17,7 @@ const AUDIO = (() => {
 
   // mapování prostředí → soubor (volitelné, vytvoříš přes Suno)
   const MUSIC_FILES = {
+    intro:   'assets/music/menu.mp3', // intro a menu sdílí soubor → přechod je plynulý
     menu:    'assets/music/menu.mp3',
     louka:   'assets/music/louka.mp3',
     sad:     'assets/music/louka.mp3',
@@ -102,6 +103,8 @@ const AUDIO = (() => {
 
   const MUSIC_DEFS = {
     // bpm, root = MIDI nota, prog = stupně akordů (1 takt každý)
+    // intro je ve stejné tónině jako menu, takže se do něj plynule prolne
+    intro:   { bpm: 108, root: 62, scale: 'major',  prog: [0, 5, 3, 4], lead: 'triangle', leadOct: 1, perc: false, oompah: false, density: 0.55 },
     menu:    { bpm: 100, root: 62, scale: 'major',  prog: [0, 3, 4, 0], lead: 'sine',     leadOct: 1, perc: false, oompah: false, density: 0.45 },
     louka:   { bpm: 126, root: 62, scale: 'major',  prog: [0, 5, 3, 4], lead: 'square',   leadOct: 1, perc: true,  oompah: false, density: 0.6 },
     sad:     { bpm: 122, root: 64, scale: 'major',  prog: [0, 3, 1, 4], lead: 'square',   leadOct: 1, perc: true,  oompah: false, density: 0.55 },
@@ -288,6 +291,17 @@ const AUDIO = (() => {
   }
   window.addEventListener('pointerdown', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
+
+  // hned po načtení se pár vteřin snažíme hudbu rozjet i bez doteku –
+  // když to prohlížeč dovolí (itch.io po kliknutí na „Run game“, návrat
+  // na známý web…), hraje okamžitě; jinak počká na první dotek/klávesu
+  let eagerTries = 0;
+  const eagerTimer = setInterval(() => {
+    if (ctx && ctx.state === 'running') { clearInterval(eagerTimer); return; }
+    if (++eagerTries > 8) { clearInterval(eagerTimer); return; }
+    if (lastKey) unlock();
+  }, 400);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
 
   return { play, playMusic, stopMusic, setSfx, setMusic, ensureCtx };
 })();
