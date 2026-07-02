@@ -554,6 +554,13 @@ const DATA = (() => {
         },
       },
       {
+        id: 'hud', gapM: 18, gate: 'tap', hud: true,
+        text: {
+          cs: 'Koukni nahoru: ten oranžový proužek je ukazatel mrkvové energie. Běháním ubývá, mrkvemi se doplňuje. Když dojde, lehneš si do trávy a šlus. Vedle měřím metry a počítám mince — já jsem tam nahoře prostě celý úřad.',
+          en: 'Look up: that orange bar is your carrot energy meter. Running drains it, carrots refill it. When it hits empty, you flop into the grass and that’s that. Next to it I measure meters and count coins — basically I’m the whole office up there.',
+        },
+      },
+      {
         id: 'chicken', gapM: 45, gate: 'jump',
         spawn: { obstacle: 'chicken' },
         text: {

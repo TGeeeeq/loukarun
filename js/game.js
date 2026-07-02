@@ -1317,6 +1317,22 @@
 
     ctx.restore();
 
+    // Karlova lekce o HUD – pulzující rámeček kolem ukazatele mrkvové energie
+    if (S.tut && S.tut.idx >= 0 && TUTORIAL.steps[S.tut.idx].hud
+        && S.tut.bubbleA > 0.1 && S.tut.scale < 0.8) {
+      const hudEnergy = document.getElementById('hud-energy');
+      if (hudEnergy) {
+        const r = hudEnergy.getBoundingClientRect();
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, (1 - S.tut.scale) * (0.5 + 0.3 * Math.sin(S.t * 0.008)));
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        GFX.rr(ctx, r.left - 8, r.top - 6, r.width + 16, r.height + 12, 18);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     // vinětace pro filmový vzhled – gradient se vytváří jen po změně velikosti,
     // ne každý snímek
     if (!vignette) {
@@ -1380,7 +1396,11 @@
     const w = tw + 36;
     const h = lines.length * lineH + 22;
     const bx = Math.min(Math.max(ax - w / 2, 12), W - w - 12);
-    const by = Math.max(ay - h - 16, 12);
+    // bublina nesmí zajet pod HUD – horní mez je spodní hrana ukazatelů
+    const hudEl = document.getElementById('hud');
+    const topSafe = (hudEl && hudEl.classList.contains('visible')
+      ? hudEl.getBoundingClientRect().bottom : 0) + 10;
+    const by = Math.max(ay - h - 16, topSafe);
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     GFX.rr(ctx, bx + 3, by + 4, w, h, 18); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.97)';
