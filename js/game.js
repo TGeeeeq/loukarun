@@ -42,7 +42,7 @@
 
   /* ---------- stav hry ---------- */
   const S = {
-    mode: 'menu',           // menu | run | over | paused
+    mode: 'intro',          // intro | menu | run | over | paused
     t: 0,                   // celkový čas (ms)
     worldX: 0,              // ujetá vzdálenost v px
     speed: 0,
@@ -73,6 +73,233 @@
   const GRAVITY = 2600;
 
   function charById(id) { return CHARACTERS.find(c => c.id === id); }
+
+  /* =========================================================
+     INTRO – zvířátka pobíhají po louce, vykreslí se logo azylu
+     a web, pak se to plynule prolne do menu
+     ========================================================= */
+  const INTRO_LOGO_START = 0.8;   // kdy se začne kreslit logo (s)
+  const INTRO_LOGO_DUR = 2.6;     // jak dlouho se kreslí
+  const INTRO_WEB_AT = 3.2;       // kdy naskočí web
+  const INTRO_END_AT = 7.0;       // kdy intro samo přejde do menu
+  const INTRO_FADE = 1.2;         // délka závěrečného prolnutí
+
+  // na výšku drží intro pozici 0 – rozjede se, až hráč otočí telefon
+  const portraitMq = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+
+  const intro = {
+    t: 0,
+    ending: false, endT: 0,
+    actors: [],
+    logoImg: null, logoReady: false,
+    buf: null, bufCtx: null,
+  };
+
+  function initIntro() {
+    intro.t = 0; intro.ending = false; intro.endT = 0;
+    intro.actors = CHARACTERS.map((ch, i) => ({
+      ch,
+      x: -160 - Math.random() * 80,
+      delay: 0.25 + i * 0.65 + Math.random() * 0.4,
+      speed: 60 + Math.random() * 150,   // navíc k posunu světa – zvířátka se předbíhají
+      scale: 0.78 + Math.random() * 0.28,
+      phase: Math.random() * Math.PI * 2,
+      py: 0, vy: 0,
+      hopT: 0.8 + Math.random() * 2.5,
+      puffT: Math.random() * 0.3,
+    }));
+    intro.logoImg = new Image();
+    intro.logoImg.onload = () => { intro.logoReady = true; };
+    intro.logoImg.src = 'assets/logo.png';
+  }
+
+  function updateIntro(dt) {
+    if (portraitMq.matches) return; // čeká za výzvou „otoč telefon“
+    intro.t += dt;
+
+    for (const a of intro.actors) {
+      if (intro.t < a.delay) continue;
+      if (intro.ending && a.x < -60) continue; // při odchodu už nikdo nový nenabíhá
+      a.x += (a.speed + (intro.ending ? 900 : 0)) * dt;
+
+      // radostné poskočení
+      if (a.py > 0 || a.vy < 0) {
+        a.vy += GRAVITY * dt;
+        a.py -= a.vy * dt;
+        if (a.py <= 0) { a.py = 0; a.vy = 0; }
+      } else {
+        a.hopT -= dt;
+        if (a.hopT <= 0) {
+          a.hopT = 1.5 + Math.random() * 3;
+          a.vy = -480 - Math.random() * 260;
+          a.py = 0.0001;
+        }
+      }
+
+      // obláčky prachu od kopýtek
+      a.puffT -= dt;
+      if (a.puffT <= 0 && a.py === 0 && a.x > -40 && a.x < W + 40) {
+        a.puffT = 0.22 + Math.random() * 0.2;
+        S.particles.push({
+          x: a.x - 30 * a.scale, y: groundY - 3,
+          vx: -80 - Math.random() * 60, vy: -10 - Math.random() * 30,
+          r: 3 + Math.random() * 4, life: 0.4, c: '#e8dcc4', a: 0.6,
+        });
+      }
+
+      // dokola, ať louka pořád žije
+      if (!intro.ending && a.x > W + 160) {
+        a.x = -160 - Math.random() * 120;
+        a.speed = 60 + Math.random() * 150;
+      }
+    }
+
+    if (!intro.ending && intro.t >= INTRO_END_AT) beginIntroEnd();
+    if (intro.ending) {
+      intro.endT += dt;
+      if (intro.endT >= INTRO_FADE) finishIntro();
+    }
+  }
+
+  function beginIntroEnd() {
+    intro.ending = true;
+    intro.endT = 0;
+  }
+
+  function skipIntro() {
+    if (S.mode === 'intro' && !intro.ending && intro.t > 0.6) beginIntroEnd();
+  }
+  window.addEventListener('pointerdown', skipIntro);
+
+  function finishIntro() {
+    S.mode = 'menu';
+    initMenu();
+    const m = document.getElementById('screen-menu');
+    m.classList.add('fade-in');
+    setTimeout(() => m.classList.remove('fade-in'), 800);
+    showScreen('menu');
+  }
+
+  function renderIntro(px) {
+    // pobíhající zvířátka azylu
+    for (const a of intro.actors) {
+      if (intro.t < a.delay || a.x < -160 || a.x > W + 160) continue;
+      const sc = a.scale;
+      const shScale = Math.max(0.4, 1 - a.py / 300);
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      GFX.ell(ctx, a.x, groundY + 6, 40 * sc * shScale, 7 * sc * shScale);
+      ctx.fill();
+      GFX.drawCharacter(ctx, a.ch, a.x, groundY - a.py, sc, {
+        runPhase: S.runPhase * (0.8 + a.speed / 250) + a.phase,
+        airborne: a.py > 0,
+        squash: a.py > 0 ? -0.25 : 0,
+        blink: S.blink > 0,
+      }, S.t + a.phase * 1000);
+    }
+
+    // závěr – vybrané zvířátko dobíhá na své místo v menu
+    if (intro.ending) {
+      const p = Math.min(1, intro.endT / (INTRO_FADE * 0.85));
+      const ease = 1 - Math.pow(1 - p, 3);
+      const x = GFX.lerp(-140, px, ease);
+      const ch = charById(save.selected) || CHARACTERS[0];
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      GFX.ell(ctx, x, groundY + 6, 44, 8);
+      ctx.fill();
+      GFX.drawCharacter(ctx, ch, x, groundY, 1, { runPhase: S.runPhase, blink: S.blink > 0 }, S.t);
+    }
+
+    drawIntroLogo();
+  }
+
+  function drawIntroLogo() {
+    const reveal = Math.max(0, Math.min(1, (intro.t - INTRO_LOGO_START) / INTRO_LOGO_DUR));
+    if (reveal <= 0) return;
+    const fadeOut = intro.ending ? Math.max(0, 1 - intro.endT / (INTRO_FADE * 0.6)) : 1;
+    if (fadeOut <= 0) return;
+
+    // rozměry podle poměru stran obrázku
+    const ratio = intro.logoReady ? intro.logoImg.height / intro.logoImg.width : 0.7;
+    let lw = Math.min(W * 0.46, 480);
+    if (lw * ratio > H * 0.46) lw = (H * 0.46) / ratio;
+    const lh = lw * ratio;
+    const cx = W / 2, cy = H * 0.32;
+
+    // tmavší podklad, ať světlé kruhy loga vyniknou i na jasné obloze
+    const glow = ctx.createRadialGradient(cx, cy, lw * 0.1, cx, cy, lw * 0.85);
+    glow.addColorStop(0, `rgba(28, 42, 30, ${0.32 * reveal * fadeOut})`);
+    glow.addColorStop(1, 'rgba(28, 42, 30, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(cx - lw, cy - lw, lw * 2, lw * 2);
+
+    if (intro.logoReady) {
+      // „vykreslování“ zleva doprava – maska s měkkou hranou v offscreen bufferu
+      const bw = Math.ceil(lw * DPR), bh = Math.ceil(lh * DPR);
+      if (!intro.buf || intro.buf.width !== bw || intro.buf.height !== bh) {
+        intro.buf = document.createElement('canvas');
+        intro.buf.width = bw; intro.buf.height = bh;
+        intro.bufCtx = intro.buf.getContext('2d');
+      }
+      const b = intro.bufCtx;
+      b.clearRect(0, 0, bw, bh);
+      b.drawImage(intro.logoImg, 0, 0, bw, bh);
+      if (reveal < 1) {
+        b.globalCompositeOperation = 'destination-in';
+        const feather = 0.22;
+        const edge = reveal * (1 + feather);
+        const g = b.createLinearGradient(0, 0, bw, 0);
+        g.addColorStop(Math.max(0, Math.min(1, edge - feather)), 'rgba(0,0,0,1)');
+        g.addColorStop(Math.max(0, Math.min(1, edge)), 'rgba(0,0,0,0)');
+        b.fillStyle = g;
+        b.fillRect(0, 0, bw, bh);
+        b.globalCompositeOperation = 'source-over';
+      }
+      ctx.save();
+      ctx.globalAlpha = fadeOut;
+      ctx.shadowColor = 'rgba(20, 26, 18, 0.45)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 4;
+      ctx.drawImage(intro.buf, cx - lw / 2, cy - lh / 2, lw, lh);
+      ctx.restore();
+    } else {
+      // záložní nápis, kdyby se obrázek nestihl načíst
+      ctx.save();
+      ctx.globalAlpha = reveal * fadeOut;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f5efdf';
+      ctx.font = `800 ${Math.round(lw * 0.13)}px "Baloo 2", sans-serif`;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+      ctx.fillText('nech mě růst', cx, cy);
+      ctx.restore();
+    }
+
+    // web azylu
+    const webIn = Math.max(0, Math.min(1, (intro.t - INTRO_WEB_AT) / 0.8));
+    if (webIn > 0) {
+      ctx.save();
+      ctx.globalAlpha = webIn * fadeOut;
+      ctx.textAlign = 'center';
+      ctx.font = `800 ${Math.round(Math.min(34, lw * 0.1))}px "Baloo 2", sans-serif`;
+      const y = cy + lh / 2 + Math.min(46, H * 0.08) + (1 - webIn) * 14;
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(30, 40, 26, 0.4)';
+      ctx.strokeText('nechmerust.org', cx, y);
+      ctx.fillStyle = '#ffe08a';
+      ctx.fillText('nechmerust.org', cx, y);
+      ctx.restore();
+    }
+
+    // nápověda přeskočení
+    if (!intro.ending && intro.t > 1.4) {
+      ctx.save();
+      ctx.globalAlpha = 0.45 + 0.25 * Math.sin(S.t * 0.004);
+      ctx.textAlign = 'center';
+      ctx.font = '600 15px "Baloo 2", sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('ťukni pro přeskočení', W / 2, H - 16);
+      ctx.restore();
+    }
+  }
 
   /* =========================================================
      OVLÁDÁNÍ
@@ -120,6 +347,7 @@
   });
 
   function uiOrJump() {
+    if (S.mode === 'intro') { skipIntro(); return; }
     if (S.mode === 'menu') startRun();
     else if (S.mode === 'over') { /* tlačítka řeší DOM */ }
     else jump();
@@ -480,6 +708,8 @@
 
     S.worldX += spd * dt * (S.stumble > 0 ? 0.55 : 1);
 
+    if (S.mode === 'intro') updateIntro(dt);
+
     // fyzika hráče
     if (S.airborne || S.py > 0) {
       S.vy += GRAVITY * dt;
@@ -768,25 +998,30 @@
       ctx.restore();
     }
 
-    // stín hráče
-    const shScale = Math.max(0.4, 1 - S.py / 400);
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    GFX.ell(ctx, px, groundY + 6, 44 * shScale, 8 * shScale);
-    ctx.fill();
+    if (S.mode === 'intro') {
+      // v intru místo hráče pobíhá celý azyl + kreslí se logo
+      renderIntro(px);
+    } else {
+      // stín hráče
+      const shScale = Math.max(0.4, 1 - S.py / 400);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      GFX.ell(ctx, px, groundY + 6, 44 * shScale, 8 * shScale);
+      ctx.fill();
 
-    // hráč – v menu a obchodě běhá vždy právě vybrané zvířátko,
-    // během běhu (a na kartě po doběhnutí) drží postava z běhu
-    const ch = (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
-    const flash = S.invuln > 0 && Math.floor(S.t / 80) % 2 === 0;
-    if (!flash) {
-      GFX.drawCharacter(ctx, ch, px, groundY - S.py, 1, {
-        runPhase: S.runPhase,
-        airborne: S.airborne,
-        sliding: S.sliding > 0,
-        stumble: S.stumble,
-        squash: S.squash,
-        blink: S.blink > 0,
-      }, S.t);
+      // hráč – v menu a obchodě běhá vždy právě vybrané zvířátko,
+      // během běhu (a na kartě po doběhnutí) drží postava z běhu
+      const ch = (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
+      const flash = S.invuln > 0 && Math.floor(S.t / 80) % 2 === 0;
+      if (!flash) {
+        GFX.drawCharacter(ctx, ch, px, groundY - S.py, 1, {
+          runPhase: S.runPhase,
+          airborne: S.airborne,
+          sliding: S.sliding > 0,
+          stumble: S.stumble,
+          squash: S.squash,
+          blink: S.blink > 0,
+        }, S.t);
+      }
     }
 
     // bublina s hláškou
@@ -1029,9 +1264,10 @@
     requestAnimationFrame(frame);
   }
 
-  // start: demo běh za menu
+  // start: intro se zvířátky a logem azylu, za ním už běží demo svět
   resetWorld(true);
   initMenu();
-  showScreen('menu');
+  initIntro();
+  showScreen('intro'); // schová menu i HUD, vidět je jen canvas
   requestAnimationFrame(frame);
 })();
