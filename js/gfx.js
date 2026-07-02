@@ -1187,9 +1187,16 @@ const GFX = (() => {
     const bob = airborne ? 0 : Math.abs(Math.sin(run)) * 3;
     ctx.translate(0, -bob);
 
+    // tělesná stavba – osel (Karel) je podle skutečné předlohy štíhlejší,
+    // s užším trupem a delšíma nohama; kopýtka končí vždy na stejné zemi
+    const slim = species === 'osel';
+    const bodyRX = slim ? 38 : 42;
+    const bodyRY = slim ? 20 : 26;
+    const bodyY = slim ? -44 : -40;
+
     // --- nohy (za tělem) ---
-    const legLen = 26;
-    const legY = -18;
+    const legLen = slim ? 33 : 26;
+    const legY = slim ? -25 : -18;
     function leg(offX, phase, back) {
       const a = airborne
         ? (back ? 0.6 : -0.5)
@@ -1199,7 +1206,7 @@ const GFX = (() => {
       ctx.rotate(a * (sliding ? 0.2 : 1));
       const legCol = c.legs || c.body;
       ctx.fillStyle = back ? shade(legCol, -0.08) : legCol;
-      rr(ctx, -5, 0, 10, legLen, 5);
+      rr(ctx, slim ? -4.5 : -5, 0, slim ? 9 : 10, legLen, slim ? 4.5 : 5);
       ctx.fill();
       // kopýtko
       ctx.fillStyle = c.hoof || shade(c.mane, -0.1);
@@ -1212,7 +1219,7 @@ const GFX = (() => {
 
     // --- ocas ---
     ctx.save();
-    ctx.translate(-38, -36);
+    ctx.translate(slim ? -35 : -38, slim ? -42 : -36);
     const wag = Math.sin(t * 0.01) * 0.25;
     ctx.rotate(0.5 + wag);
     if (species === 'prase') {
@@ -1233,7 +1240,7 @@ const GFX = (() => {
     ctx.restore();
 
     // --- tělo (s jemným stínováním pro objem) ---
-    const bodyGrad = ctx.createLinearGradient(0, -68, 0, -12);
+    const bodyGrad = ctx.createLinearGradient(0, bodyY - bodyRY - 2, 0, bodyY + bodyRY + 2);
     bodyGrad.addColorStop(0, shade(c.body, 0.07));
     bodyGrad.addColorStop(1, shade(c.body, -0.07));
     if (species === 'ovce') { // vlněné obláčky po obvodu
@@ -1246,14 +1253,15 @@ const GFX = (() => {
       }
     }
     ctx.fillStyle = bodyGrad;
-    ell(ctx, 0, -40, 42, 26); ctx.fill();
+    ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.fill();
     // bříško
     ctx.fillStyle = c.belly;
-    ell(ctx, 2, -30, 26, 13); ctx.fill();
+    if (slim) { ell(ctx, 2, -37, 21, 9); ctx.fill(); }
+    else { ell(ctx, 2, -30, 26, 13); ctx.fill(); }
     // vzory srsti – oříznuté na tělo, ať nikam nepřečuhují
     if (c.pattern && c.spots) {
       ctx.save();
-      ell(ctx, 0, -40, 42, 26);
+      ell(ctx, 0, bodyY, bodyRX, bodyRY);
       ctx.clip();
       ctx.fillStyle = c.spots;
       if (c.pattern === 'holstein') {        // velké černé fleky na bílé
@@ -1279,7 +1287,7 @@ const GFX = (() => {
     // oslí hříva podél hřbetu
     if (species === 'osel') {
       ctx.fillStyle = c.mane;
-      ell(ctx, 6, -63, 28, 6, -0.05); ctx.fill();
+      ell(ctx, 6, bodyY - bodyRY + 3, 26, 5.5, -0.05); ctx.fill();
     }
 
     // --- přední nohy ---
@@ -1289,12 +1297,14 @@ const GFX = (() => {
     // --- krk + hlava ---
     ctx.save();
     const headBob = airborne ? -4 : Math.sin(run * 2) * 1.5;
-    ctx.translate(40, -58 + headBob);
+    ctx.translate(slim ? 38 : 40, (slim ? -63 : -58) + headBob);
     if (sliding) ctx.rotate(0.25);
 
     // krk
     ctx.fillStyle = c.body;
-    if (species === 'osel' || species === 'kráva' || species === 'muflon') {
+    if (species === 'osel') {
+      ell(ctx, -8, 10, 12, 21, 0.5); ctx.fill();
+    } else if (species === 'kráva' || species === 'muflon') {
       ell(ctx, -8, 8, 16, 20, 0.5); ctx.fill();
     }
     // hříva osla
