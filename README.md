@@ -59,12 +59,12 @@ veškerá grafika se kreslí procedurálně do canvasu, zvukové efekty generuje
 
 ## 🎵 Hudba
 
-Hra má **vestavěnou generativní hudbu** (WebAudio) – každé prostředí má vlastní
-náladu, tempo a nástroje, takže hudba hraje hned bez jakýchkoli souborů.
+Hudbu tvoří MP3 skladby v `assets/music/` – každé prostředí má vlastní skladbu
+a hra ji přepíná podle toho, kudy zrovna běžíš.
 
-Pokud chceš plnohodnotné skladby, vygeneruj je pomocí AI (Suno apod.) podle
-připravených promptů v **[HUDBA_PROMPTY.md](HUDBA_PROMPTY.md)** a nahraj do
-`assets/music/` – soubory mají automaticky přednost před generovanou hudbou.
+Nové skladby vygeneruješ pomocí AI (Suno apod.) podle připravených promptů
+v **[HUDBA_PROMPTY.md](HUDBA_PROMPTY.md)** – stačí je nahrát do `assets/music/`
+pod správným názvem.
 
 ## 📱 Cesta do Google Play a App Store
 

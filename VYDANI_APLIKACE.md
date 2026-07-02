@@ -97,8 +97,8 @@ npx cap sync
 ### 2b. Hudba
 
 Vygeneruj skladby podle **HUDBA_PROMPTY.md** (Suno – placený tarif kvůli
-komerční licenci!) a nahraj MP3 do `assets/music/`. Hra je automaticky
-upřednostní před generovanou hudbou. Pak `npx cap sync`.
+komerční licenci!) a nahraj MP3 do `assets/music/` – hra hraje přímo tyto
+soubory. Pak `npx cap sync`.
 
 ### 2c. Monetizace – žádné nákupy v aplikaci
 
