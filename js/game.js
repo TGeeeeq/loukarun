@@ -442,11 +442,14 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
     if (isBest) save.best = dist;
+    // příběhový konec – každé zvířátko střídá své příběhy popořadě,
+    // takže tři doběhy za sebou vyprávějí tři různé konce
+    if (!save.storyIdx) save.storyIdx = {};
+    const sIdx = (save.storyIdx[S.char.id] || 0) % S.char.stories.length;
+    const story = S.char.stories[sIdx];
+    save.storyIdx[S.char.id] = sIdx + 1;
     persist();
     AUDIO.play('finish');
-
-    // příběhový konec
-    const story = S.char.stories[Math.floor(Math.random() * S.char.stories.length)];
     document.getElementById('over-title').textContent = isBest ? '🏆 NOVÝ REKORD!' : 'CÍL DNEŠNÍHO BĚHU!';
     document.getElementById('over-story').textContent = story;
     document.getElementById('over-dist').textContent = dist + ' m';
