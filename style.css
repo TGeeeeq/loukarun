@@ -241,39 +241,128 @@ a.btn { text-decoration: none; display: inline-block; }
   text-align: center;
 }
 
-/* obchod */
-#screen-shop { background: linear-gradient(180deg, #7cc4b8, #dff3e8); }
+/* obchod – karusel karet od nejlevnější (vlevo) po nejdražší (vpravo) */
+#screen-shop {
+  background: linear-gradient(180deg, #7cc4b8, #dff3e8);
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) 0 max(10px, env(safe-area-inset-bottom));
+  overflow-y: hidden;
+}
 .shop-head {
-  width: 100%; max-width: 900px;
+  width: 100%; max-width: 1040px;
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
+  padding: 0 20px;
+  flex: 0 0 auto;
 }
-.shop-head h2 { color: #2d4a3a; font-size: 1.6rem; }
-.shop-note { margin: 8px 0 16px; color: #2d4a3a; font-weight: 600; opacity: 0.75; font-size: 0.9rem; }
+.shop-head h2 { color: #2d4a3a; font-size: 1.5rem; }
+.shop-note {
+  margin: 4px 0 0; padding: 0 20px;
+  color: #2d4a3a; font-weight: 600; opacity: 0.75; font-size: 0.85rem;
+  text-align: center; flex: 0 0 auto;
+}
 #shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  display: flex;
+  align-items: stretch;
   gap: 16px;
   width: 100%;
-  max-width: 900px;
-  padding-bottom: 30px;
+  max-width: 1040px;
+  padding: 14px 28px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+  cursor: grab;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 26px, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 26px, #000 calc(100% - 26px), transparent);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45,74,58,0.35) transparent;
 }
+#shop-grid::-webkit-scrollbar { height: 8px; }
+#shop-grid::-webkit-scrollbar-track { background: transparent; }
+#shop-grid::-webkit-scrollbar-thumb { background: rgba(45,74,58,0.3); border-radius: 999px; }
+#shop-grid.dragging { scroll-snap-type: none; cursor: grabbing; }
+#shop-grid.dragging .char-card { pointer-events: none; }
 .char-card {
-  background: rgba(255,255,255,0.92);
-  border-radius: 22px;
-  padding: 14px;
+  flex: 0 0 auto;
+  width: min(70vw, 236px);
+  scroll-snap-align: center;
+  background: rgba(255,255,255,0.94);
+  border-radius: 20px;
+  padding: 10px 12px 12px;
   text-align: center;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.14);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   border: 3px solid transparent;
-  transition: transform .12s;
+  transition: transform .12s, box-shadow .12s;
 }
-.char-card.selected { border-color: #7ac95e; box-shadow: 0 8px 22px rgba(85,161,60,0.35); }
-.char-card.locked canvas { filter: grayscale(0.8) opacity(0.7); }
-.char-card h3 { color: #4a3220; font-size: 1.15rem; }
-.char-card .tagline { font-size: 0.82rem; color: #6a5a48; font-weight: 600; min-height: 2.4em; }
-.char-card .perk { font-size: 0.78rem; color: #55a13c; font-weight: 700; min-height: 2.2em; }
-.char-card canvas { width: 150px; height: 118px; }
+.char-card:hover { transform: translateY(-3px); }
+.char-card.selected { border-color: #7ac95e; box-shadow: 0 10px 24px rgba(85,161,60,0.4); }
+.char-card.locked canvas { filter: grayscale(0.8) opacity(0.75); }
+.char-card h3 { color: #4a3220; font-size: 1.1rem; line-height: 1.15; }
+.char-card .tagline {
+  font-size: 0.78rem; color: #6a5a48; font-weight: 600; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.char-card .perk {
+  font-size: 0.74rem; color: #2c5e1e; font-weight: 700; line-height: 1.25;
+  background: rgba(122,201,94,0.18);
+  border-radius: 10px;
+  padding: 4px 10px;
+}
+/* ořez textu musí být na vnitřním prvku – jinak další řádek prosvítá skrz padding */
+.char-card .perk-text {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.char-card .btn { margin-top: auto; }
+/* portrét na trávě, cenovka v rohu */
+.portrait-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 50% 108%, #a5cd6f 0 38%, rgba(165,205,111,0) 39%),
+    linear-gradient(180deg, #bfe4f7, #ddf2cf);
+  display: flex; justify-content: center; align-items: flex-end;
+  overflow: hidden;
+}
+.portrait-wrap canvas { height: 118px; width: auto; display: block; }
+.card-badge {
+  position: absolute; top: 7px; right: 7px;
+  font-size: 0.72rem; font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe08a, #ffc94a);
+  color: #4a3220;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.card-badge.sel { background: linear-gradient(180deg, #b0e89a, #7ac95e); color: #234a12; }
+/* statistiky – rychlost / skok / výdrž */
+.stat-rows { width: 100%; display: grid; gap: 4px; padding: 0 2px; }
+.stat-row { display: grid; grid-template-columns: 62px 1fr; align-items: center; gap: 8px; }
+.stat-row span {
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+  color: #8a7a66; text-align: left; white-space: nowrap;
+}
+.stat-track { height: 7px; background: #ece4d4; border-radius: 999px; overflow: hidden; }
+.stat-fill { height: 100%; border-radius: 999px; }
+.stat-fill.speed { background: linear-gradient(90deg, #ffb24a, #f28c28); }
+.stat-fill.jump { background: linear-gradient(90deg, #8fc7e8, #4a9fd8); }
+.stat-fill.stamina { background: linear-gradient(90deg, #b0e89a, #7ac95e); }
+/* nižší displeje (mobil na šířku) – karty se zkrátí, ať se nikam nescrolluje svisle */
+@media (max-height: 560px) {
+  .shop-note { display: none; }
+  .shop-head h2 { font-size: 1.2rem; }
+  .char-card { width: min(58vw, 208px); gap: 5px; }
+  .char-card .tagline { display: none; }
+  .portrait-wrap canvas { height: 88px; }
+  #shop-grid { padding: 10px 28px 12px; }
+}
+@media (max-height: 420px) {
+  .stat-rows { display: none; }
+  .char-card .perk-text { -webkit-line-clamp: 1; }
+  .portrait-wrap canvas { height: 72px; }
+}
 
 /* konec běhu / pauza */
 #screen-over, #screen-pause { justify-content: center; background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }

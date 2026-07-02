@@ -1247,19 +1247,46 @@
   }
 
   /* ---------- obchod ---------- */
+  // karusel: zvířátka seřazená od nejlevnějšího (vlevo) po nejdražší (vpravo)
+  const unlockPrice = (ch) => ch.unlock.type === 'coins' ? ch.unlock.price : 0;
+  const SHOP_ORDER = [...CHARACTERS].sort((a, b) => unlockPrice(a) - unlockPrice(b));
+
+  // statistiky se ukazují relativně k celému osazenstvu (výdrž = obrácená spotřeba)
+  const STAT_KEYS = [
+    { key: 'speed', label: 'shop.stat.speed', val: (st) => st.speed },
+    { key: 'jump', label: 'shop.stat.jump', val: (st) => st.jump },
+    { key: 'stamina', label: 'shop.stat.stamina', val: (st) => 2 - st.drain },
+  ];
+  const STAT_RANGE = STAT_KEYS.map(sk => {
+    const vals = CHARACTERS.map(ch => sk.val(ch.stats));
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+  });
+
   function buildShop() {
     const grid = $('shop-grid');
     grid.innerHTML = '';
     $('shop-coins').textContent = save.coins;
-    for (const ch of CHARACTERS) {
+    let selectedCard = null;
+    for (const ch of SHOP_ORDER) {
       const owned = save.unlocked.includes(ch.id);
       const selected = save.selected === ch.id;
       const card = document.createElement('div');
       card.className = 'char-card' + (owned ? ' owned' : ' locked') + (selected ? ' selected' : '');
 
+      // portrét na kousku louky, v rohu cenovka / fajfka
+      const wrap = document.createElement('div');
+      wrap.className = 'portrait-wrap';
       const cv = document.createElement('canvas');
       cv.width = 190; cv.height = 150;
-      card.appendChild(cv);
+      wrap.appendChild(cv);
+      const badge = document.createElement('div');
+      badge.className = 'card-badge';
+      if (selected) { badge.classList.add('sel'); badge.textContent = '✓'; }
+      else if (owned) { badge.style.display = 'none'; }
+      else if (ch.unlock.type === 'coins') { badge.textContent = `🪙 ${ch.unlock.price}`; }
+      else { badge.classList.add('sel'); badge.textContent = I18N.t('shop.free'); }
+      wrap.appendChild(badge);
+      card.appendChild(wrap);
 
       const name = document.createElement('h3');
       name.textContent = I18N.pick(ch.name);
@@ -1272,8 +1299,31 @@
 
       const perk = document.createElement('p');
       perk.className = 'perk';
-      perk.textContent = I18N.pick(ch.perk);
+      const perkText = document.createElement('span');
+      perkText.className = 'perk-text';
+      perkText.textContent = I18N.pick(ch.perk);
+      perk.appendChild(perkText);
       card.appendChild(perk);
+
+      const rows = document.createElement('div');
+      rows.className = 'stat-rows';
+      STAT_KEYS.forEach((sk, i) => {
+        const { min, max } = STAT_RANGE[i];
+        const pct = max > min ? 25 + 75 * (sk.val(ch.stats) - min) / (max - min) : 60;
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        const label = document.createElement('span');
+        label.textContent = I18N.t(sk.label);
+        const track = document.createElement('div');
+        track.className = 'stat-track';
+        const fill = document.createElement('div');
+        fill.className = 'stat-fill ' + sk.key;
+        fill.style.width = pct.toFixed(0) + '%';
+        track.appendChild(fill);
+        row.appendChild(label); row.appendChild(track);
+        rows.appendChild(row);
+      });
+      card.appendChild(rows);
 
       const btn = document.createElement('button');
       btn.className = 'btn small';
@@ -1287,8 +1337,41 @@
       card.appendChild(btn);
       grid.appendChild(card);
       drawPortrait(cv, ch);
+      if (selected) selectedCard = card;
+    }
+    // vybrané zvířátko ať je po otevření rovnou vidět
+    if (selectedCard) {
+      requestAnimationFrame(() => {
+        grid.scrollLeft = selectedCard.offsetLeft - (grid.clientWidth - selectedCard.offsetWidth) / 2;
+      });
     }
   }
+
+  // ovládání karuselu na počítači: kolečko myši a tažení
+  (() => {
+    const grid = $('shop-grid');
+    grid.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        grid.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+    let drag = null;
+    grid.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.target.closest('button')) return;
+      drag = { x: e.clientX, sl: grid.scrollLeft, moved: false };
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) > 4) { drag.moved = true; grid.classList.add('dragging'); }
+      if (drag.moved) grid.scrollLeft = drag.sl - dx;
+    });
+    window.addEventListener('pointerup', () => {
+      if (drag && drag.moved) grid.classList.remove('dragging');
+      drag = null;
+    });
+  })();
 
   function onCharAction(ch) {
     AUDIO.play('click');
