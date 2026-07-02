@@ -133,6 +133,17 @@
     // PWA: hra jde nainstalovat na plochu a funguje offline
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+      // po vydání nové verze se stránka jednou tiše obnoví, ať jede čerstvý
+      // kód – ale jen dokud se hráč ničeho nedotkl a jen při aktualizaci
+      // (ne při úplně první návštěvě)
+      const hadController = !!navigator.serviceWorker.controller;
+      let interacted = false;
+      window.addEventListener('pointerdown', () => { interacted = true; }, { capture: true });
+      window.addEventListener('keydown', () => { interacted = true; }, { capture: true });
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || interacted) return;
+        location.reload();
+      });
     }
   </script>
 </body>

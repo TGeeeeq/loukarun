@@ -5,7 +5,7 @@
    cache se automaticky smaže.
    ========================================================= */
 
-const CACHE = 'loukarun-v3';
+const CACHE = 'loukarun-v4';
 
 const CORE = [
   './',
@@ -42,26 +42,31 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// velké soubory, které se prakticky nemění – ty smí jít z cache hned
+const HEAVY = /\.(mp3|woff2|png|webp|jpg)$/;
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
-  // otevření stránky: nejdřív síť (ať se aktualizace projeví hned), offline z cache
-  if (req.mode === 'navigate') {
+  // jádro hry (HTML, JS, CSS, manifest): vždy nejdřív síť, ať se nová verze
+  // projeví hned při dalším načtení; cache slouží jen offline
+  if (req.mode === 'navigate' || !HEAVY.test(new URL(req.url).pathname)) {
     e.respondWith(
-      fetch(req)
+      (req.mode === 'navigate' ? fetch(req) : fetch(req.url, { cache: 'no-cache' }))
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match('index.html')))
+        .catch(() => caches.match(req).then((r) => r || (req.mode === 'navigate' ? caches.match('index.html') : Promise.reject(new Error('offline')))))
     );
     return;
   }
 
-  // ostatní soubory: z cache hned, na pozadí se stáhne čerstvá verze
-  // (projeví se při příštím načtení; hudba apod. se docachuje za běhu)
+  // hudba, fonty a obrázky: z cache hned, na pozadí se případně obnoví
   e.respondWith(
     caches.match(req).then((hit) => {
       const fresh = fetch(req)
