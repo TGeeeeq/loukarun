@@ -1,10 +1,10 @@
 name: Deploy to GitHub Pages
 
-# Zrcadlí obsah hlavní vývojové větve do gh-pages,
+# Zrcadlí obsah hlavní větve do gh-pages,
 # ze které GitHub Pages web servíruje.
 on:
   push:
-    branches: [claude/animal-shelter-runner-5cboff]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
