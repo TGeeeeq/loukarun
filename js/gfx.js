@@ -478,11 +478,23 @@ const GFX = (() => {
     /* ---------- lidští obyvatelé Louky ---------- */
     tomas(ctx, s, extra, t) {
       // Tomáš – pilně staví a slepice mu z hlavy dělá stavební dozor
+      // pózy: 0 = buší kladivem, 1 = řeže pilou, 2 = fandí s kladivem nad hlavou
+      const v = (extra || 0) % 3;
       const swing = Math.sin((t || 0) * 0.004);
-      // hromádka prken vedle něj
-      ctx.fillStyle = '#c9a06b';
-      rr(ctx, 18 * s, -10 * s, 46 * s, 6 * s, 2 * s); ctx.fill();
-      rr(ctx, 22 * s, -17 * s, 40 * s, 6 * s, 2 * s); ctx.fill();
+      if (v === 0) {
+        // hromádka prken vedle něj
+        ctx.fillStyle = '#c9a06b';
+        rr(ctx, 18 * s, -10 * s, 46 * s, 6 * s, 2 * s); ctx.fill();
+        rr(ctx, 22 * s, -17 * s, 40 * s, 6 * s, 2 * s); ctx.fill();
+      } else if (v === 1) {
+        // koza s prknem, které zrovna řeže
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 4 * s; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-42 * s, 0); ctx.lineTo(-33 * s, -26 * s); ctx.lineTo(-24 * s, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#c9a06b';
+        rr(ctx, -56 * s, -33 * s, 46 * s, 7 * s, 2 * s); ctx.fill();
+      }
       // nohy – pracovní kalhoty a boty
       ctx.fillStyle = '#7a6248';
       rr(ctx, -13 * s, -52 * s, 11 * s, 52 * s, 4 * s); ctx.fill();
@@ -502,20 +514,56 @@ const GFX = (() => {
       rr(ctx, -1.4 * s, -90 * s, 2.8 * s, 6 * s, 1 * s); ctx.fill();
       ctx.fillStyle = '#d8422f';
       ctx.beginPath(); ctx.arc(0, -90 * s, 4 * s, Math.PI, 0); ctx.closePath(); ctx.fill();
-      // ruka s kladivem – pilně buší
-      ctx.save();
-      ctx.translate(-14 * s, -96 * s);
-      ctx.rotate(-0.5 + swing * 0.45);
-      ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18 * s, 12 * s); ctx.stroke();
-      ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 4 * s;
-      ctx.beginPath(); ctx.moveTo(-18 * s, 12 * s); ctx.lineTo(-28 * s, -6 * s); ctx.stroke();
-      ctx.fillStyle = '#5a5a5a';
-      rr(ctx, -36 * s, -14 * s, 16 * s, 9 * s, 3 * s); ctx.fill();
-      ctx.restore();
-      // druhá ruka v bok
-      ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(26 * s, -84 * s, 16 * s, -70 * s); ctx.stroke();
+      if (v === 0) {
+        // ruka s kladivem – pilně buší
+        ctx.save();
+        ctx.translate(-14 * s, -96 * s);
+        ctx.rotate(-0.5 + swing * 0.45);
+        ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18 * s, 12 * s); ctx.stroke();
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 4 * s;
+        ctx.beginPath(); ctx.moveTo(-18 * s, 12 * s); ctx.lineTo(-28 * s, -6 * s); ctx.stroke();
+        ctx.fillStyle = '#5a5a5a';
+        rr(ctx, -36 * s, -14 * s, 16 * s, 9 * s, 3 * s); ctx.fill();
+        ctx.restore();
+      } else if (v === 1) {
+        // ruka s pilou – řeže prkno na koze
+        const hx = (-30 + swing * 7) * s, hy = -40 * s;
+        ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-14 * s, -94 * s); ctx.quadraticCurveTo(-26 * s, -70 * s, hx, hy); ctx.stroke();
+        // čepel pily zakousnutá do prkna
+        ctx.fillStyle = '#b8bfc4';
+        ctx.beginPath();
+        ctx.moveTo(hx - 2 * s, hy + 2 * s);
+        ctx.lineTo(hx - 26 * s, hy + 5 * s);
+        ctx.lineTo(hx - 24 * s, hy + 11 * s);
+        ctx.lineTo(hx - 2 * s, hy + 9 * s);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#8a6a45';
+        rr(ctx, hx - 3 * s, hy, 7 * s, 11 * s, 2 * s); ctx.fill();
+      } else {
+        // fandí – obě ruce nad hlavou, v jedné vítězně kladivo
+        const palmL = (-28 + swing * 3) * s, palmR = (28 - swing * 3) * s;
+        ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-14 * s, -96 * s); ctx.quadraticCurveTo(-26 * s, -112 * s, palmL, -128 * s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(26 * s, -112 * s, palmR, -128 * s); ctx.stroke();
+        ctx.fillStyle = '#e8b88a';
+        ctx.beginPath(); ctx.arc(palmL, -130 * s, 4.5 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(palmR, -130 * s, 4.5 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.save();
+        ctx.translate(palmR, -132 * s);
+        ctx.rotate(0.3 + swing * 0.15);
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 4 * s;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -16 * s); ctx.stroke();
+        ctx.fillStyle = '#5a5a5a';
+        rr(ctx, -8 * s, -24 * s, 16 * s, 9 * s, 3 * s); ctx.fill();
+        ctx.restore();
+      }
+      if (v !== 2) {
+        // druhá ruka v bok
+        ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(26 * s, -84 * s, 16 * s, -70 * s); ctx.stroke();
+      }
       // hlava s úsměvem
       ctx.fillStyle = '#e8b88a';
       ctx.beginPath(); ctx.arc(0, -117 * s, 14 * s, 0, Math.PI * 2); ctx.fill();
@@ -550,10 +598,13 @@ const GFX = (() => {
       ctx.restore();
     },
     tony(ctx, s, extra, t) {
-      // Tony – jednou rukou drbe berana, druhou hlídá appku azylu
+      // Tony – pečuje o zvířata i o wi-fi signál
+      // pózy: 0 = drbe berana a hlídá appku, 1 = streamuje a mává, 2 = krmí berana z kýblu
+      const v = (extra || 0) % 3;
       // beran vedle něj (blažený) – kus od Tonyho, ať mu není vidět jen zadek
       ctx.save();
-      ctx.translate(46 * s, 0);
+      // při streamování beran nadšeně poskakuje
+      ctx.translate(46 * s, v === 1 ? -Math.abs(Math.sin((t || 0) * 0.008)) * 7 * s : 0);
       ctx.scale(1.2, 1.2);
       ctx.fillStyle = '#ece5d4';
       for (let i = 0; i < 7; i++) {
@@ -589,22 +640,55 @@ const GFX = (() => {
       // bunda
       ctx.fillStyle = '#6f6a52';
       rr(ctx, -20 * s, -98 * s, 30 * s, 50 * s, 9 * s); ctx.fill();
-      // ruka drbající berana
       const scratch = Math.sin((t || 0) * 0.01) * 3;
+      const wave = Math.sin((t || 0) * 0.006);
       ctx.strokeStyle = '#6f6a52'; ctx.lineWidth = 8 * s; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(20 * s, -66 * s, (10 + scratch) * s, -42 * s); ctx.stroke();
-      // ruka s telefonem
-      ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.quadraticCurveTo(-30 * s, -78 * s, -26 * s, -66 * s); ctx.stroke();
-      ctx.fillStyle = '#2c2c30';
-      rr(ctx, -33 * s, -78 * s, 12 * s, 18 * s, 3 * s); ctx.fill();
-      ctx.fillStyle = '#9fd9f2';
-      rr(ctx, -31 * s, -76 * s, 8 * s, 13 * s, 2 * s); ctx.fill();
-      // nad telefonem občas problikne notifikace
-      if (Math.sin((t || 0) * 0.005) > 0) {
-        ctx.fillStyle = '#ffd24a';
-        ctx.font = `bold ${9 * s}px "Baloo 2", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText('₿', -27 * s, -84 * s);
+      if (v === 0) {
+        // ruka drbající berana
+        ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(20 * s, -66 * s, (10 + scratch) * s, -42 * s); ctx.stroke();
+        // ruka s telefonem
+        ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.quadraticCurveTo(-30 * s, -78 * s, -26 * s, -66 * s); ctx.stroke();
+        ctx.fillStyle = '#2c2c30';
+        rr(ctx, -33 * s, -78 * s, 12 * s, 18 * s, 3 * s); ctx.fill();
+        ctx.fillStyle = '#9fd9f2';
+        rr(ctx, -31 * s, -76 * s, 8 * s, 13 * s, 2 * s); ctx.fill();
+        // nad telefonem občas problikne notifikace
+        if (Math.sin((t || 0) * 0.005) > 0) {
+          ctx.fillStyle = '#ffd24a';
+          ctx.font = `bold ${9 * s}px "Baloo 2", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText('₿', -27 * s, -84 * s);
+        }
+      } else if (v === 1) {
+        // streamuje – telefon vysoko nad hlavou, druhou rukou mává běžci
+        ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.quadraticCurveTo(-26 * s, -104 * s, -25 * s, -120 * s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(18 * s, -102 * s, (22 - wave * 4) * s, -116 * s); ctx.stroke();
+        ctx.fillStyle = '#d9a878';
+        ctx.beginPath(); ctx.arc((22 - wave * 4) * s, -118 * s, 4 * s, 0, Math.PI * 2); ctx.fill();
+        // telefon natočený na běžce
+        ctx.fillStyle = '#2c2c30';
+        rr(ctx, -31 * s, -140 * s, 12 * s, 19 * s, 3 * s); ctx.fill();
+        ctx.fillStyle = '#9fd9f2';
+        rr(ctx, -29 * s, -138 * s, 8 * s, 14 * s, 2 * s); ctx.fill();
+        // srdíčka od sledujících
+        if (Math.sin((t || 0) * 0.005) > -0.3) {
+          ctx.fillStyle = '#ff8fb1';
+          ctx.font = `bold ${9 * s}px "Baloo 2", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText('♥', -19 * s, -142 * s);
+        }
+      } else {
+        // krmí berana – kýbl granulí přímo pod jeho čumákem
+        ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(18 * s, -70 * s, 21 * s, -52 * s); ctx.stroke();
+        // druhá ruka v kapse (jen krátký náznak)
+        ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.quadraticCurveTo(-24 * s, -78 * s, -18 * s, -68 * s); ctx.stroke();
+        ctx.fillStyle = '#7a8aa0';
+        ctx.beginPath();
+        ctx.moveTo(14 * s, -50 * s); ctx.lineTo(30 * s, -50 * s);
+        ctx.lineTo(28 * s, -35 * s); ctx.lineTo(16 * s, -35 * s);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#c9a06b';
+        ell(ctx, 22 * s, -50 * s, 7 * s, 2.6 * s); ctx.fill();
       }
       // hlava s plnovousem
       ctx.fillStyle = '#d9a878';
@@ -629,7 +713,28 @@ const GFX = (() => {
     },
     maruska(ctx, s, extra, t) {
       // Maruška – zpívá bylinkám i miminku v bříšku
+      // pózy: 0 = zpívá s kytičkou bylinek, 1 = maluje u stojanu, 2 = mává a posílá srdíčka
+      const v = (extra || 0) % 3;
       const sway = Math.sin((t || 0) * 0.003);
+      if (v === 1) {
+        // malířský stojan s rozmalovanou loukou
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 3.5 * s; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-52 * s, 0); ctx.lineTo(-44 * s, -68 * s);
+        ctx.moveTo(-36 * s, 0); ctx.lineTo(-44 * s, -68 * s);
+        ctx.stroke();
+        ctx.fillStyle = '#f6f1e2';
+        rr(ctx, -60 * s, -80 * s, 32 * s, 27 * s, 2 * s); ctx.fill();
+        ctx.strokeStyle = '#c9a06b'; ctx.lineWidth = 2 * s;
+        rr(ctx, -60 * s, -80 * s, 32 * s, 27 * s, 2 * s); ctx.stroke();
+        // na plátně zelená louka a mrkvička
+        ctx.fillStyle = '#a5cd6f';
+        rr(ctx, -57 * s, -65 * s, 26 * s, 9 * s, 2 * s); ctx.fill();
+        ctx.fillStyle = '#f28c38';
+        ell(ctx, -46 * s, -68 * s, 2.2 * s, 5 * s, 0.3); ctx.fill();
+        ctx.fillStyle = '#4c8a3f';
+        ell(ctx, -48 * s, -74 * s, 2 * s, 2.6 * s, -0.4); ctx.fill();
+      }
       // dlouhé blond vlasy vzadu
       ctx.fillStyle = '#e2b96a';
       ctx.beginPath();
@@ -658,50 +763,78 @@ const GFX = (() => {
       // ruka něžně položená na bříšku
       ctx.strokeStyle = '#f0c9a0'; ctx.lineWidth = 6 * s; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(-6 * s, -94 * s); ctx.quadraticCurveTo(2 * s, -86 * s, 13 * s, -88 * s); ctx.stroke();
-      // druhá ruka s kytičkou bylinek
-      ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-18 * s, -96 * s, -22 * s, -106 * s); ctx.stroke();
-      ctx.strokeStyle = '#4c8a3f'; ctx.lineWidth = 2 * s;
-      ctx.beginPath();
-      ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-27 * s, -122 * s);
-      ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-20 * s, -124 * s);
-      ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-14 * s, -120 * s);
-      ctx.stroke();
-      ctx.fillStyle = '#c78fff';
-      ctx.beginPath(); ctx.arc(-27 * s, -123 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffe08a';
-      ctx.beginPath(); ctx.arc(-20 * s, -125 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ff8fb1';
-      ctx.beginPath(); ctx.arc(-13 * s, -121 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+      if (v === 0) {
+        // druhá ruka s kytičkou bylinek
+        ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-18 * s, -96 * s, -22 * s, -106 * s); ctx.stroke();
+        ctx.strokeStyle = '#4c8a3f'; ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-27 * s, -122 * s);
+        ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-20 * s, -124 * s);
+        ctx.moveTo(-22 * s, -108 * s); ctx.lineTo(-14 * s, -120 * s);
+        ctx.stroke();
+        ctx.fillStyle = '#c78fff';
+        ctx.beginPath(); ctx.arc(-27 * s, -123 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffe08a';
+        ctx.beginPath(); ctx.arc(-20 * s, -125 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ff8fb1';
+        ctx.beginPath(); ctx.arc(-13 * s, -121 * s, 2.6 * s, 0, Math.PI * 2); ctx.fill();
+      } else if (v === 1) {
+        // druhá ruka se štětcem u plátna
+        const bx = (-24 + sway * 2) * s;
+        ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-16 * s, -88 * s, bx, -72 * s); ctx.stroke();
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 2.2 * s;
+        ctx.beginPath(); ctx.moveTo(bx, -72 * s); ctx.lineTo(bx - 7 * s, -66 * s); ctx.stroke();
+        ctx.fillStyle = '#ff8fb1';
+        ctx.beginPath(); ctx.arc(bx - 8 * s, -65 * s, 2 * s, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // druhá ruka mává nad hlavou
+        const wx = (-18 + sway * 4) * s;
+        ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-14 * s, -112 * s, wx, -128 * s); ctx.stroke();
+        ctx.fillStyle = '#f0c9a0';
+        ctx.beginPath(); ctx.arc(wx, -130 * s, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+      }
       // hlava
       ctx.fillStyle = '#f0c9a0';
       ctx.beginPath(); ctx.arc(0, -114 * s, 12 * s, 0, Math.PI * 2); ctx.fill();
       // pěšinka s ofinkou
       ctx.fillStyle = '#e2b96a';
       ctx.beginPath(); ctx.arc(0, -117 * s, 12.5 * s, Math.PI * 0.95, Math.PI * 2.08); ctx.fill();
-      // zavřené oči – zrovna zpívá
-      ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.6 * s;
-      ctx.beginPath();
-      ctx.arc(-4 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.moveTo(7.6 * s, -112 * s);
-      ctx.arc(5 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
-      // zpívající pusa a tvářičky
-      ctx.fillStyle = '#a8543a';
-      ell(ctx, 1 * s, -106 * s, 2.4 * s, 3 * s); ctx.fill();
+      if (v === 0) {
+        // zavřené oči – zrovna zpívá
+        ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.6 * s;
+        ctx.beginPath();
+        ctx.arc(-4 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.moveTo(7.6 * s, -112 * s);
+        ctx.arc(5 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        // zpívající pusa
+        ctx.fillStyle = '#a8543a';
+        ell(ctx, 1 * s, -106 * s, 2.4 * s, 3 * s); ctx.fill();
+      } else {
+        // otevřené oči a úsměv
+        ctx.fillStyle = '#6b4a2e';
+        ctx.beginPath(); ctx.arc(-4 * s, -113 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5 * s, -113 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#a8543a'; ctx.lineWidth = 1.6 * s;
+        ctx.beginPath(); ctx.arc(0.5 * s, -109 * s, 3.5 * s, 0.25, Math.PI - 0.35); ctx.stroke();
+      }
+      // tvářičky
       ctx.fillStyle = 'rgba(230,120,110,0.35)';
       ell(ctx, -8 * s, -108 * s, 2.6 * s, 1.8 * s); ctx.fill();
       ell(ctx, 9 * s, -108 * s, 2.6 * s, 1.8 * s); ctx.fill();
-      // notičky stoupající vzhůru
-      const baseAlpha = ctx.globalAlpha;
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
-      ctx.textAlign = 'center';
-      for (let i = 0; i < 3; i++) {
-        const ph = (((t || 0) * 0.0012 + i * 0.33) % 1 + 1) % 1;
-        ctx.globalAlpha = baseAlpha * (1 - ph) * 0.9;
-        ctx.fillText(i % 2 ? '♫' : '♪', (14 + i * 8 + Math.sin(ph * 6 + i) * 4) * s, (-118 - ph * 30) * s);
+      // notičky (při zpěvu) nebo srdíčka (když fandí) stoupající vzhůru
+      if (v !== 1) {
+        const baseAlpha = ctx.globalAlpha;
+        ctx.fillStyle = v === 2 ? '#ff8fb1' : '#fff';
+        ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
+        ctx.textAlign = 'center';
+        for (let i = 0; i < 3; i++) {
+          const ph = (((t || 0) * 0.0012 + i * 0.33) % 1 + 1) % 1;
+          ctx.globalAlpha = baseAlpha * (1 - ph) * 0.9;
+          ctx.fillText(v === 2 ? '♥' : (i % 2 ? '♫' : '♪'), (14 + i * 8 + Math.sin(ph * 6 + i) * 4) * s, (-118 - ph * 30) * s);
+        }
+        ctx.globalAlpha = baseAlpha;
       }
-      ctx.globalAlpha = baseAlpha;
     },
 
     /* ---------- další vtipné kulisy ---------- */

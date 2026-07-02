@@ -570,6 +570,7 @@
         far: true,
         human: true,
         said: false,
+        extra: Math.floor(Math.random() * 3), // náhodná póza (každý člověk má tři)
         s: 0.8 + Math.random() * 0.15,
       });
       S.nextDecorX += 640 + Math.random() * 620;
@@ -950,6 +951,7 @@
   }
 
   // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
+  const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
     const px = playerX();
     for (const d of S.decor) {
@@ -957,7 +959,11 @@
       const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
       if (sx > W * 0.3 && sx < W * 0.85) {
         d.said = true;
-        S.sideBubbles.push({ txt: randomQuote(HUMANS[d.prop]), t: 0, dur: 4, decor: d });
+        const list = HUMANS[d.prop];
+        let qi = Math.floor(Math.random() * list.length);
+        if (list.length > 1 && qi === lastHumanQuote[d.prop]) qi = (qi + 1) % list.length;
+        lastHumanQuote[d.prop] = qi;
+        S.sideBubbles.push({ txt: I18N.pick(list[qi]), t: 0, dur: 4, decor: d });
       }
     }
   }
