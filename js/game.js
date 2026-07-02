@@ -144,7 +144,8 @@
   /* =========================================================
      PRŮBĚH HRY
      ========================================================= */
-  function playerX() { return Math.min(W * 0.3, 260); }
+  // v demu za menu běhá zvířátko víc vlevo, aby ho nezakrýval panel menu
+  function playerX() { return S.demo ? Math.min(W * 0.16, 170) : Math.min(W * 0.3, 260); }
 
   function resetWorld(demo) {
     S.worldX = 0;
@@ -207,8 +208,8 @@
     AUDIO.play('finish');
 
     // příběhový konec
-    const story = S.char.stories[Math.floor(Math.random() * S.char.stories.length)];
-    document.getElementById('over-title').textContent = isBest ? '🏆 NOVÝ REKORD!' : 'CÍL DNEŠNÍHO BĚHU!';
+    const story = I18N.pick(S.char.stories[Math.floor(Math.random() * S.char.stories.length)]);
+    document.getElementById('over-title').textContent = isBest ? I18N.t('over.record') : I18N.t('over.finish');
     document.getElementById('over-story').textContent = story;
     document.getElementById('over-dist').textContent = dist + ' m';
     document.getElementById('over-carrots').textContent = S.carrotsRun;
@@ -320,7 +321,7 @@
       far,
       // cedule schválně větší, ať se dají číst
       s: isSign ? 0.95 + Math.random() * 0.2 : (far ? 0.55 + Math.random() * 0.25 : 0.75 + Math.random() * 0.3),
-      extra: isSign ? SIGNS[Math.floor(Math.random() * SIGNS.length)] : null,
+      extra: isSign ? I18N.pick(SIGNS[Math.floor(Math.random() * SIGNS.length)]) : null,
     });
     S.nextDecorX += 280 + Math.random() * 440;
   }
@@ -440,7 +441,8 @@
     S.bubbleT = 4.2;
     AUDIO.play('quote');
   }
-  function randomQuote(list) { return list[Math.floor(Math.random() * list.length)]; }
+  // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
+  function randomQuote(list) { return I18N.pick(list[Math.floor(Math.random() * list.length)]); }
 
   /* =========================================================
      UPDATE
@@ -593,7 +595,7 @@
         } else if (p.kind === 'golden') {
           S.carrotsRun++;
           S.energy = Math.min(100, S.energy + ECONOMY.goldenCarrotEnergy);
-          floater('ZLATÁ MRKEV! +' + ECONOMY.goldenCarrotEnergy + ' ⚡', sx, sy - 24, '#ffce3a');
+          floater(I18N.t('fl.golden', { n: ECONOMY.goldenCarrotEnergy }), sx, sy - 24, '#ffce3a');
           burst(sx, sy, '#ffd24a', 22);
           sayBubble(randomQuote(EVENTS.goldenCarrot));
           AUDIO.play('golden');
@@ -626,7 +628,7 @@
         S.ramLeft--;
         o.broken = true;
         burst(sx, groundY - o.h / 2, '#c9a03c', 20);
-        floater('BERANIDLO! 💥', sx, groundY - o.h - 30, '#ffd24a');
+        floater(I18N.t('fl.ram'), sx, groundY - o.h - 30, '#ffd24a');
         S.shake = 0.6;
         AUDIO.play('ram');
         updateHud(true);
@@ -863,10 +865,10 @@
     $('menu-best').textContent = save.best + ' m';
     $('menu-coins').textContent = save.coins;
     const ch = charById(save.selected);
-    $('menu-charname').textContent = ch.name;
-    $('menu-perk').textContent = ch.perk;
-    $('btn-sfx').textContent = save.sfx !== false ? '🔊 Zvuky' : '🔇 Zvuky';
-    $('btn-music').textContent = save.music !== false ? '🎵 Hudba' : '🚫 Hudba';
+    $('menu-charname').textContent = I18N.pick(ch.name);
+    $('menu-perk').textContent = I18N.pick(ch.perk);
+    $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
+    $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
   }
 
   /* ---------- obchod ---------- */
@@ -885,28 +887,28 @@
       card.appendChild(cv);
 
       const name = document.createElement('h3');
-      name.textContent = ch.name;
+      name.textContent = I18N.pick(ch.name);
       card.appendChild(name);
 
       const tag = document.createElement('p');
       tag.className = 'tagline';
-      tag.textContent = ch.tagline;
+      tag.textContent = I18N.pick(ch.tagline);
       card.appendChild(tag);
 
       const perk = document.createElement('p');
       perk.className = 'perk';
-      perk.textContent = ch.perk;
+      perk.textContent = I18N.pick(ch.perk);
       card.appendChild(perk);
 
       const btn = document.createElement('button');
       btn.className = 'btn small';
-      if (selected) { btn.textContent = '✓ Vybráno'; btn.disabled = true; }
-      else if (owned) { btn.textContent = 'Vybrat'; }
+      if (selected) { btn.textContent = I18N.t('shop.selected'); btn.disabled = true; }
+      else if (owned) { btn.textContent = I18N.t('shop.select'); }
       else if (ch.unlock.type === 'coins') {
         btn.textContent = `🪙 ${ch.unlock.price}`;
         btn.classList.add(save.coins >= ch.unlock.price ? 'buy' : 'cant');
       } else {
-        btn.textContent = `⭐ PREMIUM · ${ch.unlock.price}`;
+        btn.textContent = I18N.t('shop.premium', { price: I18N.pick(ch.unlock.price) });
         btn.classList.add('premium');
       }
       btn.addEventListener('click', () => onCharAction(ch));
@@ -936,11 +938,11 @@
         initMenu();
       } else {
         const missing = ch.unlock.price - save.coins;
-        toast(`Chybí ti ještě ${missing} mincí. Běhej a sbírej! 🪙`);
+        toast(I18N.t('toast.needCoins', { n: missing }));
       }
     } else {
       // premium – v demo verzi vysvětlíme a odemkneme
-      $('premium-name').textContent = ch.name;
+      $('premium-name').textContent = I18N.pick(ch.name);
       $('premium-modal').classList.add('visible');
       $('btn-premium-unlock').onclick = () => {
         save.unlocked.push(ch.id);
@@ -950,7 +952,7 @@
         $('premium-modal').classList.remove('visible');
         buildShop();
         initMenu();
-        toast(`${ch.name} se přidává k běžeckému týmu! 🎉`);
+        toast(I18N.t('toast.joined', { name: I18N.pick(ch.name) }));
       };
     }
   }
@@ -985,6 +987,19 @@
     if (save.music) AUDIO.playMusic('menu');
   });
 
+  /* ---------- přepínač jazyka ---------- */
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      AUDIO.play('click');
+      I18N.set(btn.dataset.lang);
+    });
+  });
+  // po přepnutí jazyka obnovit texty, které skládá JS
+  I18N.onChange(() => {
+    initMenu();
+    if ($('screen-shop').classList.contains('visible')) buildShop();
+  });
+
   /* =========================================================
      SMYČKA
      ========================================================= */
@@ -998,6 +1013,7 @@
   }
 
   // start: demo běh za menu
+  I18N.apply(); // propíše uložený jazyk do celého UI
   resetWorld(true);
   initMenu();
   showScreen('menu');
