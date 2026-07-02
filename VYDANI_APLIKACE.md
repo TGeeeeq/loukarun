@@ -100,26 +100,12 @@ Vygeneruj skladby podle **HUDBA_PROMPTY.md** (Suno – placený tarif kvůli
 komerční licenci!) a nahraj MP3 do `assets/music/`. Hra je automaticky
 upřednostní před generovanou hudbou. Pak `npx cap sync`.
 
-### 2c. Nákupy v aplikaci (Yakul a Květa – premium)
+### 2c. Monetizace – žádné nákupy v aplikaci
 
-Nejjednodušší cesta je **RevenueCat** (zdarma do 2 500 USD měsíčního obratu):
-
-1. Účet na revenuecat.com → nový projekt „Louka Run".
-2. ```bash
-   npm install @revenuecat/purchases-capacitor
-   npx cap sync
-   ```
-3. V Google Play Console a App Store Connect vytvoř **neconsumable** produkty
-   `premium_yakul` a `premium_kveta` (49 Kč) – přesný postup je ve fázích 4 a 6.
-4. V RevenueCat je propoj (Products → připojit oba obchody).
-5. V kódu: místo napojení je funkce `onCharAction()` v `js/game.js` –
-   větev `ch.unlock.type === 'premium'` teď otevírá demo dialog; tam zavoláš
-   `Purchases.purchaseStoreProduct(...)` a po úspěchu stejný odemykací kód,
-   který dnes spouští tlačítko „Odemknout (demo)".
-
-> **Pozor:** dokud IAP nenapojíš, nech premium postavy odemykatelné zdarma
-> (jako teď) – obchody nepustí aplikaci, která slibuje nákup a nemá ho.
-> Anebo je pro první verzi skryj.
+Hra nemá žádné IAP: **všechna zvířátka se odemykají za mince nasbírané ve hře**
+a prodává se hra samotná za jednotnou cenu (nejdřív na **itch.io**, později
+případně jako placená aplikace v obchodech). To celé vydání výrazně
+zjednodušuje – odpadá RevenueCat, produkty v konzolích i review nákupů.
 
 ### 2d. Zásady ochrany soukromí (privacy policy)
 
@@ -127,7 +113,6 @@ Oba obchody vyžadují veřejnou URL. Hra neukládá nic než lokální postup
 (localStorage) a nesbírá žádná data – stačí jedna stránka na nechmerust.org,
 např. `nechmerust.org/loukarun-soukromi`, s textem: aplikace nesbírá, neukládá
 ani nesdílí žádné osobní údaje; postup hry se ukládá pouze v zařízení.
-(S IAP přibude zmínka o zpracování plateb obchodem a RevenueCatem.)
 
 ---
 
@@ -154,8 +139,8 @@ ani nesdílí žádné osobní údaje; postup hry se ukládá pouze v zařízen�
    - min. 2 screenshoty na šířku (vezmi přímo ze hry, ideálně z telefonu).
 4. **Dotazníky (záložka Policy):** obsah (content rating – vyjde PEGI 3),
    cílová skupina, **Data safety** – „No data collected", privacy policy URL.
-5. **Nákupy:** Monetize → Products → In-app products → `premium_yakul`,
-   `premium_kveta`, 49 Kč, neconsumable.
+5. **Cena aplikace:** Monetize → App pricing → nastav jednotnou cenu
+   (hra nemá žádné in-app nákupy).
 6. **Testování:** Release → Testing → **Internal testing** → nahraj AAB →
    přidej svůj e-mail jako testera → nainstaluj přes odkaz a projeď hru.
    > Google od r. 2024 u osobních účtů vyžaduje před produkcí uzavřené
@@ -188,13 +173,10 @@ Capacitor). Postup na Macu:
 3. **Metadata:** popis, klíčová slova, kategorie Hry → Arkády,
    screenshoty na šířku (6,7" a 6,5" iPhone – stačí z největšího simulátoru),
    privacy policy URL, App Privacy dotazník („Data Not Collected").
-4. **Nákupy:** Features → In-App Purchases → 2× Non-Consumable
-   (`premium_yakul`, `premium_kveta`), cena tier ~49 Kč. IAP jde do review
-   spolu s první verzí.
+4. **Cena aplikace:** Pricing and Availability → nastav jednotnou cenu
+   (hra nemá žádné in-app nákupy).
 5. **TestFlight:** nahraný build se objeví v TestFlight – otestuj na iPhonu.
 6. **Odeslat k recenzi:** vyber build, Submit for Review. Kontrola 1–3 dny.
-   Apple je přísnější: mívej IAP plně funkční, nebo pro první verzi premium
-   postavy z iOS verze skryj.
 
 ---
 
@@ -203,7 +185,6 @@ Capacitor). Postup na Macu:
 **Jednorázově založit/zaplatit:**
 - [ ] Google Play Console účet (25 USD)
 - [ ] Apple Developer Program (99 USD/rok; zkus neziskový waiver)
-- [ ] RevenueCat účet (zdarma)
 - [ ] Suno placený tarif na hudbu s komerční licencí (volitelné – hra má vestavěnou hudbu)
 
 **Vyrobit/napsat:**
@@ -214,7 +195,6 @@ Capacitor). Postup na Macu:
 
 **Technické (můžu udělat já, až budeš chtít):**
 - [ ] Capacitor projekt + orientace + fullscreen (fáze 1)
-- [ ] napojení RevenueCat na premium postavy (fáze 2c)
 - [ ] vygenerování ikon/splashů z tvých podkladů
 
 **Sehnat:**
@@ -224,5 +204,5 @@ Capacitor). Postup na Macu:
 
 ---
 
-*Až budeš mít založené účty, ozvi se – fáze 1 a 2c (Capacitor + nákupy)
-jdou připravit rovnou v tomhle repozitáři.*
+*Až budeš mít založené účty, ozvi se – fáze 1 (Capacitor) jde připravit
+rovnou v tomhle repozitáři.*

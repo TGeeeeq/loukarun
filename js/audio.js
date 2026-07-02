@@ -79,6 +79,7 @@ const AUDIO = (() => {
     carrot() { tone(660, 0.09, 'sine', 0.7); tone(880, 0.12, 'sine', 0.7, null, 0.07); },
     golden() { [660, 880, 1100, 1320].forEach((f, i) => tone(f, 0.14, 'sine', 0.7, null, i * 0.08)); },
     coin()   { tone(1050, 0.08, 'triangle', 0.6); tone(1400, 0.1, 'triangle', 0.5, null, 0.06); },
+    clover() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.6, null, i * 0.06)); },
     hit()    { tone(220, 0.25, 'sawtooth', 0.5, 90); noise(0.15, 0.3); },
     ram()    { tone(150, 0.2, 'sawtooth', 0.7, 60); noise(0.2, 0.5); },
     quote()  { tone(520, 0.07, 'sine', 0.35); tone(700, 0.08, 'sine', 0.3, null, 0.06); },

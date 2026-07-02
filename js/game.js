@@ -55,6 +55,7 @@
     coinsRun: 0,
     carrotsRun: 0,
     ramLeft: 0,
+    cloverT: 0,             // zbývající čas bonusu čtyřlístku (s) – mince mají dvojnásobnou hodnotu
     // hráč
     py: 0, vy: 0, airborne: false, jumps: 0,
     sliding: 0,             // zbývající čas skluzu (s)
@@ -419,6 +420,7 @@
     S.stats = S.char.stats;
     S.energy = ECONOMY.startEnergy;
     S.coinsRun = 0; S.carrotsRun = 0;
+    S.cloverT = 0;
     S.ramLeft = S.stats.ram || 0;
     S.speed = S.baseSpeed * S.stats.speed;
     S.demo = false;
@@ -534,9 +536,13 @@
       const n = 2;
       for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: 26 });
       width = n * 46;
-    } else if (roll < 0.83) {
+    } else if (roll < 0.82) {
       // ZLATÁ MRKEV – vysoko, chce to dvojskok
       S.pickups.push({ kind: 'golden', x: x0, h: 130 });
+      width = 40;
+    } else if (roll < 0.87) {
+      // ČTYŘLÍSTEK PRO ŠTĚSTÍ – vzácný, chvíli po něm platí mince dvojnásob
+      S.pickups.push({ kind: 'clover', x: x0, h: 105 + Math.random() * 30 });
       width = 40;
     } else {
       // řádka mincí na zemi
@@ -773,6 +779,7 @@
     }
 
     if (running) {
+      S.cloverT = Math.max(0, S.cloverT - dt);
       // energie – ubývá rychleji s tempem i vzdáleností, ať běh nemůže trvat věčně
       const distM = S.worldX / PX_PER_M;
       const speedFactor = Math.max(0, (S.speed - S.baseSpeed) / 400);
@@ -867,9 +874,16 @@
           burst(sx, sy, '#ffd24a', 22);
           sayBubble(randomQuote(EVENTS.goldenCarrot));
           AUDIO.play('golden');
+        } else if (p.kind === 'clover') {
+          S.cloverT = ECONOMY.cloverDuration;
+          floater(I18N.t('fl.clover', { n: ECONOMY.cloverCoinValue }), sx, sy - 24, '#8ee87a');
+          burst(sx, sy, '#6fce58', 18);
+          sayBubble(randomQuote(EVENTS.clover));
+          AUDIO.play('clover');
         } else {
-          S.coinsRun++;
-          floater('+1', sx, sy - 16, '#ffd24a');
+          const val = S.cloverT > 0 ? ECONOMY.cloverCoinValue : 1;
+          S.coinsRun += val;
+          floater('+' + val, sx, sy - 16, S.cloverT > 0 ? '#8ee87a' : '#ffd24a');
           AUDIO.play('coin');
         }
       }
@@ -996,6 +1010,7 @@
       if (sx < -60 || sx > W + 60) continue;
       const sy = groundY - p.h;
       if (p.kind === 'coin') GFX.drawCoin(ctx, sx, sy, S.t);
+      else if (p.kind === 'clover') GFX.drawClover(ctx, sx, sy, S.t);
       else GFX.drawCarrot(ctx, sx, sy, S.t, p.kind === 'golden');
     }
 
@@ -1192,6 +1207,11 @@
     $('hud-energy-fill').classList.toggle('low', S.energy < 25);
     $('hud-dist').textContent = Math.floor(S.worldX / PX_PER_M) + ' m';
     $('hud-coins').textContent = S.coinsRun;
+    const clover = $('hud-clover');
+    if (S.cloverT > 0) {
+      clover.style.display = 'flex';
+      clover.textContent = `🍀 ×${ECONOMY.cloverCoinValue} · ${Math.ceil(S.cloverT)} s`;
+    } else clover.style.display = 'none';
     if (full) {
       const ram = $('hud-ram');
       if (S.stats && S.stats.ram) {
@@ -1253,12 +1273,9 @@
       btn.className = 'btn small';
       if (selected) { btn.textContent = I18N.t('shop.selected'); btn.disabled = true; }
       else if (owned) { btn.textContent = I18N.t('shop.select'); }
-      else if (ch.unlock.type === 'coins') {
+      else {
         btn.textContent = `🪙 ${ch.unlock.price}`;
         btn.classList.add(save.coins >= ch.unlock.price ? 'buy' : 'cant');
-      } else {
-        btn.textContent = I18N.t('shop.premium', { price: I18N.pick(ch.unlock.price) });
-        btn.classList.add('premium');
       }
       btn.addEventListener('click', () => onCharAction(ch));
       card.appendChild(btn);
@@ -1276,33 +1293,18 @@
       initMenu();
       return;
     }
-    if (ch.unlock.type === 'coins') {
-      if (save.coins >= ch.unlock.price) {
-        save.coins -= ch.unlock.price;
-        save.unlocked.push(ch.id);
-        save.selected = ch.id;
-        persist();
-        AUDIO.play('buy');
-        buildShop();
-        initMenu();
-      } else {
-        const missing = ch.unlock.price - save.coins;
-        toast(I18N.t('toast.needCoins', { n: missing }));
-      }
+    if (save.coins >= ch.unlock.price) {
+      save.coins -= ch.unlock.price;
+      save.unlocked.push(ch.id);
+      save.selected = ch.id;
+      persist();
+      AUDIO.play('buy');
+      buildShop();
+      initMenu();
+      toast(I18N.t('toast.joined', { name: I18N.pick(ch.name) }));
     } else {
-      // premium – v demo verzi vysvětlíme a odemkneme
-      $('premium-name').textContent = I18N.pick(ch.name);
-      $('premium-modal').classList.add('visible');
-      $('btn-premium-unlock').onclick = () => {
-        save.unlocked.push(ch.id);
-        save.selected = ch.id;
-        persist();
-        AUDIO.play('buy');
-        $('premium-modal').classList.remove('visible');
-        buildShop();
-        initMenu();
-        toast(I18N.t('toast.joined', { name: I18N.pick(ch.name) }));
-      };
+      const missing = ch.unlock.price - save.coins;
+      toast(I18N.t('toast.needCoins', { n: missing }));
     }
   }
 
@@ -1325,7 +1327,6 @@
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-resume').addEventListener('click', togglePause);
   $('btn-pause-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
-  $('btn-premium-close').addEventListener('click', () => $('premium-modal').classList.remove('visible'));
   $('btn-sfx').addEventListener('click', () => {
     save.sfx = !(save.sfx !== false);
     persist(); AUDIO.setSfx(save.sfx); initMenu();
