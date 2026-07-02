@@ -1115,6 +1115,36 @@ const GFX = (() => {
     ctx.restore();
   }
 
+  function drawClover(ctx, x, y, t) {
+    ctx.save();
+    ctx.translate(x, y + Math.sin(t * 0.005 + x * 0.01) * 4);
+    // pulzující svatozář jako u zlaté mrkve, jen do zelena
+    const pulse = 1 + 0.12 * Math.sin(t * 0.008);
+    ctx.fillStyle = 'rgba(140,230,120,0.35)';
+    ctx.beginPath(); ctx.arc(0, 0, 24 * pulse, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(190,245,150,0.3)';
+    ctx.beginPath(); ctx.arc(0, 0, 17 * pulse, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(Math.sin(t * 0.003 + x * 0.02) * 0.25);
+    // stonek
+    ctx.strokeStyle = '#3f8a34';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 2); ctx.quadraticCurveTo(3, 10, 1, 16);
+    ctx.stroke();
+    // čtyři srdíčkové lístky
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.rotate(i * Math.PI / 2 + Math.PI / 4);
+      ctx.fillStyle = '#57b545';
+      ell(ctx, -3.2, -7.5, 4.4, 6, -0.35); ctx.fill();
+      ell(ctx, 3.2, -7.5, 4.4, 6, 0.35); ctx.fill();
+      ctx.fillStyle = '#6fce58';
+      ell(ctx, 0, -7, 3, 5.4, 0); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   function drawCoin(ctx, x, y, t) {
     const wob = Math.sin(t * 0.006 + x * 0.02);
     ctx.save();
@@ -1410,7 +1440,7 @@ const GFX = (() => {
   return {
     lerp, lerpColor, shade, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround,
-    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawCharacter,
+    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawCharacter,
     PROPS,
   };
 })();

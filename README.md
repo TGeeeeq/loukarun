@@ -15,8 +15,8 @@ příběhem – každé zvířátko má ty svoje.
 | 🐑 **Ovečka Pogo** | 250 mincí | PRUŽINKA – vyšší skoky |
 | 🐄 **Kráva Avala** | 500 mincí | SPRINTERKA – rychlejší běh, výživnější mrkve |
 | 🐖 **Prasátko Flíček** | 900 mincí | RYPÁČEK-MAGNET – přitahuje mrkve a mince |
-| 🐏 **Muflon Yakul** | ⭐ premium | BERANIDLO – 3× za běh prorazí překážku |
-| 🐄 **Kráva Květa** | ⭐ premium | KLID V DUŠI – energie ubývá pomaleji |
+| 🐏 **Muflon Yakul** | 1500 mincí | BERANIDLO – 3× za běh prorazí překážku |
+| 🐄 **Kráva Květa** | 2500 mincí | KLID V DUŠI – energie ubývá pomaleji |
 
 ## 🎮 Ovládání
 
@@ -34,6 +34,8 @@ příběhem – každé zvířátko má ty svoje.
 - Když energie dojde, běh **pozitivně končí** – zvířátko někam doběhne a stane se
   něco vtipného (náhodný příběh podle postavy).
 - **Mince** 🪙 se přičítají do peněženky a odemykají další zvířátka.
+- Vzácný **čtyřlístek pro štěstí** 🍀 na chvíli zdvojnásobí hodnotu sbíraných mincí
+  (odpočet ukazuje zelený štítek v HUD).
 - Prostředí se plynule střídá po ~550 m: louka → sad → les → vesnice → západ slunce → noc.
 
 ## 🚀 Spuštění (web demo)
@@ -79,12 +81,10 @@ npx cap open ios       # Xcode → archiv pro App Store (vyžaduje Mac)
 
 ### Co bude potřeba dořešit před vydáním
 
-1. **Nákupy v aplikaci (premium postavy).** Ve web demu se prémiové postavy
-   (Yakul, Květa) odemykají zdarma přes vysvětlující dialog. Pro ostrou verzi
-   napojit In-App Purchases – nejjednodušší cesta je
-   [RevenueCat](https://www.revenuecat.com/) (`@revenuecat/purchases-capacitor`),
-   který sjednocuje Google Play Billing a Apple StoreKit. Místo napojení je funkce
-   `onCharAction()` v `js/game.js` (větev `unlock.type === 'premium'`).
+1. **Monetizace.** Hra nemá žádné nákupy v aplikaci – všechna zvířátka se
+   odemykají za nasbírané mince. Prodává se hra samotná za jednotnou cenu
+   (nejdřív na [itch.io](https://itch.io), případně později v mobilních
+   obchodech jako placená aplikace).
 2. **Vývojářské účty:** Google Play Console (jednorázově 25 USD),
    Apple Developer Program (99 USD/rok).
 3. **Ikona a splash screen** – doporučuji vyjít z postavy Karla.

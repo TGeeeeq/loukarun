@@ -62,7 +62,6 @@ html, body {
 }
 .btn.buy { background: linear-gradient(180deg, #b0e89a, #7ac95e); box-shadow: 0 4px 0 #55a13c, 0 8px 18px rgba(0,0,0,0.18); color: #234a12; }
 .btn.cant { filter: grayscale(.55) brightness(.92); }
-.btn.premium { background: linear-gradient(180deg, #d9b8ff, #a86ae8); box-shadow: 0 4px 0 #7a3ec2, 0 8px 18px rgba(0,0,0,0.18); color: #fff; }
 .btn:disabled { cursor: default; }
 a.btn { text-decoration: none; display: inline-block; }
 
@@ -76,6 +75,11 @@ a.btn { text-decoration: none; display: inline-block; }
   font-weight: 800;
   color: #4a3220;
   box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+.hud-chip.lucky {
+  background: rgba(214, 245, 190, 0.92);
+  color: #2c5e1e;
+  animation: pulse .6s infinite alternate;
 }
 
 /* ---------- HUD ---------- */
@@ -300,28 +304,6 @@ a.btn { text-decoration: none; display: inline-block; }
 .stat-val.gold { color: #d89b26; }
 .over-buttons { display: flex; flex-direction: column; gap: 10px; width: 100%; align-items: center; }
 .over-buttons .row { display: flex; gap: 10px; }
-
-/* modal */
-.modal {
-  position: fixed; inset: 0;
-  display: none; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.5);
-  padding: 20px;
-  z-index: 20;
-}
-.modal.visible { display: flex; }
-.modal-card {
-  background: #fffdf5;
-  border-radius: 24px;
-  padding: 26px;
-  max-width: 420px;
-  text-align: center;
-  display: flex; flex-direction: column; gap: 12px;
-  color: #4a3220;
-  font-weight: 600;
-}
-.modal-card .muted { font-size: 0.88rem; opacity: 0.75; }
-.modal-card a { color: #55a13c; }
 
 /* toast */
 #toast {

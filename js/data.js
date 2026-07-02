@@ -212,7 +212,7 @@ const DATA = (() => {
         cs: 'Rozverný mladík, který právě zjišťuje, k čemu má rohy.',
         en: 'A playful youngster still figuring out what his horns are for.',
       },
-      unlock: { type: 'premium', price: { cs: '49 Kč', en: 'CZK 49' } },
+      unlock: { type: 'coins', price: 1500 },
       perk: {
         cs: 'Perk: BERANIDLO – 3× za běh prorazí překážku bez ztráty energie.',
         en: 'Perk: BATTERING RAM – smashes through 3 obstacles per run without losing energy.',
@@ -260,7 +260,7 @@ const DATA = (() => {
         cs: 'Klidná a tichá duše, věrná parťačka Avaly.',
         en: 'A calm and quiet soul, Avala’s faithful companion.',
       },
-      unlock: { type: 'premium', price: { cs: '49 Kč', en: 'CZK 49' } },
+      unlock: { type: 'coins', price: 2500 },
       perk: {
         cs: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
         en: 'Perk: INNER PEACE – energy drains a quarter slower.',
@@ -455,6 +455,11 @@ const DATA = (() => {
       { cs: 'Ta chutná jako tisíc mrkví!', en: 'It tastes like a thousand carrots!' },
       { cs: 'Dneska mám svátek!', en: 'This is my lucky day!' },
     ],
+    clover: [
+      { cs: 'ČTYŘLÍSTEK! Dneska mi štěstí přeje!', en: 'FOUR-LEAF CLOVER! Luck is on my side!' },
+      { cs: 'Mince se najednou lesknou dvakrát tolik!', en: 'Coins suddenly shine twice as bright!' },
+      { cs: 'Šťastná tlapka, plná peněženka!', en: 'Lucky paw, full wallet!' },
+    ],
     chicken: [ // co zakřičí slepice, když do ní zvířátko vrazí
       { cs: 'Kokodák!!', en: 'Bawk-bawk!!' },
       { cs: 'Ko-ko-KATASTROFA!', en: 'Cluck-cluck-CATASTROPHE!' },
@@ -499,6 +504,8 @@ const DATA = (() => {
     startEnergy: 100,
     drainPerSecond: 1.8,  // základ, násobí se statistikou postavy, rychlostí a vzdáleností
     drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
+    cloverDuration: 12,   // jak dlouho po sebrání čtyřlístku platí bonus (s)
+    cloverCoinValue: 2,   // hodnota mince, dokud bonus běží
   };
 
   return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY };
