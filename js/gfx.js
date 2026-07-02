@@ -46,21 +46,34 @@ const GFX = (() => {
   /* =========================================================
      OBLOHA, KOPCE, ZEMĚ
      ========================================================= */
+  // gradienty oblohy a sluneční záře se přepočítají jen při změně barev/rozměrů,
+  // ne každý snímek – plynulejší vykreslování
+  const skyCache = { key: '', grad: null };
+  const glowCache = { key: '', grad: null };
+
   function drawSky(ctx, W, H, pal, t) {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, pal.skyTop);
-    g.addColorStop(1, pal.skyBottom);
-    ctx.fillStyle = g;
+    const skyKey = pal.skyTop + pal.skyBottom + H;
+    if (skyCache.key !== skyKey) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, pal.skyTop);
+      g.addColorStop(1, pal.skyBottom);
+      skyCache.key = skyKey; skyCache.grad = g;
+    }
+    ctx.fillStyle = skyCache.grad;
     ctx.fillRect(0, 0, W, H);
 
     // slunce / měsíc
     const sx = W * 0.78, sy = H * 0.22;
     ctx.save();
     ctx.globalAlpha = 0.9;
-    const glow = ctx.createRadialGradient(sx, sy, 10, sx, sy, 90);
-    glow.addColorStop(0, pal.sun);
-    glow.addColorStop(1, pal.sun + '00');
-    ctx.fillStyle = glow;
+    const glowKey = pal.sun + W + 'x' + H;
+    if (glowCache.key !== glowKey) {
+      const glow = ctx.createRadialGradient(sx, sy, 10, sx, sy, 90);
+      glow.addColorStop(0, pal.sun);
+      glow.addColorStop(1, pal.sun + '00');
+      glowCache.key = glowKey; glowCache.grad = glow;
+    }
+    ctx.fillStyle = glowCache.grad;
     ctx.beginPath(); ctx.arc(sx, sy, 90, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = pal.sun;
     ctx.beginPath(); ctx.arc(sx, sy, pal.nightAmt > 0.5 ? 24 : 34, 0, Math.PI * 2); ctx.fill();
@@ -690,6 +703,104 @@ const GFX = (() => {
       }
       ctx.globalAlpha = baseAlpha;
     },
+
+    /* ---------- další vtipné kulisy ---------- */
+    catnap(ctx, s, extra, t) {
+      // kočka spící na pařezu – bok se jí zvedá, jak oddechuje
+      ctx.fillStyle = '#7a5a38';
+      rr(ctx, -16 * s, -20 * s, 32 * s, 20 * s, 4 * s); ctx.fill();
+      ctx.fillStyle = '#c9a06b';
+      ell(ctx, 0, -20 * s, 16 * s, 6 * s); ctx.fill();
+      const breathe = 1 + Math.sin((t || 0) * 0.003) * 0.05;
+      ctx.fillStyle = '#8a7364';
+      ell(ctx, 0, -27 * s, 14 * s, 8 * s * breathe); ctx.fill();
+      // hlava položená na tlapkách
+      ctx.beginPath(); ctx.arc(-9 * s, -30 * s, 6 * s, 0, Math.PI * 2); ctx.fill();
+      // ouška
+      ctx.beginPath(); ctx.moveTo(-13 * s, -34 * s); ctx.lineTo(-11 * s, -39 * s); ctx.lineTo(-8 * s, -34 * s); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-7 * s, -35 * s); ctx.lineTo(-4 * s, -39 * s); ctx.lineTo(-2 * s, -33 * s); ctx.closePath(); ctx.fill();
+      // ocásek přehozený přes okraj
+      ctx.strokeStyle = '#8a7364'; ctx.lineWidth = 3.5 * s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(12 * s, -25 * s); ctx.quadraticCurveTo(19 * s, -30 * s, 12 * s, -34 * s); ctx.stroke();
+      // zavřené oko
+      ctx.strokeStyle = '#4a3a2c'; ctx.lineWidth = 1.4 * s;
+      ctx.beginPath(); ctx.arc(-11 * s, -30 * s, 2 * s, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+      // stoupající Zzz
+      const base = ctx.globalAlpha;
+      const ph = (((t || 0) * 0.0008) % 1 + 1) % 1;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = base * (1 - ph);
+      ctx.font = `bold ${8 * s}px "Baloo 2", sans-serif`;
+      ctx.fillText('z', (-15 - ph * 6) * s, (-42 - ph * 14) * s);
+      ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
+      ctx.fillText('Z', (-8 - ph * 10) * s, (-48 - ph * 18) * s);
+      ctx.globalAlpha = base;
+    },
+    snail(ctx, s, extra, t) {
+      // závodní šnek s vlaječkou – taky dnes trénuje
+      const stretch = 1 + Math.sin((t || 0) * 0.004) * 0.06;
+      ctx.fillStyle = '#d9c48a';
+      ell(ctx, -6 * s * stretch, -5 * s, 16 * s * stretch, 5 * s); ctx.fill();
+      ctx.beginPath(); ctx.arc(-18 * s * stretch, -9 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+      // tykadla s očima
+      ctx.strokeStyle = '#d9c48a'; ctx.lineWidth = 2 * s; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-20 * s, -13 * s); ctx.lineTo(-24 * s, -20 * s);
+      ctx.moveTo(-17 * s, -13 * s); ctx.lineTo(-15 * s, -21 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#4a3a2c';
+      ctx.beginPath(); ctx.arc(-24 * s, -21 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-15 * s, -22 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+      // ulita se spirálou
+      ctx.fillStyle = '#c98a4a';
+      ctx.beginPath(); ctx.arc(4 * s, -14 * s, 12 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#a86a34'; ctx.lineWidth = 2.5 * s;
+      ctx.beginPath();
+      ctx.arc(4 * s, -14 * s, 8 * s, 0, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(4 * s, -14 * s, 4 * s, Math.PI * 1.5, Math.PI * 3);
+      ctx.stroke();
+      // závodní vlaječka na ulitě
+      ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 1.6 * s;
+      ctx.beginPath(); ctx.moveTo(8 * s, -24 * s); ctx.lineTo(8 * s, -35 * s); ctx.stroke();
+      ctx.fillStyle = '#e5533a';
+      ctx.beginPath(); ctx.moveTo(8 * s, -35 * s); ctx.lineTo(18 * s, -32.5 * s); ctx.lineTo(8 * s, -30 * s); ctx.closePath(); ctx.fill();
+    },
+    frogpond(ctx, s, extra, t) {
+      // rybníček se žabkou na leknínu, občas kuňkne bublinu
+      ctx.fillStyle = '#7ec3d8';
+      ell(ctx, 0, -4 * s, 34 * s, 9 * s); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ell(ctx, -12 * s, -6 * s, 12 * s, 3 * s); ctx.fill();
+      // rákosí
+      ctx.strokeStyle = '#4c8a3f'; ctx.lineWidth = 2.4 * s; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-30 * s, -4 * s); ctx.lineTo(-32 * s, -26 * s);
+      ctx.moveTo(-26 * s, -4 * s); ctx.lineTo(-25 * s, -22 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#8a6a45';
+      ell(ctx, -32 * s, -28 * s, 2.6 * s, 6 * s); ctx.fill(); // orobinec
+      // leknín
+      ctx.fillStyle = '#4c8a3f';
+      ell(ctx, 8 * s, -6 * s, 9 * s, 3.5 * s); ctx.fill();
+      // žabka
+      ctx.fillStyle = '#6aab52';
+      ell(ctx, 8 * s, -13 * s, 6 * s, 5 * s); ctx.fill();
+      ctx.beginPath(); ctx.arc(4 * s, -17 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(12 * s, -17 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(4 * s, -17.4 * s, 1.1 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(12 * s, -17.4 * s, 1.1 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(4 * s, -17.4 * s, 0.55 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(12 * s, -17.4 * s, 0.55 * s, 0, Math.PI * 2); ctx.fill();
+      // kuňkací bublina
+      const b = Math.max(0, Math.sin((t || 0) * 0.0035));
+      ctx.fillStyle = 'rgba(255,240,200,0.85)';
+      ell(ctx, 16 * s, -13 * s, 4 * s * b, 3.5 * s * b); ctx.fill();
+    },
   };
 
   function drawProp(ctx, prop, x, y, s, extra, t) {
@@ -978,9 +1089,12 @@ const GFX = (() => {
     ctx.save();
     ctx.translate(x, y + Math.sin(t * 0.005 + x * 0.01) * 4);
     ctx.rotate(0.5);
-    if (golden) {
-      ctx.shadowColor = '#ffd24a';
-      ctx.shadowBlur = 18;
+    if (golden) { // levná pulzující svatozář místo shadowBlur
+      const pulse = 1 + 0.12 * Math.sin(t * 0.008);
+      ctx.fillStyle = 'rgba(255,210,74,0.35)';
+      ctx.beginPath(); ctx.arc(0, 0, 24 * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,225,120,0.3)';
+      ctx.beginPath(); ctx.arc(0, 0, 17 * pulse, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = golden ? '#ffce3a' : '#f28c28';
     ctx.beginPath();
