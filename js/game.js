@@ -639,7 +639,7 @@
     const T = S.tut;
     T.phase = 'slow';
     // novinka s akcí skoro zastaví čas; čisté vyprávění zpomalí jen lehce
-    T.target = step.gate ? TUTORIAL.slowScale : 0.45;
+    T.target = step.gate ? TUTORIAL.slowScale : 0.35;
     T.gate = step.gate;
     T.bubble = step.text;
     T.fallback = step.dur || TUTORIAL.readTime;
@@ -794,8 +794,9 @@
           S.particles.push({ x: f.sx, y: f.sy + 6, vx: -30, vy: 35, r: 3, life: 4, a: 0.85, sway: Math.random() * 6, c: '#f5f2ea' });
         }
       }
-      // jednou za přelet něco vesele zavolá
-      if (!f.said && running && f.sx > W * 0.3 && f.sx < W * 0.85) {
+      // jednou za přelet něco vesele zavolá (ve škole běhu mlčí,
+      // aby nepřekřikoval Karlovy lekce)
+      if (!f.said && running && !S.tut && f.sx > W * 0.3 && f.sx < W * 0.85) {
         f.said = true;
         if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
           S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
@@ -1125,6 +1126,8 @@
   // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
   const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
+    // ve škole běhu má slovo jen Karel – lidé zafandí až po ní
+    if (S.tut) return;
     const px = playerX();
     for (const d of S.decor) {
       if (!d.human || d.said) continue;
@@ -1294,8 +1297,9 @@
     }
     ctx.globalAlpha = 1;
 
-    // bublinky obyvatel a letců – plují se svým mluvčím
-    for (const b of S.sideBubbles) {
+    // bublinky obyvatel a letců – plují se svým mluvčím;
+    // dokud svítí Karlova lekce, nesmí mu do ní nikdo kecat
+    for (const b of (S.tut && S.tut.bubbleA > 0.1 ? [] : S.sideBubbles)) {
       let ax, ay;
       if (b.decor) {
         ax = (b.decor.x - S.worldX) * FAR_PARALLAX + px;

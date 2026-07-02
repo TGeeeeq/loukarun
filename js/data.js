@@ -532,10 +532,10 @@ const DATA = (() => {
      pojistce readTime. Skript jede v normálním režimu 'run', jen
      místo náhodných spawnů vkládá objekty popořadě. */
   const TUTORIAL = {
-    slowScale: 0.12,   // časová lupa při novince
+    slowScale: 0.08,   // časová lupa při novince
     easeIn: 5,         // rychlost náběhu zpomalení (1/s, reálný čas)
     easeOut: 9,        // rychlost návratu do běhu
-    readTime: 5.0,     // pojistka – po tolika reálných s se čas rozjede sám
+    readTime: 6.5,     // pojistka – po tolika reálných s se čas rozjede sám
     triggerX: 0.62,    // zpomalí se, když novinka dojede na 62 % šířky obrazovky
     steps: [
       {
@@ -594,7 +594,7 @@ const DATA = (() => {
         },
       },
       {
-        id: 'outro', gapM: 25, gate: null, dur: 4,
+        id: 'outro', gapM: 25, gate: null, dur: 5.5,
         text: {
           cs: 'Škola běhu skončila, jednička s hvězdičkou. Teď běž, skákej a nenaraž do husy… vlastně naraz, chci vidět, co ti řekne!',
           en: 'Running school is over — straight A’s. Now go, jump, and don’t crash into a goose… actually do, I want to hear what she says!',
