@@ -69,8 +69,8 @@ const DATA = (() => {
       unlock: { type: 'coins', price: 500 },
       perk: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
       stats: { speed: 1.08, jump: 1.0, drain: 1.0, carrotBonus: 1.3 },
-      // hnědo-bílá strakatá kravka s malými růžky
-      colors: { body: '#8a5638', belly: '#eee1d2', mane: '#5c3822', muzzle: '#e8b7a0', ear: '#8a5638', earIn: '#cb9c82', spots: '#f2ece0', pattern: 'patches', hoof: '#3d3128' },
+      // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
+      colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
         'Búúrned kalorie? Já je předběhla!',
         'Louka je moje běžecká dráha!',
@@ -147,8 +147,8 @@ const DATA = (() => {
       unlock: { type: 'premium', price: '49 Kč' },
       perk: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
-      // bílá kravka s velkými černými fleky, bez rohů
-      colors: { body: '#f0ebe0', belly: '#faf6ec', mane: '#3a3835', muzzle: '#e8b0a0', ear: '#f0ebe0', earIn: '#cbb9ae', spots: '#33302c', pattern: 'holstein', noHorns: true, hoof: '#46423e' },
+      // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy
+      colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', noHorns: true, eyePatch: '#552a12', forelock: '#f7f2e6', hoof: '#3d3128' },
       quotes: [
         'Spěchám. Pomalu, ale spěchám.',
         'Klid je taky rychlost. Jen jiná.',
@@ -254,6 +254,38 @@ const DATA = (() => {
     ],
   };
 
+  /* ---------- LIDÉ Z LOUKY ----------
+     Tři lidští obyvatelé azylu fandí z pozadí.
+     Tomáš – staví (a na hlavě mu bydlí slepice)
+     Tony – pečuje o zvířata a o wi-fi signál
+     Maruška – bylinky, zpěv, malování a miminko v bříšku */
+  const HUMANS = {
+    tomas: [
+      'Neruš, stavíme!',
+      'Ta slepice je můj stavební dozor.',
+      'Ještě prkno a je z toho palác!',
+      'Změřeno dvakrát, uříznuto třikrát…',
+      'Hnízdo na hlavě? Aspoň mám vejce čerstvá!',
+      'Kdo maká, ten se nenudí!',
+    ],
+    tony: [
+      'Beran podrbán, appka nasazena.',
+      'Mám 5G i v kurníku!',
+      'AI tvrdí, že jsi nejrychlejší v okolí!',
+      'Beránek právě dostal svůj první token.',
+      'Ovce spočítány. Digitálně!',
+      'Nabíjím telefon i berana.',
+    ],
+    maruska: [
+      'Běž, běž! Zpívám ti do kroku! ♪',
+      'Miminko fandí kopáním!',
+      'Meduňka na klid, mrkev na běh!',
+      'Namaluju tě, až doběhneš!',
+      'My s bříškem fandíme oba!',
+      'Avalo, nech trávu i ostatním!',
+    ],
+  };
+
   /* ---------- CEDULE (vtipné nápisy na rozcestnících) ---------- */
   const SIGNS = [
     'Mrkvov 2 km', 'Senné Lázně 5 km', 'Pozor, zvěř! (my)', 'Azyl Nech mě růst ❤',
@@ -315,5 +347,5 @@ const DATA = (() => {
     drainRampDist: 1800,  // po kolika metrech se odčerpávání zdvojnásobí
   };
 
-  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY };
+  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY };
 })();

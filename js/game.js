@@ -4,7 +4,7 @@
    ========================================================= */
 
 (() => {
-  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, SIGNS, EVENTS, ECONOMY } = DATA;
+  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY } = DATA;
 
   /* ---------- canvas ---------- */
   const canvas = document.getElementById('game');
@@ -308,7 +308,24 @@
   // aby se nepletlo s překážkami na pěšině
   const NEAR_PROPS = new Set(['flower', 'mushroom', 'stump', 'basket', 'gnome', 'campfire']);
 
+  // lidští obyvatelé Louky – objevují se vzácně a střídají se
+  const HUMAN_PROPS = Object.keys(HUMANS);
+  let humanIdx = Math.floor(Math.random() * HUMAN_PROPS.length);
+
   function spawnDecor() {
+    // občas u pěšiny fandí někdo z lidí, co se o azyl starají
+    if (Math.random() < 0.09) {
+      S.decor.push({
+        prop: HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length],
+        x: S.nextDecorX,
+        far: true,
+        human: true,
+        said: false,
+        s: 0.8 + Math.random() * 0.15,
+      });
+      S.nextDecorX += 420 + Math.random() * 440;
+      return;
+    }
     const env = currentEnv().env;
     const props = env.props;
     const p = props[Math.floor(Math.random() * props.length)];
@@ -520,6 +537,7 @@
 
       collide(dt);
       quotes(dt);
+      humanQuotes();
       updateHud(false);
     }
 
@@ -665,6 +683,20 @@
     }
   }
 
+  // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
+  function humanQuotes() {
+    const px = playerX();
+    for (const d of S.decor) {
+      if (!d.human || d.said) continue;
+      const sx = (d.x - S.worldX) * 0.75 + px;
+      if (sx > W * 0.25 && sx < W * 0.9) {
+        d.said = true;
+        const fx = Math.min(Math.max(sx, 130), W - 130);
+        floater(randomQuote(HUMANS[d.prop]), fx, groundY - 20 - 150 * d.s, '#ffffff');
+      }
+    }
+  }
+
   /* =========================================================
      RENDER
      ========================================================= */
@@ -693,7 +725,7 @@
       if (!d.far) continue;
       const sx = (d.x - S.worldX) * 0.75 + px;
       if (sx < -220 || sx > W + 220) continue;
-      ctx.globalAlpha = d.prop === 'signpost' ? 0.85 : 0.62;
+      ctx.globalAlpha = d.human ? 0.95 : (d.prop === 'signpost' ? 0.85 : 0.62);
       GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }
