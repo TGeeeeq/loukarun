@@ -46,7 +46,7 @@
       <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
     </div>
     <div class="menu-top">
-      <h1 class="game-title">LOUKA<span>RUN</span></h1>
+      <h1 class="game-title" id="game-title">LOUKA<span>RUN</span></h1>
       <p class="subtitle" data-i18n="menu.subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
       <p class="subtitle-alt" data-i18n-other="menu.subtitle">A runner game supporting the <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> animal sanctuary 💚</p>
     </div>
@@ -111,9 +111,20 @@
   <!-- PAUZA -->
   <div id="screen-pause" class="screen">
     <div class="over-card small">
-      <h2 data-i18n="pause.title">Přestávka na trávu 🌱</h2>
+      <h2 id="pause-title" data-i18n="pause.title">Přestávka na trávu 🌱</h2>
       <button id="btn-resume" class="btn big" data-i18n="pause.resume">▶ Pokračovat</button>
       <button id="btn-pause-menu" class="btn" data-i18n="pause.menu">🏠 Zpět do menu</button>
+    </div>
+  </div>
+
+  <!-- VÝVOJÁŘSKÉ MENU (skryté – 5× ťuknout na titul, nebo klávesa `) -->
+  <div id="screen-dev" class="screen">
+    <div class="over-card dev-card">
+      <div class="dev-head">
+        <h2 id="dev-title">🔧 Vývojářské menu</h2>
+        <button id="btn-dev-close" class="btn round" aria-label="Zavřít">✕</button>
+      </div>
+      <div id="dev-body"></div>
     </div>
   </div>
 
