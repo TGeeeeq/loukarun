@@ -118,6 +118,33 @@
   // na výšku drží intro pozici 0 – rozjede se, až hráč otočí telefon
   const portraitMq = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
 
+  /* ---------- AF signatura – filmová znělka autora ----------
+     Logo se vynoří ze tmy, pod ním web, pak se vše prolne do
+     intra hry. Jde přeskočit ťuknutím nebo klávesou. */
+  const AF_HOLD = 4.7;   // kdy znělka sama začne odcházet (s)
+  const AF_OUT = 1.4;    // délka prolnutí do hry (s)
+  const afSplash = document.getElementById('af-splash');
+  let afActive = !!afSplash;
+  const afAutoLeave = afActive ? setTimeout(leaveAfSplash, AF_HOLD * 1000) : null;
+
+  function leaveAfSplash() {
+    if (!afActive) return;
+    afActive = false; // intro hry se rozjede hned, ať se louka vynoří ze tmy
+    clearTimeout(afAutoLeave);
+    window.removeEventListener('pointerdown', skipAfSplash, true);
+    window.removeEventListener('keydown', skipAfSplash, true);
+    afSplash.classList.add('af-leave');
+    setTimeout(() => afSplash.remove(), AF_OUT * 1000);
+  }
+  function skipAfSplash() {
+    // krátká prodleva, ať znělka při netrpělivém ťuknutí aspoň problikne
+    if (performance.now() > 700) leaveAfSplash();
+  }
+  if (afActive) {
+    window.addEventListener('pointerdown', skipAfSplash, true);
+    window.addEventListener('keydown', skipAfSplash, true);
+  }
+
   const intro = {
     t: 0,
     ending: false, endT: 0,
@@ -145,6 +172,7 @@
   }
 
   function updateIntro(dt) {
+    if (afActive) return;           // čeká, než doběhne AF znělka
     if (portraitMq.matches) return; // čeká za výzvou „otoč telefon“
     intro.t += dt;
 

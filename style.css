@@ -462,7 +462,10 @@ a.btn { text-decoration: none; display: inline-block; }
 }
 #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* výzva k otočení telefonu */
+/* =========================================================
+   Výzva k otočení telefonu (jen mobil na výšku)
+   – noční louka se světluškami a telefonem, který se sám otočí
+   ========================================================= */
 #rotate-overlay {
   position: fixed; inset: 0;
   z-index: 100;
@@ -470,27 +473,239 @@ a.btn { text-decoration: none; display: inline-block; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  background: linear-gradient(180deg, #55a13c, #2d6e3a);
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(95% 60% at 50% -12%, rgba(255, 224, 138, 0.16), rgba(255, 224, 138, 0) 62%),
+    linear-gradient(180deg, #12332a 0%, #22563a 55%, #35804a 100%);
   color: #fff;
   text-align: center;
-  font-weight: 800;
-  font-size: 1.4rem;
-  padding: 30px;
-}
-#rotate-overlay span { font-size: 1rem; font-weight: 600; opacity: 0.85; }
-#rotate-overlay .rotate-en { font-size: 1.1rem; opacity: 0.8; }
-#rotate-overlay .rotate-en span { font-size: 0.85rem; }
-.rotate-phone {
-  font-size: 4.5rem;
-  animation: rotatePhone 1.6s ease-in-out infinite;
-}
-@keyframes rotatePhone {
-  0%, 25% { transform: rotate(0deg); }
-  60%, 100% { transform: rotate(90deg); }
+  overflow: hidden;
 }
 @media (orientation: portrait) and (pointer: coarse) {
   #rotate-overlay { display: flex; }
+}
+
+/* tmavé kopce louky u spodního okraje */
+.rotate-meadow {
+  position: absolute;
+  left: -8vw; right: -8vw; bottom: -10vh;
+  height: 26vh;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 100% at 20% 100%, rgba(9, 38, 22, 0.9) 57%, transparent 58%),
+    radial-gradient(66% 112% at 80% 102%, rgba(12, 47, 27, 0.85) 55%, transparent 56%);
+}
+
+/* poletující světlušky */
+.rotate-fireflies i {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #ffe08a;
+  filter: blur(1px);
+  box-shadow: 0 0 12px 3px rgba(255, 224, 138, 0.45);
+  opacity: 0;
+  animation: fireflyFloat 6s ease-in-out infinite;
+}
+.rotate-fireflies i:nth-child(1) { left: 12%; top: 24%; animation-delay: 0s;    animation-duration: 6.4s; }
+.rotate-fireflies i:nth-child(2) { left: 84%; top: 18%; animation-delay: 1.2s;  animation-duration: 7.6s; }
+.rotate-fireflies i:nth-child(3) { left: 22%; top: 72%; animation-delay: 2.6s;  animation-duration: 5.8s; }
+.rotate-fireflies i:nth-child(4) { left: 76%; top: 66%; animation-delay: 0.8s;  animation-duration: 8.2s; }
+.rotate-fireflies i:nth-child(5) { left: 50%; top: 10%; animation-delay: 3.4s;  animation-duration: 7s;   }
+.rotate-fireflies i:nth-child(6) { left: 8%;  top: 52%; animation-delay: 4.4s;  animation-duration: 6.6s; }
+@keyframes fireflyFloat {
+  0%, 100% { opacity: 0; transform: translateY(8px); }
+  25%      { opacity: 0.9; }
+  55%      { opacity: 0.3; transform: translateY(-16px); }
+  80%      { opacity: 0.75; transform: translateY(-4px); }
+}
+
+/* skleněná karta s obsahem */
+.rotate-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: min(86vw, 360px);
+  padding: 26px 30px 24px;
+  background: rgba(7, 27, 17, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 30px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.35);
+  animation: rotateCardIn .6s cubic-bezier(.2, .9, .3, 1.15) both;
+}
+@keyframes rotateCardIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* telefon s mini loukou na displeji + šipka otočení */
+.rotate-stage {
+  position: relative;
+  width: 136px; height: 136px;
+  margin-bottom: 14px;
+  display: grid;
+  place-items: center;
+}
+.rotate-arc {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  animation: arcPulse 3.6s ease-in-out infinite;
+}
+@keyframes arcPulse {
+  0%, 100% { opacity: 0.55; }
+  30%      { opacity: 1; }
+}
+.rotate-device {
+  position: relative;
+  width: 56px; height: 100px;
+  border-radius: 14px;
+  background: #0d2418;
+  border: 3px solid #f6f2e7;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  animation: deviceTurn 3.6s cubic-bezier(.65, -0.1, .3, 1.2) infinite;
+}
+@keyframes deviceTurn {
+  0%, 16%   { transform: rotate(0deg); }
+  38%       { transform: rotate(96deg); }
+  46%, 76%  { transform: rotate(90deg); }
+  94%, 100% { transform: rotate(0deg); }
+}
+.rotate-notch {
+  position: absolute;
+  top: 5px; left: 50%;
+  width: 16px; height: 3px;
+  margin-left: -8px;
+  border-radius: 999px;
+  background: rgba(246, 242, 231, 0.8);
+  z-index: 1;
+}
+.rotate-screen {
+  position: absolute; inset: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #8ed4f7 0%, #cdeef7 54%, #a5cd6f 55%, #7ab84e 100%);
+}
+.rs-sun {
+  position: absolute; top: 8px; right: 8px;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #ffe08a;
+  box-shadow: 0 0 10px 3px rgba(255, 224, 138, 0.75);
+}
+.rs-hill {
+  position: absolute; bottom: -8px; left: -10px;
+  width: 46px; height: 24px;
+  border-radius: 50%;
+  background: #55a13c;
+}
+
+/* texty výzvy */
+.rotate-title {
+  font-size: clamp(1.35rem, 6.2vw, 1.7rem);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18), 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.rotate-sub {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+.rotate-rule {
+  width: 76px; height: 1px;
+  margin: 15px auto 12px;
+  background: linear-gradient(90deg, transparent, rgba(255, 224, 138, 0.65), transparent);
+}
+.rotate-en {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.45;
+}
+.rotate-en strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* šetrný režim – bez točení a poletování, telefon rovnou naležato */
+@media (prefers-reduced-motion: reduce) {
+  .rotate-device { animation: none; transform: rotate(90deg); }
+  .rotate-fireflies i, .rotate-arc { animation: none; opacity: 0.6; }
+  .rotate-card { animation: none; }
+}
+
+/* =========================================================
+   AF signatura – filmová znělka autora před spuštěním hry
+   (logo se vynoří ze tmy, pod ním web, pak se vše prolne do hry)
+   ========================================================= */
+#af-splash {
+  position: fixed; inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(52% 42% at 50% 45%, rgba(212, 164, 90, 0.08), rgba(212, 164, 90, 0) 70%),
+    #0a0908;
+  transition: opacity 1s ease .35s; /* pozadí odchází jako poslední */
+  /* pojistka: kdyby JS selhal, znělka se po chvíli sama uklidí */
+  animation: afSafety 1s ease 9s forwards;
+}
+@keyframes afSafety { to { opacity: 0; visibility: hidden; } }
+#af-splash.af-leave { opacity: 0; pointer-events: none; }
+#af-splash.af-leave .af-inner { animation: afInnerOut .85s ease forwards; }
+@keyframes afInnerOut {
+  to { opacity: 0; transform: translateY(-2vmin) scale(1.035); }
+}
+
+.af-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 3vmin, 26px);
+  transform: translateY(-2vmin);
+}
+.af-mark {
+  width: clamp(150px, 32vmin, 250px);
+  height: auto;
+  opacity: 0;
+  filter: drop-shadow(0 0 28px rgba(212, 164, 90, 0.16));
+  animation: afMarkIn 2.1s cubic-bezier(.22, .6, .2, 1) .45s forwards;
+}
+@keyframes afMarkIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.af-rule {
+  width: 64px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 164, 90, 0.7), transparent);
+  opacity: 0;
+  animation: afFadeIn 1.2s ease 1.75s forwards;
+}
+@keyframes afFadeIn { to { opacity: 1; } }
+.af-site {
+  font-family: "Cormorant Garamond", "Times New Roman", Georgia, serif;
+  font-size: clamp(0.9rem, 2.8vmin, 1.1rem);
+  letter-spacing: 0.32em;
+  text-indent: 0.32em; /* vyrovnává mezeru za posledním znakem – text sedí opticky na středu */
+  color: #f1e9d8;
+  opacity: 0;
+  animation: afSiteIn 1.5s ease 2s forwards;
+}
+@keyframes afSiteIn {
+  from { opacity: 0; transform: translateY(9px); }
+  to   { opacity: 0.85; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .af-mark  { animation: afFadeIn 1s ease .3s forwards; transform: none; }
+  .af-site  { animation: afFadeIn 1s ease 1s forwards; transform: none; opacity: 0; }
+  #af-splash.af-leave .af-inner { animation: none; opacity: 0; transition: opacity .8s ease; }
 }
 
 /* =========================================================
