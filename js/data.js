@@ -433,6 +433,16 @@ const DATA = (() => {
         en: 'Look, bees! Flying low in perfect formation. Duck — they won’t share honey, but they’ll happily share stings.',
       },
     },
+    {
+      // vír špačků od 5. levelu: sahá tak vysoko, že ho nepřeskočí ani
+      // Pogo dvojskokem (max ~304 px, vršek hejna je ve 334 px) – jediná
+      // cesta je skluz, takže věčné skákání přestává být univerzální trik
+      id: 'flock', w: 120, h: 280, type: 'duck', minM: 2200, label: { cs: 'hejno špačků', en: 'starling flock' }, flying: true, clearance: 64,
+      intro: {
+        cs: 'Hejno špačků! Zkoušejí velkolepou show přes celé nebe — tohle nepřeskočíš, ani kdyby ses přede mnou chtěl vytáhnout. Skrč se a podběhni, vstupenka zadarmo.',
+        en: 'A starling flock! Rehearsing their grand show across the whole sky — you won’t jump over this one, no matter how much you want to impress me. Duck and slip underneath, admission is free.',
+      },
+    },
   ];
 
   /* ---------- BAREVNÉ VARIANTY DRŮBEŽE ---------- */
@@ -543,6 +553,12 @@ const DATA = (() => {
       { cs: 'Slepičí poplach!!', en: 'Chicken alarm!!' },
       { cs: 'Kdák! Koukej, kudy běžíš!', en: 'Cluck! Watch where you’re running!' },
     ],
+    flock: [ // co zašvitoří hejno špačků, když do něj běžec vletí
+      { cs: 'Švit-švit! Tohle v nácviku NEBYLO!', en: 'Tweet-tweet! That was NOT in rehearsal!' },
+      { cs: 'Rozbils nám osmičku! Teď je to šestka!', en: 'You broke our figure eight! Now it’s a six!' },
+      { cs: 'Choreograf omdlel!!', en: 'The choreographer just fainted!!' },
+      { cs: 'Všichni zpátky do formace!', en: 'Everyone back in formation!' },
+    ],
     goose: [ // husy jsou drzejší
       { cs: 'Kejhák!!', en: 'HONK!!' },
       { cs: 'Ssss! Tady velím JÁ!', en: 'Hisss! I’m in charge here!' },
@@ -647,6 +663,14 @@ const DATA = (() => {
         },
       },
       {
+        id: 'flyers', gapM: 35, gate: null,
+        spawn: { flyers: ['stork', 'swallow'] },
+        text: {
+          cs: 'Koukni nahoru — vlaštovky a čápi! Moji kámoši. Ničeho se neboj: neklovou, nepřekáží, jen machrujou, že umí lítat. Já zase umím hýkat. Remíza.',
+          en: 'Look up — swallows and storks! My buddies. Don’t worry: no pecking, no blocking, they just show off that they can fly. Well, I can bray. So we’re even.',
+        },
+      },
+      {
         id: 'golden', gapM: 50, gate: 'jump',
         spawn: { pickups: [{ kind: 'golden', dx: 0, h: 130 }] },
         text: {
@@ -673,6 +697,14 @@ const DATA = (() => {
         text: {
           cs: 'Mince! Za ně si v obchodě pořídíš moje kamarády. Mě už máš zadarmo — gratuluju, lepší už to nebude.',
           en: 'Coins! They buy you my friends in the shop. Me you got for free — congrats, it’s all downhill from here.',
+        },
+      },
+      {
+        id: 'humans', gapM: 35, gate: null,
+        spawn: { humans: true },
+        text: {
+          cs: 'A tamhle vzadu — naši lidi! Tomáš pořád něco staví a na hlavě mu bydlí slepice. Tony drbe berany a měří jim wi-fi. A Maruška zpívá bylinkám i miminku v bříšku. Zamávej jim — kdo mává, dostává mrkev.',
+          en: 'And back there — our humans! Tomáš is always building something, with a hen living on his head. Tony scratches the rams and checks their wi-fi. And Maruška sings to the herbs and to the baby in her belly. Wave at them — wavers get carrots.',
         },
       },
       {

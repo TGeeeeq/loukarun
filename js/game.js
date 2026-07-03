@@ -67,7 +67,7 @@
     t: 0,                   // celkový čas (ms)
     worldX: 0,              // ujetá vzdálenost v px
     speed: 0,
-    baseSpeed: 330,
+    baseSpeed: 308,
     char: null,             // definice postavy
     stats: null,
     energy: 100,
@@ -646,6 +646,33 @@
   function spawnTutStep(step) {
     if (!step.spawn) return null;
     const x0 = S.worldX + (W - playerX()) + 140; // těsně za pravým okrajem
+    if (step.spawn.flyers) {
+      // kámoši z oblohy přiletí přímo do záběru lekce (mlčí – slovo má Karel)
+      step.spawn.flyers.forEach((type, i) => {
+        S.flyers.push({
+          type,
+          cx: S.worldX + (W * (0.48 + i * 0.22) - playerX()) / 0.85,
+          cy: 85 + i * 60,
+          r: type === 'stork' ? 75 : 48,
+          w: type === 'stork' ? 0.5 : 1.1,
+          ph: i * 2.1, dir: i % 2 ? -1 : 1,
+          trailT: 0, dropT: 3, said: true,
+        });
+      });
+      return null;
+    }
+    if (step.spawn.humans) {
+      // lidští obyvatelé se seběhnou k pěšině, ať je Karel může představit
+      HUMAN_PROPS.forEach((prop, i) => {
+        S.decor.push({
+          prop,
+          x: S.worldX + (W * (0.5 + i * 0.16) - playerX()) / FAR_PARALLAX,
+          far: true, human: true, said: true,
+          extra: i % 3, s: 0.9,
+        });
+      });
+      return null;
+    }
     if (step.spawn.obstacle) {
       const ob = OBSTACLES.find(p => p.id === step.spawn.obstacle);
       const o = { ...ob, x: x0, y: 0, broken: false };
@@ -1022,7 +1049,7 @@
 
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko
     if (running) {
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + (S.worldX / PX_PER_M) * 0.26, 790);
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + (S.worldX / PX_PER_M) * 0.23, 735);
     }
 
     S.worldX += spd * dt * (S.stumble > 0 ? 0.55 : 1);
@@ -1227,6 +1254,9 @@
       if (o.id === 'chicken' || o.id === 'goose') {
         burst(sx, groundY - 30, (o.v && o.v.body) || '#f5f0e0', o.id === 'goose' ? 16 : 12); // peříčka
         floater(randomQuote(EVENTS[o.id]), sx, groundY - o.h - 26, '#e5533a');
+      } else if (o.id === 'flock') {
+        burst(sx, groundY - 90, '#55524c', 18); // tmavá pírka rozprášeného hejna
+        floater(randomQuote(EVENTS.flock), sx, groundY - 160, '#e5533a');
       }
       const penalty = o.soft ? 8 : ECONOMY.hitPenalty;
       // ve škole běhu drží energie rezervu – klopýtnutí nesmí běh ukončit
