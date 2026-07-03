@@ -73,6 +73,8 @@
     // hlášky
     bubble: null, bubbleT: 0, nextQuoteAt: 6,
     tut: null,              // Karlova škola běhu (tutoriál prvního běhu)
+    enc: null,              // novinka na trase – první setkání s překážkou
+    introFlagged: new Set(),// druhy označené k představení v tomto běhu
     sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
     shake: 0,
@@ -320,6 +322,7 @@
   function jump() {
     if (S.mode !== 'run' && !S.demo) return;
     tutInput('jump');
+    encInput('jump');
     if (S.sliding > 0) S.sliding = 0;
     // odraz 880 ≈ výška skoku 149 px, dvojskok z vrcholu přidá ~69 px –
     // nejvyšší překážka má 58 px a zlatá mrkev visí ve 130 px, takže
@@ -353,6 +356,7 @@
   function slide() {
     if (S.mode !== 'run') return;
     tutInput('duck');
+    encInput('duck');
     if (S.airborne) { S.vy = Math.max(S.vy, 1500); } // rychlý sešup
     S.sliding = 0.65;
     AUDIO.play('slide');
@@ -409,6 +413,7 @@
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
     S.tut = null;
+    S.enc = null; S.introFlagged = new Set();
   }
 
   function goLandscapeFullscreen() {
@@ -455,6 +460,7 @@
     S.mode = 'over';
     S.shake = 0;
     S.tut = null; // pojistka – škola běhu končí s během (bez zápisu tutorialDone)
+    S.enc = null;
     save.coins += S.coinsRun;
     save.runs += 1;
     const dist = Math.floor(S.worldX / PX_PER_M);
@@ -496,6 +502,7 @@
     // drůbež má náhodnou barevnou variantu
     const variants = BIRD_VARIANTS[o.id];
     if (variants) o.v = variants[Math.floor(Math.random() * variants.length)];
+    maybeFlagIntro(o);
     S.obstacles.push(o);
 
     // občas mince nebo mrkev nad překážkou – odměna za přesný skok
@@ -519,6 +526,7 @@
       const o2 = { ...ob2, x: o.x + 340 + Math.random() * 140, y: 0, broken: false };
       const v2 = BIRD_VARIANTS[o2.id];
       if (v2) o2.v = v2[Math.floor(Math.random() * v2.length)];
+      maybeFlagIntro(o2);
       S.obstacles.push(o2);
       resolvePickupConflicts(o2);
       S.nextObstacleX = o.x + 340 + 140;
@@ -627,6 +635,7 @@
       const variants = BIRD_VARIANTS[o.id];
       if (variants) o.v = variants[Math.floor(Math.random() * variants.length)];
       S.obstacles.push(o);
+      markObstacleSeen(o.id); // Karel je ve škole představil – po ní už se neopakují
       return o;
     }
     let first = null;
@@ -645,7 +654,10 @@
     T.target = step.gate ? TUTORIAL.slowScale : 0.35;
     T.gate = step.gate;
     T.bubble = step.text;
-    T.fallback = step.dur || TUTORIAL.readTime;
+    // pojistka roste s délkou textu – dlouhou lekci si hráč stihne přečíst,
+    // rychlíci ji kdykoli přeskočí správnou akcí (tlačítko pod bublinou)
+    T.fallback = step.dur
+      || Math.min(16, Math.max(TUTORIAL.readTime, I18N.pick(step.text).length * 0.08));
     AUDIO.play('quote');
   }
 
@@ -711,6 +723,94 @@
     persist();
     S.tut = null;
     S.nextQuoteAt = 8 + Math.random() * 6; // běžné hlášky až po chvilce
+  }
+
+  /* =========================================================
+     NOVINKY NA TRASE – první setkání s každým druhem překážky
+     Když se v běhu poprvé objeví něco nového (husa, včely, trakař…),
+     čas se zpomalí jako ve škole běhu, běžec novinku okomentuje
+     a pod bublinou pulzuje tlačítko se správnou akcí. Poznané
+     druhy si hra pamatuje v uloženém postupu, takže každé
+     představení proběhne jen jednou.
+     ========================================================= */
+  const ENC = {
+    slowScale: 0.08,  // stejná časová lupa jako ve škole běhu
+    easeIn: 5, easeOut: 9,
+    triggerX: 0.8,    // spouští se dřív než tutoriál – v rychlé fázi hry ať je čas číst
+    maxRead: 9,       // strop pojistky (reálné s)
+    minGapPx: 240,    // dojde-li novinka takhle blízko, čas se rozjede dřív
+  };
+
+  function markObstacleSeen(id) {
+    if (!save.seenObstacles) save.seenObstacles = [];
+    if (!save.seenObstacles.includes(id)) save.seenObstacles.push(id);
+  }
+
+  // při spawnu: druh, který hráč ještě nikdy nepotkal, dostane vlaječku
+  function maybeFlagIntro(o) {
+    if (!o.intro) return;
+    if ((save.seenObstacles || []).includes(o.id) || S.introFlagged.has(o.id)) return;
+    S.introFlagged.add(o.id);
+    o.isNew = true;
+  }
+
+  function startEncounter(o) {
+    o.isNew = false;
+    markObstacleSeen(o.id);
+    persist();
+    S.enc = {
+      o,
+      scale: 1, target: ENC.slowScale,  // časová lupa (easuje se reálným dt)
+      bubbleA: 0,
+      gate: o.type,                     // správná akce čas zase rozjede
+      // na čtení je čas podle délky hlášky, pojistka nikoho nenechá viset
+      fallback: Math.min(ENC.maxRead, Math.max(5, I18N.pick(o.intro).length * 0.08)),
+      done: false,
+    };
+    AUDIO.play('quote');
+  }
+
+  // volají jump()/slide(): správná akce rozjede čas
+  function encInput(kind) {
+    const E = S.enc;
+    if (!E || E.done) return;
+    if (kind === E.gate) {
+      E.scale = Math.max(E.scale, 0.5); // okamžitý kopanec, ať akce hned odsýpá
+      E.done = true;
+      E.target = 1;
+    }
+  }
+
+  // hlídka: jakmile nový druh dojede do záběru, spustí se představení
+  function checkEncounters() {
+    if (S.tut || S.enc) return;
+    const px = playerX();
+    for (const o of S.obstacles) {
+      if (!o.isNew || o.broken) continue;
+      const sx = o.x - S.worldX + px;
+      if (sx < px + 140) { o.isNew = false; continue; } // prošvihnuto – zkusí se v dalším běhu
+      if (sx < W * ENC.triggerX) { startEncounter(o); break; }
+    }
+  }
+
+  // tiká reálným (neškálovaným) dt – stejně jako škola běhu
+  function updateEncounter(dt) {
+    const E = S.enc;
+    const k = E.target < E.scale ? ENC.easeIn : ENC.easeOut;
+    E.scale += (E.target - E.scale) * Math.min(1, dt * k);
+    // po rozjezdu bublina ještě chvilku dosvítí, ať jde věta dočíst
+    E.bubbleA += ((E.done ? 0 : 1) - E.bubbleA) * Math.min(1, dt * (E.done ? 2 : 8));
+    if (!E.done) {
+      E.fallback -= dt;
+      // rozjet dřív, když novinka dojede moc blízko – hráč musí stihnout reagovat
+      const sx = E.o.x - S.worldX + playerX();
+      if (E.fallback <= 0 || E.o.broken || sx < playerX() + ENC.minGapPx) {
+        E.done = true;
+        E.target = 1;
+      }
+    } else if (E.scale > 0.95 && E.bubbleA < 0.05) {
+      S.enc = null;
+    }
   }
 
   // malé kytičky apod. smí do popředí; všechno velké patří dozadu,
@@ -799,7 +899,7 @@
       }
       // jednou za přelet něco vesele zavolá (ve škole běhu mlčí,
       // aby nepřekřikoval Karlovy lekce)
-      if (!f.said && running && !S.tut && f.sx > W * 0.3 && f.sx < W * 0.85) {
+      if (!f.said && running && !S.tut && !S.enc && f.sx > W * 0.3 && f.sx < W * 0.85) {
         f.said = true;
         if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
           S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
@@ -894,6 +994,12 @@
       if (S.tut) dt *= S.tut.scale;
     }
 
+    // novinka na trase zpomaluje čas stejným způsobem jako škola běhu
+    if (S.enc && running && !S.tut) {
+      updateEncounter(dt);
+      if (S.enc) dt *= S.enc.scale;
+    }
+
     const spd = S.demo ? S.baseSpeed * 0.8 : S.speed;
 
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko
@@ -935,6 +1041,7 @@
     if (running) {
       while (S.nextObstacleX < S.worldX + W + 300) spawnObstacle();
       while (S.nextPickupX < S.worldX + W + 300) spawnPickups();
+      checkEncounters();
     }
 
     // úklid za obrazovkou
@@ -1112,8 +1219,9 @@
 
   /* ---------- hlášky ---------- */
   function quotes(dt) {
-    // během školy běhu mluví Karel jen lekce – náhodné hlášky počkají
-    if (S.tut) { S.nextQuoteAt = Math.max(S.nextQuoteAt, 2); return; }
+    // během školy běhu mluví Karel jen lekce – náhodné hlášky počkají;
+    // totéž platí, dokud běžec představuje novinku na trase
+    if (S.tut || S.enc) { S.nextQuoteAt = Math.max(S.nextQuoteAt, 2); return; }
     S.nextQuoteAt -= dt;
     if (S.nextQuoteAt <= 0 && S.bubbleT <= 0) {
       sayBubble(randomQuote(S.char.quotes));
@@ -1129,8 +1237,9 @@
   // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
   const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
-    // ve škole běhu má slovo jen Karel – lidé zafandí až po ní
-    if (S.tut) return;
+    // ve škole běhu má slovo jen Karel – lidé zafandí až po ní;
+    // a do představování novinky jim taky nic není
+    if (S.tut || S.enc) return;
     const px = playerX();
     for (const d of S.decor) {
       if (!d.human || d.said) continue;
@@ -1243,30 +1352,24 @@
 
     // zvýraznění novinky ve zpomaleném čase – oko hráče hned ví, kam koukat
     if (S.tut && S.tut.focus && !S.tut.focus.taken && !S.tut.focus.broken && S.tut.scale < 0.8) {
-      const f = S.tut.focus;
-      const fx = f.x - S.worldX + px;
-      const isPickup = f.kind !== undefined;
-      const fy = isPickup
-        ? groundY - f.h
-        : (f.flying ? groundY - f.clearance - f.h / 2 : groundY - f.h / 2);
-      const r = (isPickup ? 34 : Math.max(f.w, f.h) * 0.7) + Math.sin(S.t * 0.008) * 4;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, (1 - S.tut.scale) * (0.5 + 0.3 * Math.sin(S.t * 0.008)));
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+      drawFocusRing(S.tut.focus, S.tut.scale, px);
+    }
+    if (S.enc && !S.enc.o.broken && S.enc.scale < 0.8) {
+      drawFocusRing(S.enc.o, S.enc.scale, px);
     }
 
-    // bublina s hláškou (tutoriálová bublina má přednost)
-    if (S.bubbleT > 0 && S.bubble && S.mode === 'run' && !(S.tut && S.tut.bubbleA > 0.1)) {
+    // bublina s hláškou (tutoriálová bublina a novinka na trase mají přednost)
+    if (S.bubbleT > 0 && S.bubble && S.mode === 'run'
+        && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)) {
       drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
       drawTutorialBubble(px, groundY - S.py - 140, S.tut.bubble, S.tut.bubbleA,
         S.tut.phase === 'slow' ? S.tut.gate : null);
+    }
+    if (S.enc && S.enc.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
+      drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
+        S.enc.done ? null : S.enc.gate);
     }
 
     // částice
@@ -1301,8 +1404,9 @@
     ctx.globalAlpha = 1;
 
     // bublinky obyvatel a letců – plují se svým mluvčím;
-    // dokud svítí Karlova lekce, nesmí mu do ní nikdo kecat
-    for (const b of (S.tut && S.tut.bubbleA > 0.1 ? [] : S.sideBubbles)) {
+    // dokud svítí Karlova lekce nebo představení novinky, nesmí do nich nikdo kecat
+    const bigBubbleOn = (S.tut && S.tut.bubbleA > 0.1) || (S.enc && S.enc.bubbleA > 0.1);
+    for (const b of (bigBubbleOn ? [] : S.sideBubbles)) {
       let ax, ay;
       if (b.decor) {
         ax = (b.decor.x - S.worldX) * FAR_PARALLAX + px;
@@ -1342,6 +1446,24 @@
     }
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
+  }
+
+  // pulzující kroužek kolem představované novinky (škola běhu i novinky na trase)
+  function drawFocusRing(f, scale, px) {
+    const fx = f.x - S.worldX + px;
+    const isPickup = f.kind !== undefined;
+    const fy = isPickup
+      ? groundY - f.h
+      : (f.flying ? groundY - f.clearance - f.h / 2 : groundY - f.h / 2);
+    const r = (isPickup ? 34 : Math.max(f.w, f.h) * 0.7) + Math.sin(S.t * 0.008) * 4;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, (1 - scale) * (0.5 + 0.3 * Math.sin(S.t * 0.008)));
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(fx, fy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawBubble(x, y, text, alpha) {
@@ -1417,14 +1539,28 @@
     ctx.textAlign = 'center';
     lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 28 + i * lineH));
     if (gate) {
-      ctx.font = '700 17px "Baloo 2", sans-serif';
-      ctx.globalAlpha = alpha * (0.55 + 0.35 * Math.sin(S.t * 0.006));
+      // nápověda jako opravdové tlačítko (stejná žlutá jako v menu) – kdo číst
+      // nechce, na první pohled vidí, že akcí může hned pokračovat
+      ctx.font = '800 18px "Baloo 2", sans-serif';
       const hint = I18N.t('tut.hint.' + gate);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-      ctx.strokeText(hint, bx + w / 2, by + h + 34);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(hint, bx + w / 2, by + h + 34);
+      const hw = Math.min(ctx.measureText(hint).width + 44, W - 24);
+      const hh = 42;
+      const hx = Math.min(Math.max(bx + w / 2 - hw / 2, 12), W - hw - 12);
+      const hy = by + h + 20;
+      const cxp = hx + hw / 2, cyp = hy + hh / 2;
+      const pulse = 1 + 0.05 * Math.sin(S.t * 0.006);
+      ctx.globalAlpha = alpha;
+      ctx.translate(cxp, cyp); ctx.scale(pulse, pulse); ctx.translate(-cxp, -cyp);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      GFX.rr(ctx, hx + 2, hy + 5, hw, hh, hh / 2); ctx.fill();
+      ctx.fillStyle = '#d89b26'; // spodní hrana tlačítka
+      GFX.rr(ctx, hx, hy + 3, hw, hh, hh / 2); ctx.fill();
+      const g = ctx.createLinearGradient(0, hy, 0, hy + hh);
+      g.addColorStop(0, '#ffe08a'); g.addColorStop(1, '#ffc94a');
+      ctx.fillStyle = g;
+      GFX.rr(ctx, hx, hy, hw, hh, hh / 2); ctx.fill();
+      ctx.fillStyle = '#5a3d10';
+      ctx.fillText(hint, cxp, hy + 28);
     }
     ctx.restore();
   }

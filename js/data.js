@@ -365,17 +365,74 @@ const DATA = (() => {
   /* ---------- PŘEKÁŽKY ----------
      minM = od kolikátého metru se překážka objevuje. Odemykání je
      sladěné s přechody prostředí (~550 m), takže každý nový „level“
-     přinese něco nového a začátek zůstane přívětivý. */
+     přinese něco nového a začátek zůstane přívětivý.
+     intro = hláška prvního setkání: když daný druh potká hráč úplně
+     poprvé, čas se zpomalí jako ve škole běhu a běžec novinku
+     představí (viz „novinky na trase“ v game.js). */
   const OBSTACLES = [
-    { id: 'hay',      w: 62,  h: 52,  type: 'jump',  minM: 0,    label: { cs: 'balík sena', en: 'hay bale' } },
-    { id: 'fence',    w: 56,  h: 58,  type: 'jump',  minM: 250,  label: { cs: 'plůtek', en: 'fence' } },
-    { id: 'mud',      w: 92,  h: 18,  type: 'jump',  minM: 0,    label: { cs: 'kaluž bláta', en: 'mud puddle' }, soft: true },
-    { id: 'rock',     w: 50,  h: 44,  type: 'jump',  minM: 550,  label: { cs: 'šutr', en: 'rock' } },
-    { id: 'branch',   w: 120, h: 30,  type: 'duck',  minM: 550,  label: { cs: 'větev', en: 'branch' }, flying: true, clearance: 62 },
-    { id: 'chicken',  w: 40,  h: 40,  type: 'jump',  minM: 250,  label: { cs: 'slepice', en: 'chicken' }, moving: true },
-    { id: 'goose',    w: 56,  h: 58,  type: 'jump',  minM: 1100, label: { cs: 'husa', en: 'goose' }, moving: true },
-    { id: 'barrow',   w: 66,  h: 48,  type: 'jump',  minM: 1100, label: { cs: 'trakař', en: 'wheelbarrow' } },
-    { id: 'beeline',  w: 110, h: 26,  type: 'duck',  minM: 1650, label: { cs: 'včelí letka', en: 'bee squadron' }, flying: true, clearance: 66 },
+    {
+      id: 'hay', w: 62, h: 52, type: 'jump', minM: 0, label: { cs: 'balík sena', en: 'hay bale' },
+      intro: {
+        cs: 'Balík sena! Vypadá měkce, ale věř mi — je to zamaskovaná zeď. Skoč!',
+        en: 'A hay bale! Looks soft, but trust me — it’s a wall in disguise. Jump!',
+      },
+    },
+    {
+      id: 'fence', w: 56, h: 58, type: 'jump', minM: 250, label: { cs: 'plůtek', en: 'fence' },
+      intro: {
+        cs: 'Plůtek! Prý má držet zvířata na místě. Cha! Hop přes něj!',
+        en: 'A fence! Supposedly it keeps animals in place. Ha! Hop right over!',
+      },
+    },
+    {
+      id: 'mud', w: 92, h: 18, type: 'jump', minM: 0, label: { cs: 'kaluž bláta', en: 'mud puddle' }, soft: true,
+      intro: {
+        cs: 'Bláto! Flíček by se do něj vrhl šipkou. Ty ho radši přeskoč — wellness až po běhu.',
+        en: 'Mud! Flíček would dive straight in. Better jump it — spa time is after the run.',
+      },
+    },
+    {
+      id: 'rock', w: 50, h: 44, type: 'jump', minM: 550, label: { cs: 'šutr', en: 'rock' },
+      intro: {
+        cs: 'Šutr! Leží tu tisíc let a uhýbat se nenaučil. Přeskoč ho, on se neurazí.',
+        en: 'A rock! It’s been lying here for a thousand years and never learned to move. Jump over — it won’t take offense.',
+      },
+    },
+    {
+      id: 'branch', w: 120, h: 30, type: 'duck', minM: 550, label: { cs: 'větev', en: 'branch' }, flying: true, clearance: 62,
+      intro: {
+        cs: 'Nízká větev! Hlavu dolů a proklouzni pod ní — účes si opravíš v cíli.',
+        en: 'A low branch! Head down and slide under — you can fix your hairdo at the finish line.',
+      },
+    },
+    {
+      id: 'chicken', w: 40, h: 40, type: 'jump', minM: 250, label: { cs: 'slepice', en: 'chicken' }, moving: true,
+      intro: {
+        cs: 'Slepice na trase! Nejezdi jí peřím, přeskoč ji. Stížnost stejně podá.',
+        en: 'A chicken on the track! Don’t plow through her feathers, jump over. She’ll file a complaint anyway.',
+      },
+    },
+    {
+      id: 'goose', w: 56, h: 58, type: 'jump', minM: 1100, label: { cs: 'husa', en: 'goose' }, moving: true,
+      intro: {
+        cs: 'Pozor, husa! Šéfová celé louky. Přeskoč ji s úctou — vynadá ti tak jako tak.',
+        en: 'Watch out, a goose! Boss of the whole meadow. Jump over her with respect — she’ll tell you off either way.',
+      },
+    },
+    {
+      id: 'barrow', w: 66, h: 48, type: 'jump', minM: 1100, label: { cs: 'trakař', en: 'wheelbarrow' },
+      intro: {
+        cs: 'Trakař! Tomáš ho tu zase nechal. Skoč — a dělej, že jsi nic neviděl.',
+        en: 'A wheelbarrow! Tomáš left it here again. Jump — and pretend you saw nothing.',
+      },
+    },
+    {
+      id: 'beeline', w: 110, h: 26, type: 'duck', minM: 1650, label: { cs: 'včelí letka', en: 'bee squadron' }, flying: true, clearance: 66,
+      intro: {
+        cs: 'Hele, včely! Letí nízko a přesně ve formaci. Skrč se — med ti nedají, žihadlo klidně.',
+        en: 'Look, bees! Flying low in perfect formation. Duck — they won’t share honey, but they’ll happily share stings.',
+      },
+    },
   ];
 
   /* ---------- BAREVNÉ VARIANTY DRŮBEŽE ---------- */
@@ -535,7 +592,7 @@ const DATA = (() => {
     slowScale: 0.08,   // časová lupa při novince
     easeIn: 5,         // rychlost náběhu zpomalení (1/s, reálný čas)
     easeOut: 9,        // rychlost návratu do běhu
-    readTime: 6.5,     // pojistka – po tolika reálných s se čas rozjede sám
+    readTime: 9,       // minimum pojistky – delší lekce dostanou čas navíc podle délky textu (viz enterSlow)
     triggerX: 0.62,    // zpomalí se, když novinka dojede na 62 % šířky obrazovky
     steps: [
       {
@@ -601,7 +658,7 @@ const DATA = (() => {
         },
       },
       {
-        id: 'outro', gapM: 25, gate: null, dur: 5.5,
+        id: 'outro', gapM: 25, gate: null, dur: 8,
         text: {
           cs: 'Škola běhu skončila, jednička s hvězdičkou. Teď běž, skákej a nenaraž do husy… vlastně naraz, chci vidět, co ti řekne!',
           en: 'Running school is over — straight A’s. Now go, jump, and don’t crash into a goose… actually do, I want to hear what she says!',

@@ -7,8 +7,6 @@
 const AUDIO = (() => {
   let ctx = null;
   let sfxGain = null;
-  let musicEl = null;
-  let currentTrack = null;
   let enabled = true;
   let musicEnabled = true;
   let lastKey = null;
@@ -89,27 +87,93 @@ const AUDIO = (() => {
 
   function play(name) { if (SFX[name]) SFX[name](); }
 
-  /* ---- veřejné API hudby (jen mp3, žádná generovaná záloha) ---- */
+  /* ---- hudba: dva přehrávače a plynulé prolínání (jen mp3) ----
+     Změna skladby (nové prostředí) se prolne přes TRACK_FADE a stejně
+     tak návrat smyčky na začátek: kousek před koncem skladby ji druhý
+     přehrávač rozehraje od nuly a hlasitosti se prokříží, takže hudba
+     nikdy tvrdě neusekne ani necvakne. */
+  const MUSIC_VOL = 0.5;
+  const TRACK_FADE = 1.8;  // prolnutí mezi skladbami (s)
+  const LOOP_FADE = 1.4;   // prolnutí přes konec smyčky (s)
+  const TICK_MS = 90;      // krok prolínacího časovače
+
+  let players = null;      // [Audio, Audio] – aktivní se střídá
+  let active = 0;
+  let currentTrack = null;
+
+  function makePlayer() {
+    const el = new Audio();
+    el.preload = 'auto';
+    // pojistka: kdyby prolnutí smyčky nestihlo (uspaná karta apod.),
+    // skladba aspoň skočí na začátek postaru
+    el.loop = true;
+    el.volume = 0;
+    el._target = 0;        // cílová hlasitost, k níž tick() klouže
+    el._fade = TRACK_FADE; // délka aktuálního prolnutí (s)
+    return el;
+  }
+
+  function ensurePlayers() {
+    if (players) return;
+    players = [makePlayer(), makePlayer()];
+    setInterval(musicTick, TICK_MS);
+  }
+
+  // klouzání hlasitostí + hlídání konce smyčky
+  function musicTick() {
+    const dt = TICK_MS / 1000;
+    for (const el of players) {
+      const step = (MUSIC_VOL / (el._fade || TRACK_FADE)) * dt;
+      if (el.volume < el._target) el.volume = Math.min(el._target, el.volume + step);
+      else if (el.volume > el._target) {
+        el.volume = Math.max(el._target, el.volume - step);
+        if (el.volume === 0 && !el.paused) el.pause();
+      }
+    }
+    // blíží se konec aktivní skladby → prolnout do jejího vlastního začátku
+    const cur = players[active];
+    if (currentTrack && !cur.paused && isFinite(cur.duration) && cur.duration > 0
+        && cur.currentTime > cur.duration - LOOP_FADE) {
+      crossTo(currentTrack, LOOP_FADE);
+    }
+  }
+
+  // rozehraje src na neaktivním přehrávači a prokříží hlasitosti
+  function crossTo(src, fade) {
+    const from = players[active];
+    from._target = 0;
+    from._fade = fade;
+    active = 1 - active;
+    const to = players[active];
+    if (to._src !== src) { to._src = src; to.src = src; }
+    else { try { to.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ } }
+    to._target = MUSIC_VOL;
+    to._fade = fade;
+    to.play().catch(() => {}); // autoplay zákaz dořeší unlock()
+  }
+
   function playMusic(key) {
     lastKey = key;
     if (!musicEnabled) return;
     const src = MUSIC_FILES[key];
     if (!src) { stopMusic(); return; }
-    if (!musicEl) {
-      musicEl = new Audio();
-      musicEl.loop = true;
-      musicEl.volume = 0.5;
+    ensurePlayers();
+    if (currentTrack === src) {
+      const el = players[active];
+      el._target = MUSIC_VOL;
+      if (el.paused) el.play().catch(() => {});
+      return;
     }
-    if (currentTrack !== src) {
-      currentTrack = src;
-      musicEl.src = src;
-    }
-    // autoplay zákaz → přehrání zopakuje unlock() po prvním doteku/klávese
-    if (musicEl.paused) musicEl.play().catch(() => {});
+    const firstStart = !currentTrack;
+    currentTrack = src;
+    // úplně první spuštění jen krátce naběhne, jinak plné prolnutí
+    crossTo(src, firstStart ? 0.6 : TRACK_FADE);
   }
 
   function stopMusic() {
-    if (musicEl) { musicEl.pause(); currentTrack = null; }
+    currentTrack = null;
+    if (!players) return;
+    for (const el of players) { el.pause(); el._target = 0; el.volume = 0; }
   }
 
   function setSfx(on) { enabled = on; }
@@ -123,7 +187,9 @@ const AUDIO = (() => {
   function unlock() {
     ensureCtx(); // probudí i WebAudio pro zvukové efekty
     if (!musicEnabled || !lastKey) return;
-    if (musicEl && currentTrack && musicEl.paused) musicEl.play().catch(() => {});
+    if (players && currentTrack && players[active].paused) {
+      players[active].play().catch(() => {});
+    }
   }
   window.addEventListener('pointerdown', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
@@ -133,7 +199,7 @@ const AUDIO = (() => {
   // na známý web…), hraje okamžitě; jinak počká na první dotek/klávesu
   let eagerTries = 0;
   const eagerTimer = setInterval(() => {
-    if (musicEl && !musicEl.paused) { clearInterval(eagerTimer); return; }
+    if (players && !players[active].paused) { clearInterval(eagerTimer); return; }
     if (++eagerTries > 8) { clearInterval(eagerTimer); return; }
     if (lastKey) unlock();
   }, 400);
