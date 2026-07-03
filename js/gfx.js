@@ -1155,6 +1155,30 @@ const GFX = (() => {
         }
         break;
       }
+      case 'flock': {
+        // vír špačků – vysoký sloup malých ptáčků kroužících nad pěšinou;
+        // pseudonáhoda z indexu, ať hejno každý snímek „netancuje“ jinak
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 30; i++) {
+          const seed = Math.sin(i * 12.9898) * 43758.5453;
+          const rnd = seed - Math.floor(seed);
+          const fy = -14 - (h - 28) * (i / 29);
+          // sloup se vlní – uprostřed je širší, u krajů se stahuje
+          const belly = 0.55 + 0.45 * Math.sin((i / 29) * Math.PI);
+          const bx = Math.sin(t * 0.0028 + i * 1.7) * (w * 0.36) * belly + (rnd - 0.5) * 14;
+          const by = fy + Math.sin(t * 0.005 + i * 2.3) * 6;
+          const sc = 0.7 + rnd * 0.5;
+          const flap = Math.sin(t * 0.02 + i * 1.3);
+          ctx.strokeStyle = rnd < 0.35 ? '#615c54' : '#3f3c38';
+          ctx.lineWidth = 2.4 * sc;
+          ctx.beginPath();
+          ctx.moveTo(bx - 6 * sc, by - 4 * sc * flap);
+          ctx.quadraticCurveTo(bx - 2 * sc, by + 2 * sc, bx, by);
+          ctx.quadraticCurveTo(bx + 2 * sc, by + 2 * sc, bx + 6 * sc, by - 4 * sc * flap);
+          ctx.stroke();
+        }
+        break;
+      }
     }
     ctx.restore();
   }

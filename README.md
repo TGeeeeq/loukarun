@@ -39,6 +39,8 @@ příběhem – každé zvířátko má ty svoje.
 - Prostředí se plynule střídá po ~550 m: louka → sad → les → vesnice → západ slunce → noc.
 - Překážky se **odemykají postupně po „levelech“** sladěných s prostředími – začíná se
   jen se senem a blátem, slepice, větve, husy i včelí letka přibývají s ujetými metry.
+  Od pátého levelu navíc nad pěšinou krouží **hejno špačků** – sahá tak vysoko, že se
+  nedá přeskočit ani dvojskokem a jediná cesta vede skluzem pod ním.
 - **První běh provází Karlova škola běhu** – tutoriál, ve kterém Karel s typickým
   humorem představí mrkve, slepice, větve i bonusy; u každé novinky se čas zpomalí,
   dokud hráč nepředvede správnou akci. Ukáže se jen jednou; `?tutorial=1` v URL ho
