@@ -321,8 +321,7 @@
      ========================================================= */
   function jump() {
     if (S.mode !== 'run' && !S.demo) return;
-    tutInput('jump');
-    encInput('jump');
+    if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
     if (S.sliding > 0) S.sliding = 0;
     // odraz 880 ≈ výška skoku 149 px, dvojskok z vrcholu přidá ~69 px –
     // nejvyšší překážka má 58 px a zlatá mrkev visí ve 130 px, takže
@@ -355,8 +354,7 @@
 
   function slide() {
     if (S.mode !== 'run') return;
-    tutInput('duck');
-    encInput('duck');
+    if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
     if (S.airborne) { S.vy = Math.max(S.vy, 1500); } // rychlý sešup
     S.sliding = 0.65;
     AUDIO.play('slide');
@@ -376,7 +374,7 @@
     if (S.mode === 'intro') { skipIntro(); return; }
     if (S.mode === 'menu') startRun();
     else if (S.mode === 'over') { /* tlačítka řeší DOM */ }
-    else jump();
+    else if (!continueLesson()) jump(); // mezerník u zastavené lekce = Pokračovat
   }
 
   let ptr = null;
@@ -607,22 +605,22 @@
      KARLOVA ŠKOLA BĚHU – příběhový tutoriál prvního běhu
      Jede v běžném režimu 'run' (hudba i HUD plynou dál): náhodné
      spawny jsou vypnuté, skript vkládá novinky popořadě a u každé
-     zpomalí čas, dokud hráč nepředvede správnou akci (nebo
-     nevyprší pojistka readTime). Pak plynule předá normální hře.
+     svět ÚPLNĚ zastaví. Žádný časový limit – hráč si lekci v klidu
+     přečte a dál se jede až po kliknutí na tlačítko Pokračovat.
+     Pak škola plynule předá normální hře.
      ========================================================= */
   const FORCE_TUT = new URLSearchParams(location.search).has('tutorial');
 
   function makeTutorial() {
     return {
       idx: -1,             // index aktuálního kroku
-      phase: 'gap',        // gap | approach | slow | cooldown
+      phase: 'gap',        // gap | approach | paused | cooldown
       stepStartM: 0,       // kde skončil minulý krok (m)
-      scale: 1, target: 1, // časová lupa (easuje se reálným dt)
+      scale: 1, target: 1, // časová lupa (easuje se reálným dt; 0 = stojí)
       focus: null,         // sledovaný objekt kroku (překážka / první pickup)
       bubble: null,        // text { cs, en } aktivního kroku
       bubbleA: 0,          // alfa bubliny
-      fallback: 0,         // pojistný časovač (reálné s)
-      gate: null,          // vstup, který rozjede čas
+      gate: null,          // jaká akce novinku zdolá (jen nápověda ovládání)
     };
   }
 
@@ -647,17 +645,12 @@
     return first;
   }
 
-  function enterSlow(step) {
+  function enterPause(step) {
     const T = S.tut;
-    T.phase = 'slow';
-    // novinka s akcí skoro zastaví čas; čisté vyprávění zpomalí jen lehce
-    T.target = step.gate ? TUTORIAL.slowScale : 0.35;
+    T.phase = 'paused';
+    T.target = 0;        // svět se úplně zastaví – čte se bez časového tlaku
     T.gate = step.gate;
     T.bubble = step.text;
-    // pojistka roste s délkou textu – dlouhou lekci si hráč stihne přečíst,
-    // rychlíci ji kdykoli přeskočí správnou akcí (tlačítko pod bublinou)
-    T.fallback = step.dur
-      || Math.min(16, Math.max(TUTORIAL.readTime, I18N.pick(step.text).length * 0.08));
     AUDIO.play('quote');
   }
 
@@ -665,25 +658,46 @@
     const T = S.tut;
     T.phase = 'cooldown';
     T.target = 1;
-    T.gate = null;
+    // gate zůstává – nápověda ovládání svítí, dokud novinku míjí
   }
 
-  // volají jump()/slide(): správná akce (u 'tap' jakákoli) rozjede čas
-  function tutInput(kind) {
-    const T = S.tut;
-    if (!T || T.phase !== 'slow') return;
-    if (T.gate === 'tap' || T.gate === kind) {
-      T.scale = Math.max(T.scale, 0.5); // okamžitý kopanec, ať akce hned odsýpá
+  // zastavenou lekci (školu běhu i novinku na trase) rozjede jedině
+  // tlačítko Pokračovat (nebo mezerník) – herní vstupy zatím nic nedělají
+  function lessonPaused() {
+    return (S.tut && S.tut.phase === 'paused') || (S.enc && !S.enc.done);
+  }
+
+  function continueLesson() {
+    if (S.mode !== 'run') return false;
+    if (S.tut && S.tut.phase === 'paused') {
       resumeTutorial();
+      AUDIO.play('click');
+      return true;
     }
+    if (S.enc && !S.enc.done) {
+      S.enc.done = true;
+      S.enc.target = 1;
+      AUDIO.play('click');
+      return true;
+    }
+    return false;
   }
 
-  // tiká reálným (neškálovaným) dt – jinak by zpomalení natáhlo i pojistku
+  // DOM tlačítko Pokračovat se ukazuje jen po dobu zastavené lekce
+  let contBtn = null;
+  function syncContinueBtn() {
+    if (!contBtn) contBtn = document.getElementById('btn-tut-continue');
+    const show = S.mode === 'run' && lessonPaused();
+    if (contBtn.hidden !== !show) contBtn.hidden = !show;
+  }
+
+  // tiká reálným (neškálovaným) dt – zastavený svět nesmí zastavit i skript
   function updateTutorial(dt) {
     const T = S.tut;
     const px = playerX();
     const k = T.target < T.scale ? TUTORIAL.easeIn : TUTORIAL.easeOut;
     T.scale += (T.target - T.scale) * Math.min(1, dt * k);
+    if (T.target === 0 && T.scale < 0.02) T.scale = 0; // opravdové zastavení
     T.bubbleA += ((T.bubble ? 1 : 0) - T.bubbleA) * Math.min(1, dt * 8);
 
     const distM = S.worldX / PX_PER_M;
@@ -695,13 +709,10 @@
       T.idx++;
       T.focus = spawnTutStep(next);
       if (T.focus) T.phase = 'approach';
-      else enterSlow(next);
+      else enterPause(next);
     } else if (T.phase === 'approach') {
       const sx = T.focus.x - S.worldX + px;
-      if (sx < W * TUTORIAL.triggerX) enterSlow(TUTORIAL.steps[T.idx]);
-    } else if (T.phase === 'slow') {
-      T.fallback -= dt;
-      if (T.fallback <= 0) resumeTutorial(); // pojistka – nikdo nezůstane viset
+      if (sx < W * TUTORIAL.triggerX) enterPause(TUTORIAL.steps[T.idx]);
     } else if (T.phase === 'cooldown') {
       const passed = !T.focus
         || T.focus.taken || T.focus.broken
@@ -713,6 +724,7 @@
         T.focus = null;
       }
     }
+    // fáze 'paused' nedělá nic – čeká na tlačítko Pokračovat
   }
 
   function finishTutorial() {
@@ -728,17 +740,14 @@
   /* =========================================================
      NOVINKY NA TRASE – první setkání s každým druhem překážky
      Když se v běhu poprvé objeví něco nového (husa, včely, trakař…),
-     čas se zpomalí jako ve škole běhu, běžec novinku okomentuje
-     a pod bublinou pulzuje tlačítko se správnou akcí. Poznané
-     druhy si hra pamatuje v uloženém postupu, takže každé
-     představení proběhne jen jednou.
+     svět se úplně zastaví jako ve škole běhu, běžec novinku
+     okomentuje a dál se jede až po kliknutí na Pokračovat.
+     Poznané druhy si hra pamatuje v uloženém postupu, takže
+     každé představení proběhne jen jednou.
      ========================================================= */
   const ENC = {
-    slowScale: 0.08,  // stejná časová lupa jako ve škole běhu
     easeIn: 5, easeOut: 9,
-    triggerX: 0.8,    // spouští se dřív než tutoriál – v rychlé fázi hry ať je čas číst
-    maxRead: 9,       // strop pojistky (reálné s)
-    minGapPx: 240,    // dojde-li novinka takhle blízko, čas se rozjede dřív
+    triggerX: 0.8,    // zastaví se dřív než tutoriál – v rychlé fázi hry ať zbyde čas reagovat
   };
 
   function markObstacleSeen(id) {
@@ -760,25 +769,12 @@
     persist();
     S.enc = {
       o,
-      scale: 1, target: ENC.slowScale,  // časová lupa (easuje se reálným dt)
+      scale: 1, target: 0,  // svět stojí, dokud hráč neklikne na Pokračovat
       bubbleA: 0,
-      gate: o.type,                     // správná akce čas zase rozjede
-      // na čtení je čas podle délky hlášky, pojistka nikoho nenechá viset
-      fallback: Math.min(ENC.maxRead, Math.max(5, I18N.pick(o.intro).length * 0.08)),
+      gate: o.type,         // jaká akce novinku zdolá (nápověda ovládání)
       done: false,
     };
     AUDIO.play('quote');
-  }
-
-  // volají jump()/slide(): správná akce rozjede čas
-  function encInput(kind) {
-    const E = S.enc;
-    if (!E || E.done) return;
-    if (kind === E.gate) {
-      E.scale = Math.max(E.scale, 0.5); // okamžitý kopanec, ať akce hned odsýpá
-      E.done = true;
-      E.target = 1;
-    }
   }
 
   // hlídka: jakmile nový druh dojede do záběru, spustí se představení
@@ -798,19 +794,12 @@
     const E = S.enc;
     const k = E.target < E.scale ? ENC.easeIn : ENC.easeOut;
     E.scale += (E.target - E.scale) * Math.min(1, dt * k);
-    // po rozjezdu bublina ještě chvilku dosvítí, ať jde věta dočíst
-    E.bubbleA += ((E.done ? 0 : 1) - E.bubbleA) * Math.min(1, dt * (E.done ? 2 : 8));
-    if (!E.done) {
-      E.fallback -= dt;
-      // rozjet dřív, když novinka dojede moc blízko – hráč musí stihnout reagovat
-      const sx = E.o.x - S.worldX + playerX();
-      if (E.fallback <= 0 || E.o.broken || sx < playerX() + ENC.minGapPx) {
-        E.done = true;
-        E.target = 1;
-      }
-    } else if (E.scale > 0.95 && E.bubbleA < 0.05) {
-      S.enc = null;
-    }
+    if (E.target === 0 && E.scale < 0.02) E.scale = 0; // opravdové zastavení
+    if (E.o.broken && !E.done) { E.done = true; E.target = 1; } // beranidlo apod.
+    // bublina svítí při čtení i při míjení novinky, pak zhasne
+    const passed = E.o.broken || (E.o.x - S.worldX + playerX()) < playerX() - 90;
+    E.bubbleA += (((E.done && passed) ? 0 : 1) - E.bubbleA) * Math.min(1, dt * 8);
+    if (E.done && passed && E.scale > 0.95 && E.bubbleA < 0.05) S.enc = null;
   }
 
   // malé kytičky apod. smí do popředí; všechno velké patří dozadu,
@@ -986,19 +975,22 @@
     if (S.mode === 'paused' || S.mode === 'over') return;
     const running = S.mode === 'run';
 
-    // Karlova škola běhu – časová lupa zpomalí celý svět (hudba je
-    // na dt nezávislá, hraje dál); vlastní časovače tutoriálu ale
-    // tikají reálným dt, proto se volá před škálováním
+    // Karlova škola běhu – při lekci se svět úplně zastaví (hudba je
+    // na dt nezávislá, hraje dál); vlastní logika tutoriálu ale
+    // tiká reálným dt, proto se volá před škálováním
     if (S.tut && running) {
       updateTutorial(dt);
       if (S.tut) dt *= S.tut.scale;
     }
 
-    // novinka na trase zpomaluje čas stejným způsobem jako škola běhu
+    // novinka na trase zastavuje čas stejným způsobem jako škola běhu
     if (S.enc && running && !S.tut) {
       updateEncounter(dt);
       if (S.enc) dt *= S.enc.scale;
     }
+
+    // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
+    syncContinueBtn();
 
     const spd = S.demo ? S.baseSpeed * 0.8 : S.speed;
 
@@ -1365,11 +1357,11 @@
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
       drawTutorialBubble(px, groundY - S.py - 140, S.tut.bubble, S.tut.bubbleA,
-        S.tut.phase === 'slow' ? S.tut.gate : null);
+        S.tut.phase === 'paused' || S.tut.phase === 'cooldown' ? S.tut.gate : null);
     }
     if (S.enc && S.enc.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
       drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
-        S.enc.done ? null : S.enc.gate);
+        S.enc.gate);
     }
 
     // částice
@@ -1538,29 +1530,17 @@
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
     lines.forEach((l, i) => ctx.fillText(l, bx + w / 2, by + 28 + i * lineH));
-    if (gate) {
-      // nápověda jako opravdové tlačítko (stejná žlutá jako v menu) – kdo číst
-      // nechce, na první pohled vidí, že akcí může hned pokračovat
-      ctx.font = '800 18px "Baloo 2", sans-serif';
+    if (gate === 'jump' || gate === 'duck') {
+      // nápověda ovládání u akční novinky – hlavní tlačítko Pokračovat je
+      // DOM prvek dole uprostřed, tady jen připomínka, čím se novinka zdolá
+      ctx.font = '700 17px "Baloo 2", sans-serif';
+      ctx.globalAlpha = alpha * (0.6 + 0.3 * Math.sin(S.t * 0.006));
       const hint = I18N.t('tut.hint.' + gate);
-      const hw = Math.min(ctx.measureText(hint).width + 44, W - 24);
-      const hh = 42;
-      const hx = Math.min(Math.max(bx + w / 2 - hw / 2, 12), W - hw - 12);
-      const hy = by + h + 20;
-      const cxp = hx + hw / 2, cyp = hy + hh / 2;
-      const pulse = 1 + 0.05 * Math.sin(S.t * 0.006);
-      ctx.globalAlpha = alpha;
-      ctx.translate(cxp, cyp); ctx.scale(pulse, pulse); ctx.translate(-cxp, -cyp);
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
-      GFX.rr(ctx, hx + 2, hy + 5, hw, hh, hh / 2); ctx.fill();
-      ctx.fillStyle = '#d89b26'; // spodní hrana tlačítka
-      GFX.rr(ctx, hx, hy + 3, hw, hh, hh / 2); ctx.fill();
-      const g = ctx.createLinearGradient(0, hy, 0, hy + hh);
-      g.addColorStop(0, '#ffe08a'); g.addColorStop(1, '#ffc94a');
-      ctx.fillStyle = g;
-      GFX.rr(ctx, hx, hy, hw, hh, hh / 2); ctx.fill();
-      ctx.fillStyle = '#5a3d10';
-      ctx.fillText(hint, cxp, hy + 28);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.strokeText(hint, bx + w / 2, by + h + 34);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(hint, bx + w / 2, by + h + 34);
     }
     ctx.restore();
   }
@@ -1816,6 +1796,7 @@
   $('btn-over-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
   $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
   $('btn-pause').addEventListener('click', togglePause);
+  $('btn-tut-continue').addEventListener('click', continueLesson);
   $('btn-resume').addEventListener('click', togglePause);
   $('btn-pause-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
   $('btn-sfx').addEventListener('click', () => {
