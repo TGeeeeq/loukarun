@@ -80,6 +80,7 @@ const AUDIO = (() => {
     hit()    { tone(220, 0.25, 'sawtooth', 0.5, 90); noise(0.15, 0.3); },
     ram()    { tone(150, 0.2, 'sawtooth', 0.7, 60); noise(0.2, 0.5); },
     quote()  { tone(520, 0.07, 'sine', 0.35); tone(700, 0.08, 'sine', 0.3, null, 0.06); },
+    laugh()  { [740, 660, 740, 660, 590, 520].forEach((f, i) => tone(f, 0.09, 'square', 0.4, f * 0.82, i * 0.12)); },
     finish() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.6, null, i * 0.13)); },
     click()  { tone(700, 0.05, 'sine', 0.4); },
     buy()    { [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', 0.55, null, i * 0.09)); },

@@ -641,6 +641,11 @@ const DATA = (() => {
           cs: 'ZLATÁ MRKEV! Legenda. Visí vysoko — skoč a ve vzduchu ťukni ještě jednou. Když ji mineš, budu se smát. Nahlas.',
           en: 'GOLDEN CARROT! The legend. It hangs high — jump, then tap again mid-air. Miss it and I will laugh. Loudly.',
         },
+        // slíbený smích, když hráč legendu mine – Karel sliby plní
+        miss: {
+          cs: 'PFF… HAHAHÁÁÁ! Promiň. Vlastně nepromiň — slíbil jsem smích a já sliby plním. Legenda letí dál, nováčku!',
+          en: 'PFF… HAHAHAAA! Sorry. Actually not sorry — I promised a laugh and I keep my promises. The legend flies on, rookie!',
+        },
       },
       {
         id: 'clover', gapM: 45, gate: null,

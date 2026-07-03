@@ -718,6 +718,13 @@
         || T.focus.taken || T.focus.broken
         || (T.focus.x - S.worldX + px) < px - 90;
       if (T.scale > 0.9 && passed) {
+        const step = TUTORIAL.steps[T.idx];
+        // hráč novinku minul a Karel u ní něco slíbil (zlatá mrkev: smích)
+        if (step.miss && T.focus && !T.focus.taken && !T.focus.broken) {
+          S.bubble = I18N.pick(step.miss);
+          S.bubbleT = 4.2;
+          AUDIO.play('laugh');
+        }
         T.phase = 'gap';
         T.stepStartM = distM;
         T.bubble = null;
