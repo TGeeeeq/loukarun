@@ -791,15 +791,17 @@
   // Květ visí vysoko nad kouzelnými schody – dá se sebrat jen z jejich vrcholu.
   function startSpecial() {
     const px = playerX();
-    const tops = [72, 150, 228, 300]; // 4 schody stoupající doprava
-    const gapX = 165;
-    const itemX = S.worldX + 0.9 * W - px;          // květ se objeví vpravo v dálce
+    const tops = [66, 132, 198, 264]; // 4 schody stoupající doprava (pravidelný krok +66)
+    const gapX = 168;                 // vodorovný rozestup – dost času mezi skoky
+    // květ se objeví daleko vpravo za krajem obrazovky → dlouhý rozjezd,
+    // schody připlují jeden po druhém a hráč má spoustu času začít reagovat
+    const itemX = S.worldX + 1.14 * W - px;
     const baseX = itemX - (tops.length - 1) * gapX; // schody vedou k němu zleva
     // ať je scéna čistá – pryč s tím, co je ještě před hráčem
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
-    S.platforms = tops.map((top, i) => ({ x: baseX + i * gapX, w: 150, top }));
-    const item = { kind: 'majestic', x: itemX, h: 390, taken: false, special: true };
+    S.platforms = tops.map((top, i) => ({ x: baseX + i * gapX, w: 190, top })); // široké = odpouští doskok
+    const item = { kind: 'majestic', x: itemX, h: tops[tops.length - 1] + 92, taken: false, special: true };
     S.pickups.push(item);
     S.special = {
       phase: 'intro',        // intro (svět stojí, Karel popisuje) → challenge → done
@@ -808,6 +810,7 @@
       item,
       bubble: EVENTS.majesticIntro,
       resultT: 0,
+      runT: 0,               // čas běhu ve výzvě – Karel se z klidu pozvolna rozjíždí
     };
     AUDIO.play('quote');
   }
@@ -822,6 +825,7 @@
     SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
 
     if (SP.phase === 'challenge') {
+      SP.runT += dt; // Karel se po představení pozvolna rozjíždí (viz rampa rychlosti)
       if (SP.item.taken) { resolveSpecial(true); return; }               // sebráno
       if ((SP.item.x - S.worldX + px) < px - 130) resolveSpecial(false); // proběhlo kolem
     } else if (SP.phase === 'done') {
@@ -1189,8 +1193,12 @@
     // rozjezd se měří od kotvy speedAnchorX (po sebrání květu se resetuje = běží zas pomalu)
     if (running) {
       S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.23, 735);
-      // během výzvy u Duhového květu běží svět pomalu, ať jde schody vyskákat férově
-      if (S.special && S.special.phase === 'challenge') S.speed = Math.min(S.speed, 180);
+      // Výzva u Duhového květu: Karel se z klidu pozvolna rozjíždí (45 → 140 px/s
+      // za ~1,8 s), takže první schod připlouvá pomalu a je spousta času reagovat.
+      if (S.special && S.special.phase === 'challenge') {
+        const ramp = Math.min(1, S.special.runT / 1.8);
+        S.speed = Math.min(S.speed, 45 + ramp * (140 - 45));
+      }
     }
 
     S.worldX += spd * dt * (S.stumble > 0 ? 0.55 : 1);
@@ -1706,7 +1714,9 @@
 
   // pulzující kroužek kolem představované novinky (škola běhu i novinky na trase)
   function drawFocusRing(f, scale, px) {
-    const fx = f.x - S.worldX + px;
+    // cíl může být během představení až za pravým krajem (Duhový květ) –
+    // prstenec přidržíme u kraje, ať hráč pořád vidí, kam se dívat
+    const fx = Math.min(f.x - S.worldX + px, W - 44);
     const isPickup = f.kind !== undefined;
     const fy = isPickup
       ? groundY - f.h
@@ -1766,9 +1776,13 @@
   function drawTutorialBubble(ax, ay, textObj, alpha, gate) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.font = '700 22px "Baloo 2", sans-serif';
-    const lines = wrapLines(I18N.pick(textObj), Math.min(360, W * 0.5));
-    const lineH = 27;
+    // u delších hlášek písmo nepatrně zmenšíme, ať bublina nevyroste přes celou scénu
+    const raw = I18N.pick(textObj);
+    const long = raw.length > 130;
+    const fs = long ? 19 : 22;
+    const lineH = long ? 24 : 27;
+    ctx.font = `700 ${fs}px "Baloo 2", sans-serif`;
+    const lines = wrapLines(raw, Math.min(360, W * 0.5));
     let tw = 0;
     for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
     const w = tw + 36;
