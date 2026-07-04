@@ -694,22 +694,29 @@
       return null;
     }
     if (step.spawn.humans) {
-      // lidští obyvatelé se seběhnou k pěšině, ať je Karel může představit.
+      // lidští obyvatelé stojí opodál v pozadí a Karel k nim doběhne (fáze
+      // approach), pak se u nich svět plynule zastaví a on je představí.
       // Nejdřív pryč s náhodnými lidmi z dekorace, ať se nikdo neukáže dvakrát –
       // na představení jsou právě a jen tihle tři, každý v jiné póze.
       S.decor = S.decor.filter(d => !d.human);
       // menší postavy na užší obrazovce, ať se všichni tři vejdou celí
       const hs = W < 620 ? 0.62 : 0.82;
-      const frac = [0.56, 0.7, 0.84]; // vpravo od Karla a jeho bubliny
+      // vykreslují se v parallaxu (pozadí) – rozestup a start počítáme přes něj,
+      // ať začnou těsně za pravým okrajem a plynule připlují do záběru
+      const gap = (W * 0.16) / FAR_PARALLAX;
+      const leadX = S.worldX + (W * 1.12 - playerX()) / FAR_PARALLAX;
+      let lead = null;
       HUMAN_PROPS.forEach((prop, i) => {
-        S.decor.push({
+        const d = {
           prop,
-          x: S.worldX + (W * frac[i] - playerX()) / FAR_PARALLAX,
+          x: leadX + i * gap,
           far: true, human: true, said: true,
           extra: i, s: hs,
-        });
+        };
+        S.decor.push(d);
+        if (!lead) lead = d; // vůdčí (nejlevější) postava = focus fáze approach
       });
-      return null;
+      return lead;
     }
     if (step.spawn.obstacle) {
       const ob = OBSTACLES.find(p => p.id === step.spawn.obstacle);
@@ -775,6 +782,12 @@
     if (contBtn.hidden !== !show) contBtn.hidden = !show;
   }
 
+  // obrazovkové X sledovaného objektu – lidé stojí v pozadí (parallax),
+  // překážky a pickupy v popředí
+  function focusScreenX(f, px) {
+    return f.human ? (f.x - S.worldX) * FAR_PARALLAX + px : (f.x - S.worldX + px);
+  }
+
   // tiká reálným (neškálovaným) dt – zastavený svět nesmí zastavit i skript
   function updateTutorial(dt) {
     const T = S.tut;
@@ -795,12 +808,14 @@
       if (T.focus) T.phase = 'approach';
       else enterPause(next);
     } else if (T.phase === 'approach') {
-      const sx = T.focus.x - S.worldX + px;
-      if (sx < W * TUTORIAL.triggerX) enterPause(TUTORIAL.steps[T.idx]);
+      const sx = focusScreenX(T.focus, px);
+      // lidi Karel dobíhá dál, ať zastaví kousek před nimi a všichni tři jsou vidět
+      const trig = T.focus.human ? 0.56 : TUTORIAL.triggerX;
+      if (sx < W * trig) enterPause(TUTORIAL.steps[T.idx]);
     } else if (T.phase === 'cooldown') {
       const passed = !T.focus
         || T.focus.taken || T.focus.broken
-        || (T.focus.x - S.worldX + px) < px - 90;
+        || focusScreenX(T.focus, px) < px - 90;
       if (T.scale > 0.9 && passed) {
         const step = TUTORIAL.steps[T.idx];
         // hráč novinku minul a Karel u ní něco slíbil (zlatá mrkev: smích)
@@ -1456,7 +1471,7 @@
     }
 
     // zvýraznění novinky ve zpomaleném čase – oko hráče hned ví, kam koukat
-    if (S.tut && S.tut.focus && !S.tut.focus.taken && !S.tut.focus.broken && S.tut.scale < 0.8) {
+    if (S.tut && S.tut.focus && !S.tut.focus.human && !S.tut.focus.taken && !S.tut.focus.broken && S.tut.scale < 0.8) {
       drawFocusRing(S.tut.focus, S.tut.scale, px);
     }
     if (S.enc && !S.enc.o.broken && S.enc.scale < 0.8) {
