@@ -773,8 +773,8 @@ const DATA = (() => {
         id: 'humans', gapM: 35, gate: null,
         spawn: { humans: true },
         text: {
-          cs: 'A tamhle vzadu — naši lidi! Tomáš pořád něco staví a na hlavě mu bydlí slepice. Tony drbe berany a měří jim wi-fi. A Maruška zpívá bylinkám i miminku v bříšku. Zamávej jim — kdo mává, dostává mrkev.',
-          en: 'And back there — our humans! Tomáš is always building something, with a hen living on his head. Tony scratches the rams and checks their wi-fi. And Maruška sings to the herbs and to the baby in her belly. Wave at them — wavers get carrots.',
+          cs: 'A tamhle vzadu — naši lidi! Tomáš pořád něco staví a na hlavě mu bydlí slepice. Tony rozumí zvířatům i technice — zrovna programuje beranům chytrý ohradník. A Maruška zpívá bylinkám i miminku v bříšku. Zamávej jim — kdo mává, dostává mrkev.',
+          en: 'And back there — our humans! Tomáš is always building something, with a hen living on his head. Tony speaks both animal and tech — right now he’s coding a smart fence for the rams. And Maruška sings to the herbs and to the baby in her belly. Wave at them — wavers get carrots.',
         },
       },
       {
