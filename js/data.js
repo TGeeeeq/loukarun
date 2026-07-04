@@ -464,46 +464,116 @@ const DATA = (() => {
      Tomáš – staví (a na hlavě mu bydlí slepice)
      Tony – pečuje o zvířata a o wi-fi signál
      Maruška – bylinky, zpěv, malování a miminko v bříšku */
+  /* Každý člověk má obecné hlášky (any) a hlášky trefné pro dané prostředí
+     (klíč = id prostředí: louka, sad, les, vesnice, zapad, noc). V noci mají
+     ospalé hlášky a při kreslení i ospalou pózu. */
   const HUMANS = {
-    tomas: [
-      { cs: 'Neruš, stavíme!', en: 'Don’t disturb us, we’re building!' },
-      { cs: 'Ta slepice je můj stavební dozor.', en: 'That hen is my building inspector.' },
-      { cs: 'Ještě prkno a je z toho palác!', en: 'One more plank and it’s a palace!' },
-      { cs: 'Změřeno dvakrát, uříznuto třikrát…', en: 'Measured twice, cut three times…' },
-      { cs: 'Hnízdo na hlavě? Aspoň mám vejce čerstvá!', en: 'A nest on my head? At least the eggs are fresh!' },
-      { cs: 'Kdo maká, ten se nenudí!', en: 'Busy hands are never bored!' },
-      { cs: 'Běžíš skvěle! Postavím ti tribunu!', en: 'You’re running great! I’ll build you a grandstand!' },
-      { cs: 'Tenhle plot přežije i berana. Snad.', en: 'This fence will survive even the ram. Hopefully.' },
-      { cs: 'Pila zpívá líp než já!', en: 'The saw sings better than I do!' },
-      { cs: 'Hřebíky mi hlídá slepice. Spolehlivě.', en: 'The hen guards my nails. Reliably.' },
-      { cs: 'Z tebe by byl skvělej tesař!', en: 'You’d make a great carpenter!' },
-    ],
-    tony: [
-      { cs: 'Beran podrbán, appka nasazena.', en: 'Ram scratched, app deployed.' },
-      { cs: 'Mám 5G i v kurníku!', en: 'I’ve got 5G even in the henhouse!' },
-      { cs: 'AI tvrdí, že jsi nejrychlejší v okolí!', en: 'The AI says you’re the fastest around!' },
-      { cs: 'Beránek právě dostal svůj první token.', en: 'The ram just got his first token.' },
-      { cs: 'Ovce spočítány. Digitálně!', en: 'Sheep counted. Digitally!' },
-      { cs: 'Nabíjím telefon i berana.', en: 'Charging my phone and the ram.' },
-      { cs: 'Tvůj běh právě trenduje!', en: 'Your run is trending right now!' },
-      { cs: 'Streamuju tě naživo! Zamávej!', en: 'I’m streaming you live! Wave!' },
-      { cs: 'Beran chce selfie. Zase.', en: 'The ram wants a selfie. Again.' },
-      { cs: 'Podle mé appky máš skvělé tempo!', en: 'According to my app, your pace is great!' },
-      { cs: 'Kýbl granulí – na to slyší úplně každý.', en: 'A bucket of feed – works on absolutely everyone.' },
-    ],
-    maruska: [
-      { cs: 'Běž, běž! Zpívám ti do kroku! ♪', en: 'Run, run! I’m singing to your stride! ♪' },
-      { cs: 'Miminko fandí kopáním!', en: 'The baby cheers by kicking!' },
-      { cs: 'Meduňka na klid, mrkev na běh!', en: 'Lemon balm for calm, carrots for running!' },
-      { cs: 'Namaluju tě, až doběhneš!', en: 'I’ll paint you when you finish!' },
-      { cs: 'My s bříškem fandíme oba!', en: 'The belly and I are both cheering!' },
-      { cs: 'Avalo, nech trávu i ostatním!', en: 'Avala, leave some grass for the others!' },
-      { cs: 'Tenhle obraz se bude jmenovat „Vítr v uších“!', en: 'This painting will be called “Wind in the Ears”!' },
-      { cs: 'Bylinky rostou rychle, ale ty jsi rychlejší!', en: 'Herbs grow fast, but you’re faster!' },
-      { cs: 'Zpívám ti fanfáru! Tádadá! ♪', en: 'I’m singing you a fanfare! Ta-da-dah! ♪' },
-      { cs: 'Miminku vyprávím, jak běháš. Kope radostí!', en: 'I’m telling the baby how you run. It kicks with joy!' },
-      { cs: 'Heřmánek voní a ty přímo letíš!', en: 'The chamomile smells lovely and you’re simply flying!' },
-    ],
+    tomas: {
+      any: [
+        { cs: 'Neruš, stavíme!', en: 'Don’t disturb us, we’re building!' },
+        { cs: 'Ta slepice je můj stavební dozor.', en: 'That hen is my building inspector.' },
+        { cs: 'Ještě prkno a je z toho palác!', en: 'One more plank and it’s a palace!' },
+        { cs: 'Změřeno dvakrát, uříznuto třikrát…', en: 'Measured twice, cut three times…' },
+        { cs: 'Hnízdo na hlavě? Aspoň mám vejce čerstvá!', en: 'A nest on my head? At least the eggs are fresh!' },
+        { cs: 'Kdo maká, ten se nenudí!', en: 'Busy hands are never bored!' },
+        { cs: 'Běžíš skvěle! Postavím ti tribunu!', en: 'You’re running great! I’ll build you a grandstand!' },
+        { cs: 'Z tebe by byl skvělej tesař!', en: 'You’d make a great carpenter!' },
+      ],
+      louka: [
+        { cs: 'Na louce tluču ptačí budku – nájemník už čeká!', en: 'Building a birdhouse in the meadow – the tenant’s already waiting!' },
+        { cs: 'Tady bude altán! Teda… až to doměřím.', en: 'A gazebo goes here! Well… once I finish measuring.' },
+      ],
+      sad: [
+        { cs: 'Spravuju žebřík k jabkám. Slepice hlídá výšku.', en: 'Fixing the ladder to the apples. The hen checks the height.' },
+        { cs: 'Bedýnky na jablka? Hotové! Skoro.', en: 'Crates for the apples? Done! Almost.' },
+      ],
+      les: [
+        { cs: 'V lese tesám lavičku pro unavené běžce.', en: 'Carving a bench in the forest for tired runners.' },
+        { cs: 'Ta borovice by chtěla domeček. Vyřezávám!', en: 'That pine could use a little house. I’m carving away!' },
+      ],
+      vesnice: [
+        { cs: 'Vezu vejce na trh – slepice trvá, že jsou její!', en: 'Taking eggs to market – the hen insists they’re hers!' },
+        { cs: 'Naložím prkna na vůz a hurá na jarmark!', en: 'Loading planks on the cart and off to the fair!' },
+      ],
+      zapad: [
+        { cs: 'Za soumraku dotloukám poslední hřebík.', en: 'At dusk I’m hammering in the very last nail.' },
+        { cs: 'Sluníčko zapadá, plot skoro stojí.', en: 'The sun is setting, the fence is almost standing.' },
+      ],
+      noc: [
+        { cs: 'Pššt… kladivo spí, slepice taky.', en: 'Shhh… the hammer’s asleep, and so is the hen.' },
+        { cs: 'Ještě jeden hřebík… ten dám zítra. Dobrou.', en: 'Just one more nail… I’ll do that one tomorrow. Night.' },
+      ],
+    },
+    tony: {
+      any: [
+        { cs: 'Beran podrbán, appka nasazena.', en: 'Ram scratched, app deployed.' },
+        { cs: 'Mám 5G i v kurníku!', en: 'I’ve got 5G even in the henhouse!' },
+        { cs: 'AI tvrdí, že jsi nejrychlejší v okolí!', en: 'The AI says you’re the fastest around!' },
+        { cs: 'Beránek právě dostal svůj první token.', en: 'The ram just got his first token.' },
+        { cs: 'Ovce spočítány. Digitálně!', en: 'Sheep counted. Digitally!' },
+        { cs: 'Tvůj běh právě trenduje!', en: 'Your run is trending right now!' },
+        { cs: 'Podle mé appky máš skvělé tempo!', en: 'According to my app, your pace is great!' },
+      ],
+      louka: [
+        { cs: 'Na louce měřím signál – ovcím jede stream skvěle!', en: 'Measuring signal in the meadow – the sheep stream great!' },
+        { cs: 'Beran na louce lajkuje každou mrkev.', en: 'Out here the ram likes every single carrot.' },
+      ],
+      sad: [
+        { cs: 'Natáčím berana, jak česá jabka. Virál jistý!', en: 'Filming the ram picking apples. Viral for sure!' },
+        { cs: 'Wi-fi dosáhne až do koruny jabloně!', en: 'The wi-fi reaches all the way up the apple tree!' },
+      ],
+      les: [
+        { cs: 'V lese slabší signál, zato beran je onlinovej.', en: 'Weaker signal in the forest, but the ram’s still online.' },
+        { cs: 'Houby počítám appkou. Beran asistuje.', en: 'Counting mushrooms with an app. The ram assists.' },
+      ],
+      vesnice: [
+        { cs: 'Vezu berana na trh – bere selfie s každým!', en: 'Taking the ram to market – he takes selfies with everyone!' },
+        { cs: 'Na návsi je 5G i pro kozy!', en: 'The village square’s got 5G even for the goats!' },
+      ],
+      zapad: [
+        { cs: 'Zlatá hodinka – ideál na fotku berana!', en: 'Golden hour – perfect light for a ram photo!' },
+        { cs: 'Západ streamuju živě, srdíčka jen lítají.', en: 'Streaming the sunset live, hearts are flying!' },
+      ],
+      noc: [
+        { cs: 'Beran usnul na příjmu. Dobrou noc, appko.', en: 'The ram fell asleep on reception. Night night, app.' },
+        { cs: 'Nabíječka běží, oči padají… chrr.', en: 'Charger’s on, eyelids are dropping… zzz.' },
+      ],
+    },
+    maruska: {
+      any: [
+        { cs: 'Běž, běž! Zpívám ti do kroku! ♪', en: 'Run, run! I’m singing to your stride! ♪' },
+        { cs: 'Miminko fandí kopáním!', en: 'The baby cheers by kicking!' },
+        { cs: 'Meduňka na klid, mrkev na běh!', en: 'Lemon balm for calm, carrots for running!' },
+        { cs: 'Namaluju tě, až doběhneš!', en: 'I’ll paint you when you finish!' },
+        { cs: 'My s bříškem fandíme oba!', en: 'The belly and I are both cheering!' },
+        { cs: 'Zpívám ti fanfáru! Tádadá! ♪', en: 'I’m singing you a fanfare! Ta-da-dah! ♪' },
+        { cs: 'Miminku vyprávím, jak běháš. Kope radostí!', en: 'I’m telling the baby how you run. It kicks with joy!' },
+      ],
+      louka: [
+        { cs: 'Na louce sbírám heřmánek a zpívám k tomu.', en: 'Picking chamomile in the meadow and singing along.' },
+        { cs: 'Miminko sbírá kopretiny se mnou!', en: 'The baby picks daisies right along with me!' },
+      ],
+      sad: [
+        { cs: 'Maluju rozkvetlou jabloň. Voní až sem!', en: 'Painting the apple blossom. I can smell it from here!' },
+        { cs: 'Z jablek uvařím kompot pro celý azyl.', en: 'I’ll make apple compote for the whole sanctuary.' },
+      ],
+      les: [
+        { cs: 'Les mi šeptá melodii. Zpívám ji dál.', en: 'The forest whispers me a melody. I sing it on.' },
+        { cs: 'Sbírám lesní bylinky – na klid i na běh.', en: 'Gathering forest herbs – for calm and for running.' },
+      ],
+      vesnice: [
+        { cs: 'Nesu bylinky na trh – levandule voní na dálku!', en: 'Taking herbs to market – the lavender smells for miles!' },
+        { cs: 'Na jarmark vezu obrázky louky. Přijď!', en: 'I’m bringing meadow paintings to the fair. Come by!' },
+      ],
+      zapad: [
+        { cs: 'Za soumraku maluju nebe. Takhle růžové!', en: 'At dusk I paint the sky. This pink!' },
+        { cs: 'Zpívám ukolébavku slunci i bříšku.', en: 'Singing a lullaby to the sun and to my belly.' },
+      ],
+      noc: [
+        { cs: 'Ššš… zpívám miminku ukolébavku.', en: 'Shhh… singing the baby a lullaby.' },
+        { cs: 'Hvězdy svítí, bylinky spí… dobrou.', en: 'Stars are out, the herbs are asleep… good night.' },
+      ],
+    },
   };
 
   /* ---------- CEDULE (vtipné nápisy na rozcestnících) ---------- */

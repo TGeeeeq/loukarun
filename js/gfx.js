@@ -43,6 +43,20 @@ const GFX = (() => {
     ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
   }
 
+  // stoupající „Zzz“ nad ospalou postavou (x,y = kotva u hlavy, v jednotkách před *s)
+  function drawZzz(ctx, s, t, x, y) {
+    const baseAlpha = ctx.globalAlpha;
+    ctx.fillStyle = '#dfe8ff';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 3; i++) {
+      const ph = (((t || 0) * 0.0009 + i * 0.33) % 1 + 1) % 1;
+      ctx.globalAlpha = baseAlpha * (1 - ph) * 0.9;
+      ctx.font = `bold ${(8 + i * 3) * s}px "Baloo 2", sans-serif`;
+      ctx.fillText('z', (x + ph * 10) * s, (y - ph * 26) * s);
+    }
+    ctx.globalAlpha = baseAlpha;
+  }
+
   /* =========================================================
      OBLOHA, KOPCE, ZEMĚ
      ========================================================= */
@@ -478,8 +492,8 @@ const GFX = (() => {
     /* ---------- lidští obyvatelé Louky ---------- */
     tomas(ctx, s, extra, t) {
       // Tomáš – pilně staví a slepice mu z hlavy dělá stavební dozor
-      // pózy: 0 = buší kladivem, 1 = řeže pilou, 2 = fandí s kladivem nad hlavou
-      const v = (extra || 0) % 3;
+      // pózy: 0 = buší kladivem, 1 = řeže pilou, 2 = fandí s kladivem, 3 = spí (noc)
+      const v = (extra || 0) % 4;
       const swing = Math.sin((t || 0) * 0.004);
       if (v === 0) {
         // hromádka prken vedle něj
@@ -541,7 +555,7 @@ const GFX = (() => {
         ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#8a6a45';
         rr(ctx, hx - 3 * s, hy, 7 * s, 11 * s, 2 * s); ctx.fill();
-      } else {
+      } else if (v === 2) {
         // fandí – obě ruce nad hlavou, v jedné vítězně kladivo
         const palmL = (-28 + swing * 3) * s, palmR = (28 - swing * 3) * s;
         ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
@@ -558,8 +572,17 @@ const GFX = (() => {
         ctx.fillStyle = '#5a5a5a';
         rr(ctx, -8 * s, -24 * s, 16 * s, 9 * s, 3 * s); ctx.fill();
         ctx.restore();
+      } else {
+        // spí – obě ruce svěšené podél těla, kladivo odloženo u nohou
+        ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-14 * s, -96 * s); ctx.quadraticCurveTo(-20 * s, -78 * s, -17 * s, -60 * s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(20 * s, -78 * s, 17 * s, -60 * s); ctx.stroke();
+        ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 3.5 * s;
+        ctx.beginPath(); ctx.moveTo(22 * s, -2 * s); ctx.lineTo(40 * s, -2 * s); ctx.stroke();
+        ctx.fillStyle = '#5a5a5a';
+        rr(ctx, 38 * s, -8 * s, 14 * s, 8 * s, 3 * s); ctx.fill();
       }
-      if (v !== 2) {
+      if (v === 0 || v === 1) {
         // druhá ruka v bok
         ctx.strokeStyle = '#3f7d4a'; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(26 * s, -84 * s, 16 * s, -70 * s); ctx.stroke();
@@ -567,11 +590,24 @@ const GFX = (() => {
       // hlava s úsměvem
       ctx.fillStyle = '#e8b88a';
       ctx.beginPath(); ctx.arc(0, -117 * s, 14 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.8 * s;
-      ctx.beginPath(); ctx.arc(1 * s, -112 * s, 5 * s, 0.2, Math.PI - 0.6); ctx.stroke();
-      ctx.fillStyle = '#3a2a1c';
-      ctx.beginPath(); ctx.arc(-4 * s, -119 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(6 * s, -119 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+      if (v === 3) {
+        // ospalý – zavřené oči, pootevřená pusa a bublinka Zzz
+        ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.6 * s;
+        ctx.beginPath();
+        ctx.arc(-4 * s, -119 * s, 2.4 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.moveTo(8.4 * s, -119 * s);
+        ctx.arc(6 * s, -119 * s, 2.4 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        ctx.fillStyle = '#a8543a';
+        ell(ctx, 1 * s, -110 * s, 2 * s, 2.6 * s); ctx.fill();
+        drawZzz(ctx, s, t, 18, -132);
+      } else {
+        ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.8 * s;
+        ctx.beginPath(); ctx.arc(1 * s, -112 * s, 5 * s, 0.2, Math.PI - 0.6); ctx.stroke();
+        ctx.fillStyle = '#3a2a1c';
+        ctx.beginPath(); ctx.arc(-4 * s, -119 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(6 * s, -119 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
+      }
       // blond číro z dredů
       ctx.fillStyle = '#c9a55a';
       for (let i = 0; i < 5; i++) {
@@ -599,8 +635,8 @@ const GFX = (() => {
     },
     tony(ctx, s, extra, t) {
       // Tony – pečuje o zvířata i o wi-fi signál
-      // pózy: 0 = drbe berana a hlídá appku, 1 = streamuje a mává, 2 = krmí berana z kýblu
-      const v = (extra || 0) % 3;
+      // pózy: 0 = drbe berana a hlídá appku, 1 = streamuje a mává, 2 = krmí berana, 3 = klimbá (noc)
+      const v = (extra || 0) % 4;
       // beran vedle něj (blažený) – kus od Tonyho, ať mu není vidět jen zadek
       ctx.save();
       // při streamování beran nadšeně poskakuje
@@ -677,7 +713,7 @@ const GFX = (() => {
           ctx.textAlign = 'center';
           ctx.fillText('♥', -19 * s, -142 * s);
         }
-      } else {
+      } else if (v === 2) {
         // krmí berana – kýbl granulí přímo pod jeho čumákem
         ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(18 * s, -70 * s, 21 * s, -52 * s); ctx.stroke();
         // druhá ruka v kapse (jen krátký náznak)
@@ -689,6 +725,14 @@ const GFX = (() => {
         ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#c9a06b';
         ell(ctx, 22 * s, -50 * s, 7 * s, 2.6 * s); ctx.fill();
+      } else {
+        // klimbá – jedna ruka drží telefon nízko v klíně, druhá svěšená
+        ctx.beginPath(); ctx.moveTo(6 * s, -88 * s); ctx.quadraticCurveTo(16 * s, -74 * s, 12 * s, -62 * s); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-16 * s, -88 * s); ctx.quadraticCurveTo(-22 * s, -74 * s, -18 * s, -60 * s); ctx.stroke();
+        ctx.fillStyle = '#2c2c30';
+        rr(ctx, 6 * s, -66 * s, 12 * s, 17 * s, 3 * s); ctx.fill();
+        ctx.fillStyle = '#3a4658'; // ztmavlý spánkový režim displeje
+        rr(ctx, 8 * s, -64 * s, 8 * s, 12 * s, 2 * s); ctx.fill();
       }
       // hlava s plnovousem
       ctx.fillStyle = '#d9a878';
@@ -706,15 +750,26 @@ const GFX = (() => {
         ctx.arc(-5 * s + Math.cos(a) * 12 * s, -118 * s + Math.sin(a) * 10 * s, 5.5 * s, 0, Math.PI * 2);
         ctx.fill();
       }
-      // usměvavé oči
-      ctx.fillStyle = '#2d2015';
-      ctx.beginPath(); ctx.arc(-10 * s, -110 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(-1 * s, -110 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
+      if (v === 3) {
+        // klimbající zavřené oči a Zzz nad hlavou
+        ctx.strokeStyle = '#2d2015'; ctx.lineWidth = 1.4 * s;
+        ctx.beginPath();
+        ctx.arc(-10 * s, -110 * s, 2.2 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.moveTo(1.2 * s, -110 * s);
+        ctx.arc(-1 * s, -110 * s, 2.2 * s, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        drawZzz(ctx, s, t, 12, -126);
+      } else {
+        // usměvavé oči
+        ctx.fillStyle = '#2d2015';
+        ctx.beginPath(); ctx.arc(-10 * s, -110 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-1 * s, -110 * s, 1.7 * s, 0, Math.PI * 2); ctx.fill();
+      }
     },
     maruska(ctx, s, extra, t) {
       // Maruška – zpívá bylinkám i miminku v bříšku
-      // pózy: 0 = zpívá s kytičkou bylinek, 1 = maluje u stojanu, 2 = mává a posílá srdíčka
-      const v = (extra || 0) % 3;
+      // pózy: 0 = zpívá s bylinkami, 1 = maluje, 2 = mává a posílá srdíčka, 3 = podřimuje (noc)
+      const v = (extra || 0) % 4;
       const sway = Math.sin((t || 0) * 0.003);
       if (v === 1) {
         // malířský stojan s rozmalovanou loukou
@@ -786,12 +841,15 @@ const GFX = (() => {
         ctx.beginPath(); ctx.moveTo(bx, -72 * s); ctx.lineTo(bx - 7 * s, -66 * s); ctx.stroke();
         ctx.fillStyle = '#ff8fb1';
         ctx.beginPath(); ctx.arc(bx - 8 * s, -65 * s, 2 * s, 0, Math.PI * 2); ctx.fill();
-      } else {
+      } else if (v === 2) {
         // druhá ruka mává nad hlavou
         const wx = (-18 + sway * 4) * s;
         ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-14 * s, -112 * s, wx, -128 * s); ctx.stroke();
         ctx.fillStyle = '#f0c9a0';
         ctx.beginPath(); ctx.arc(wx, -130 * s, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // podřimuje – druhá ruka klidně spočívá také na bříšku
+        ctx.beginPath(); ctx.moveTo(-4 * s, -96 * s); ctx.quadraticCurveTo(-10 * s, -84 * s, -2 * s, -82 * s); ctx.stroke();
       }
       // hlava
       ctx.fillStyle = '#f0c9a0';
@@ -799,17 +857,23 @@ const GFX = (() => {
       // pěšinka s ofinkou
       ctx.fillStyle = '#e2b96a';
       ctx.beginPath(); ctx.arc(0, -117 * s, 12.5 * s, Math.PI * 0.95, Math.PI * 2.08); ctx.fill();
-      if (v === 0) {
-        // zavřené oči – zrovna zpívá
+      if (v === 0 || v === 3) {
+        // zavřené oči – zpívá (0) nebo podřimuje (3)
         ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 1.6 * s;
         ctx.beginPath();
         ctx.arc(-4 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
         ctx.moveTo(7.6 * s, -112 * s);
         ctx.arc(5 * s, -112 * s, 2.6 * s, Math.PI * 0.15, Math.PI * 0.85);
         ctx.stroke();
-        // zpívající pusa
         ctx.fillStyle = '#a8543a';
-        ell(ctx, 1 * s, -106 * s, 2.4 * s, 3 * s); ctx.fill();
+        if (v === 0) {
+          ell(ctx, 1 * s, -106 * s, 2.4 * s, 3 * s); ctx.fill(); // zpívající pusa
+        } else {
+          // klidný spokojený úsměv a Zzz
+          ctx.strokeStyle = '#a8543a'; ctx.lineWidth = 1.4 * s;
+          ctx.beginPath(); ctx.arc(0.5 * s, -108 * s, 2.6 * s, 0.3, Math.PI - 0.3); ctx.stroke();
+          drawZzz(ctx, s, t, 15, -128);
+        }
       } else {
         // otevřené oči a úsměv
         ctx.fillStyle = '#6b4a2e';
@@ -823,7 +887,7 @@ const GFX = (() => {
       ell(ctx, -8 * s, -108 * s, 2.6 * s, 1.8 * s); ctx.fill();
       ell(ctx, 9 * s, -108 * s, 2.6 * s, 1.8 * s); ctx.fill();
       // notičky (při zpěvu) nebo srdíčka (když fandí) stoupající vzhůru
-      if (v !== 1) {
+      if (v === 0 || v === 2) {
         const baseAlpha = ctx.globalAlpha;
         ctx.fillStyle = v === 2 ? '#ff8fb1' : '#fff';
         ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;

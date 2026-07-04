@@ -690,13 +690,19 @@
       return null;
     }
     if (step.spawn.humans) {
-      // lidští obyvatelé se seběhnou k pěšině, ať je Karel může představit
+      // lidští obyvatelé se seběhnou k pěšině, ať je Karel může představit.
+      // Nejdřív pryč s náhodnými lidmi z dekorace, ať se nikdo neukáže dvakrát –
+      // na představení jsou právě a jen tihle tři, každý v jiné póze.
+      S.decor = S.decor.filter(d => !d.human);
+      // menší postavy na užší obrazovce, ať se všichni tři vejdou celí
+      const hs = W < 620 ? 0.62 : 0.82;
+      const frac = [0.56, 0.7, 0.84]; // vpravo od Karla a jeho bubliny
       HUMAN_PROPS.forEach((prop, i) => {
         S.decor.push({
           prop,
-          x: S.worldX + (W * (0.5 + i * 0.16) - playerX()) / FAR_PARALLAX,
+          x: S.worldX + (W * frac[i] - playerX()) / FAR_PARALLAX,
           far: true, human: true, said: true,
-          extra: i % 3, s: 0.9,
+          extra: i, s: hs,
         });
       });
       return null;
@@ -891,16 +897,25 @@
   const HUMAN_PROPS = Object.keys(HUMANS);
   let humanIdx = Math.floor(Math.random() * HUMAN_PROPS.length);
 
+  // prostředí v místě, kde dekorace vznikne (kvůli póze i noční ospalosti)
+  function envIdxAt(worldX) {
+    const distM = Math.max(0, worldX) / PX_PER_M;
+    return ((Math.floor(distM / ENV_LEN_M) % ENVS.length) + ENVS.length) % ENVS.length;
+  }
+
   function spawnDecor() {
     // občas u pěšiny fandí někdo z lidí, co se o azyl starají
-    if (Math.random() < 0.13) {
+    // (ve škole běhu ne – ty tři představí Karel sám, ať se nepletou dvakrát)
+    if (!S.tut && Math.random() < 0.13) {
+      // v noci ospalá póza (3), přes den se střídají tři pracovní pózy (0–2)
+      const night = ENVS[envIdxAt(S.nextDecorX)].night;
       S.decor.push({
         prop: HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length],
         x: S.nextDecorX,
         far: true,
         human: true,
         said: false,
-        extra: Math.floor(Math.random() * 3), // náhodná póza (každý člověk má tři)
+        extra: night ? 3 : Math.floor(Math.random() * 3),
         s: 0.8 + Math.random() * 0.15,
       });
       S.nextDecorX += 640 + Math.random() * 620;
@@ -1328,11 +1343,14 @@
       const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
       if (sx > W * 0.3 && sx < W * 0.85) {
         d.said = true;
-        const list = HUMANS[d.prop];
-        let qi = Math.floor(Math.random() * list.length);
-        if (list.length > 1 && qi === lastHumanQuote[d.prop]) qi = (qi + 1) % list.length;
-        lastHumanQuote[d.prop] = qi;
-        S.sideBubbles.push({ txt: I18N.pick(list[qi]), t: 0, dur: 4, decor: d });
+        // hláška trefná pro aktuální prostředí (70 %), jinak obecná
+        const data = HUMANS[d.prop];
+        const envLines = data[currentEnv().env.id];
+        const pool = (envLines && envLines.length && Math.random() < 0.7) ? envLines : data.any;
+        let qi = Math.floor(Math.random() * pool.length);
+        if (pool.length > 1 && pool[qi] === lastHumanQuote[d.prop]) qi = (qi + 1) % pool.length;
+        lastHumanQuote[d.prop] = pool[qi];
+        S.sideBubbles.push({ txt: I18N.pick(pool[qi]), t: 0, dur: 4, decor: d });
       }
     }
   }
@@ -1440,20 +1458,6 @@
       drawFocusRing(S.enc.o, S.enc.scale, px);
     }
 
-    // bublina s hláškou (tutoriálová bublina a novinka na trase mají přednost)
-    if (S.bubbleT > 0 && S.bubble && S.mode === 'run'
-        && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)) {
-      drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
-    }
-    if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
-      drawTutorialBubble(px, groundY - S.py - 140, S.tut.bubble, S.tut.bubbleA,
-        S.tut.phase === 'paused' || S.tut.phase === 'cooldown' ? S.tut.gate : null);
-    }
-    if (S.enc && S.enc.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
-      drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
-        S.enc.gate);
-    }
-
     // částice
     for (const p of S.particles) {
       const pa = Math.min(1, p.life * 2) * (p.a || 1);
@@ -1484,6 +1488,24 @@
       ctx.fillText(f.txt, f.x, f.y);
     }
     ctx.globalAlpha = 1;
+
+    // BUBLINY se kreslí až úplně nakonec – nad částicemi i plovoucími čísly –
+    // aby do nich nic nezasahovalo a text byl vždy čistý a čitelný.
+    // (tutoriálová bublina a představení novinky mají přednost před hláškou)
+    if (S.bubbleT > 0 && S.bubble && S.mode === 'run'
+        && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)) {
+      drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
+    }
+    if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
+      // u představení lidí je bublina výš, ať Karel nezakrývá ty tři, o kterých mluví
+      const humansStep = TUTORIAL.steps[S.tut.idx] && TUTORIAL.steps[S.tut.idx].id === 'humans';
+      drawTutorialBubble(px, groundY - S.py - (humansStep ? 210 : 140), S.tut.bubble, S.tut.bubbleA,
+        S.tut.phase === 'paused' || S.tut.phase === 'cooldown' ? S.tut.gate : null);
+    }
+    if (S.enc && S.enc.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
+      drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
+        S.enc.gate);
+    }
 
     // bublinky obyvatel a letců – plují se svým mluvčím;
     // dokud svítí Karlova lekce nebo představení novinky, nesmí do nich nikdo kecat
@@ -1559,7 +1581,7 @@
     ctx.fillStyle = 'rgba(0,0,0,0.14)';
     GFX.rr(ctx, bx + 2, by + 4, w, 50, 24);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.fillStyle = '#ffffff';
     GFX.rr(ctx, bx, by, w, 50, 24);
     ctx.fill();
     // ocásek bubliny
@@ -1607,7 +1629,7 @@
     const by = Math.max(ay - h - 16, topSafe);
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     GFX.rr(ctx, bx + 3, by + 4, w, h, 18); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.97)';
+    ctx.fillStyle = '#ffffff';
     GFX.rr(ctx, bx, by, w, h, 18); ctx.fill();
     // ocásek – špička míří na mluvčího
     const tipX = Math.min(Math.max(ax, bx + 14), bx + w - 14);
@@ -1651,7 +1673,7 @@
     const by = Math.max(ay - h - 12, 8);
     ctx.fillStyle = 'rgba(0,0,0,0.12)';
     GFX.rr(ctx, bx + 2, by + 3, w, h, 14); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillStyle = '#ffffff';
     GFX.rr(ctx, bx, by, w, h, 14); ctx.fill();
     // ocásek – špička míří na mluvčího
     const tipX = Math.min(Math.max(ax, bx + 10), bx + w - 10);
