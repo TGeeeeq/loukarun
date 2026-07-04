@@ -70,10 +70,10 @@ const DATA = (() => {
       },
       unlock: { type: 'coins', price: 250 },
       perk: {
-        cs: 'Perk: PRUŽINKA – skáče výš a dvojskok má delší.',
-        en: 'Perk: SPRING LEGS – jumps higher and gets a longer double jump.',
+        cs: 'Perk: VLNĚNÝ POLŠTÁŘ – náraz ubere jen půlku energie a skáče o kousek výš.',
+        en: 'Perk: WOOLLY CUSHION – takes only half the energy from a hit and jumps a little higher.',
       },
-      stats: { speed: 1.0, jump: 1.18, drain: 1.0 },
+      stats: { speed: 1.0, jump: 1.10, drain: 1.0, hitFactor: 0.5 },
       // krémová vlna, hnědá tvářička a tmavé nožky
       colors: { body: '#f2ede2', belly: '#ffffff', mane: '#e2d8c6', muzzle: '#9a8268', ear: '#9a8268', earIn: '#c2a888', legs: '#8a7460', hoof: '#463c32' },
       quotes: [
@@ -118,10 +118,10 @@ const DATA = (() => {
       },
       unlock: { type: 'coins', price: 500 },
       perk: {
-        cs: 'Perk: SPRINTERKA – běhá rychleji a mrkve jí dají víc energie.',
-        en: 'Perk: SPRINTER – runs faster and carrots give her more energy.',
+        cs: 'Perk: ŠŤASTNÁ KOPYTA – sbírá o polovinu víc mincí a zlaté mrkve jí dají dvakrát tolik energie.',
+        en: 'Perk: LUCKY HOOVES – collects 50% more coins and golden carrots give her twice the energy.',
       },
-      stats: { speed: 1.08, jump: 1.0, drain: 1.0, carrotBonus: 1.3 },
+      stats: { speed: 1.06, jump: 1.0, drain: 1.0, coinMult: 1.5, goldenBonus: 2.0 },
       // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
@@ -169,7 +169,7 @@ const DATA = (() => {
         cs: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
         en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
       },
-      stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 140 },
+      stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 85 },
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
       colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
@@ -214,10 +214,10 @@ const DATA = (() => {
       },
       unlock: { type: 'coins', price: 1500 },
       perk: {
-        cs: 'Perk: BERANIDLO – 3× za běh prorazí překážku bez ztráty energie.',
-        en: 'Perk: BATTERING RAM – smashes through 3 obstacles per run without losing energy.',
+        cs: 'Perk: BERANIDLO – 5× za běh prorazí překážku bez ztráty energie.',
+        en: 'Perk: BATTERING RAM – smashes through 5 obstacles per run without losing energy.',
       },
-      stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 3 },
+      stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 5 },
       // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
       colors: { body: '#6b4830', belly: '#e6dac6', mane: '#4c3120', muzzle: '#e9dfcd', ear: '#6b4830', earIn: '#c2996f', horns: '#c7ad85', spots: '#cbb896', pattern: 'saddle', legs: '#5a3c28', hoof: '#31261e' },
       quotes: [
