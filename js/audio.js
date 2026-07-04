@@ -68,6 +68,18 @@ const AUDIO = (() => {
     src.start(t0);
   }
 
+  // jednorázový zvukový soubor (např. Karlův smích) – respektuje vypnutí
+  // zvuků, přehrávače se cachují a přehrání se dá kdykoli spustit od začátku
+  const samples = {};
+  function sample(src, vol = 1) {
+    if (!enabled) return;
+    let el = samples[src];
+    if (!el) { el = samples[src] = new Audio(src); el.preload = 'auto'; }
+    el.volume = vol;
+    try { el.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ }
+    el.play().catch(() => {});
+  }
+
   const SFX = {
     jump()   { tone(300, 0.18, 'square', 0.5, 620); },
     djump()  { tone(420, 0.16, 'square', 0.5, 820); },
@@ -80,7 +92,7 @@ const AUDIO = (() => {
     hit()    { tone(220, 0.25, 'sawtooth', 0.5, 90); noise(0.15, 0.3); },
     ram()    { tone(150, 0.2, 'sawtooth', 0.7, 60); noise(0.2, 0.5); },
     quote()  { tone(520, 0.07, 'sine', 0.35); tone(700, 0.08, 'sine', 0.3, null, 0.06); },
-    laugh()  { [740, 660, 740, 660, 590, 520].forEach((f, i) => tone(f, 0.09, 'square', 0.4, f * 0.82, i * 0.12)); },
+    laugh()  { sample('assets/sfx/karel-smich.mp3', 0.7); },
     finish() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.6, null, i * 0.13)); },
     click()  { tone(700, 0.05, 'sine', 0.4); },
     buy()    { [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', 0.55, null, i * 0.09)); },
