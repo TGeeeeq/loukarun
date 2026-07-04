@@ -501,12 +501,16 @@
     else if (S.mode === 'paused') { S.mode = 'run'; showScreen(null); }
   }
 
+  // celkové mince za běh včetně násobiče postavy (Avala: coinMult) –
+  // jednotlivé floatery zůstávají v základní hodnotě, součet se násobí jednou
+  function runCoins() { return Math.round(S.coinsRun * (S.stats?.coinMult || 1)); }
+
   function endRun() {
     S.mode = 'over';
     S.shake = 0;
     S.tut = null; // pojistka – škola běhu končí s během (bez zápisu tutorialDone)
     S.enc = null;
-    save.coins += S.coinsRun;
+    save.coins += runCoins();
     save.runs += 1;
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
@@ -523,7 +527,7 @@
     document.getElementById('over-story').textContent = story;
     document.getElementById('over-dist').textContent = dist + ' m';
     document.getElementById('over-carrots').textContent = S.carrotsRun;
-    document.getElementById('over-coins').textContent = '+' + S.coinsRun;
+    document.getElementById('over-coins').textContent = '+' + runCoins();
     document.getElementById('over-best').textContent = save.best + ' m';
     drawPortrait(document.getElementById('over-portrait'), S.char);
     showScreen('over');
@@ -1243,8 +1247,9 @@
           AUDIO.play('carrot');
         } else if (p.kind === 'golden') {
           S.carrotsRun++;
-          S.energy = Math.min(100, S.energy + ECONOMY.goldenCarrotEnergy);
-          floater(I18N.t('fl.golden', { n: ECONOMY.goldenCarrotEnergy }), sx, sy - 24, '#ffce3a');
+          const gGain = Math.round(ECONOMY.goldenCarrotEnergy * (S.stats.goldenBonus || 1));
+          S.energy = Math.min(100, S.energy + gGain);
+          floater(I18N.t('fl.golden', { n: gGain }), sx, sy - 24, '#ffce3a');
           burst(sx, sy, '#ffd24a', 22);
           sayBubble(randomQuote(EVENTS.goldenCarrot));
           AUDIO.play('golden');
@@ -1301,7 +1306,7 @@
         burst(sx, groundY - 90, '#55524c', 18); // tmavá pírka rozprášeného hejna
         floater(randomQuote(EVENTS.flock), sx, groundY - 160, '#e5533a');
       }
-      const penalty = o.soft ? 8 : ECONOMY.hitPenalty;
+      const penalty = Math.round((o.soft ? 8 : ECONOMY.hitPenalty) * (S.stats.hitFactor || 1));
       // ve škole běhu drží energie rezervu – klopýtnutí nesmí běh ukončit
       S.energy = Math.max(S.tut ? 15 : 0, S.energy - penalty);
       S.stumble = 0.7;
@@ -1705,7 +1710,7 @@
     $('hud-energy-fill').style.width = Math.max(0, S.energy) + '%';
     $('hud-energy-fill').classList.toggle('low', S.energy < 25);
     $('hud-dist').textContent = Math.floor(S.worldX / PX_PER_M) + ' m';
-    $('hud-coins').textContent = S.coinsRun;
+    $('hud-coins').textContent = runCoins();
     const clover = $('hud-clover');
     if (S.cloverT > 0) {
       clover.style.display = 'flex';
