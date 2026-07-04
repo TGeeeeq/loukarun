@@ -92,6 +92,7 @@
     introFlagged: new Set(),// druhy označené k představení v tomto běhu
     sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
+    milestone: null,        // krátká oslavná cedule po dosažení 500 m milníku
     special: null,          // vznešený Duhový květ každých 2,5 km (výzva se schody)
     platforms: [],          // kouzelné schody – jednosměrné plošiny u květu
     lastSpecial: 0,         // poslední milník 2500 m, kde se květ objevil
@@ -460,7 +461,7 @@
     S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
-    S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
+    S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 6 + Math.random() * 6;
     S.tut = null;
     S.enc = null; S.introFlagged = new Set();
     S.special = null; S.platforms = []; S.lastSpecial = 0; S.speedAnchorX = 0;
@@ -613,9 +614,6 @@
 
   function spawnPickups() {
     const x0 = S.nextPickupX;
-    const distM = S.worldX / PX_PER_M;
-    // s ujetou vzdáleností jsou svačiny vzácnější
-    const scarcity = 1 + distM / 2200;
     const roll = Math.random();
     let width = 0;
 
@@ -655,7 +653,9 @@
     for (const o of S.obstacles) {
       if (!o.broken && o.x + o.w / 2 + 60 > x0 && o.x - o.w / 2 - 60 < x0 + width) resolvePickupConflicts(o);
     }
-    S.nextPickupX = x0 + width + (520 + Math.random() * 480) * scarcity;
+    // rozestup svačin je konstantní po celý běh – mrkví, mincí ani zlatých
+    // mrkví neubývá s ujetou vzdáleností (energie ubývá, tak ať je čím doplňovat)
+    S.nextPickupX = x0 + width + 470 + Math.random() * 430;
   }
 
   /* =========================================================
@@ -791,28 +791,29 @@
   // Květ visí vysoko nad kouzelnými schody – dá se sebrat jen z jejich vrcholu.
   function startSpecial() {
     const px = playerX();
-    const tops = [66, 132, 198, 264]; // 4 schody stoupající doprava (pravidelný krok +66)
-    const gapX = 168;                 // vodorovný rozestup – dost času mezi skoky
-    // květ se objeví daleko vpravo za krajem obrazovky → dlouhý rozjezd,
-    // schody připlují jeden po druhém a hráč má spoustu času začít reagovat
-    const itemX = S.worldX + 1.14 * W - px;
-    const baseX = itemX - (tops.length - 1) * gapX; // schody vedou k němu zleva
+    // Výšky schodů drží celé schodiště i květ v záběru i na telefonu na šířku
+    // (groundY = 0,78·H, takže nahoře je málo místa) a jsou snadno doskočné.
+    const tops = [40, 78, 116, 154];  // 4 schody stoupající doprava (krok +38)
+    const gapX = 110;                 // vodorovný rozestup schodů
+    // Schodiště i květ se zrodí až ZA pravým krajem a teprve vjedou do záběru
+    // (žádné bliknutí z ničeho). První schod začíná těsně za okrajem.
+    const firstX = S.worldX + (W + 60) - px;
     // ať je scéna čistá – pryč s tím, co je ještě před hráčem
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
-    S.platforms = tops.map((top, i) => ({ x: baseX + i * gapX, w: 190, top })); // široké = odpouští doskok
-    const item = { kind: 'majestic', x: itemX, h: tops[tops.length - 1] + 92, taken: false, special: true };
+    S.platforms = tops.map((top, i) => ({ x: firstX + i * gapX, w: 150, top })); // široké = odpouští doskok
+    const itemX = firstX + (tops.length - 1) * gapX; // květ visí nad posledním schodem
+    const item = { kind: 'majestic', x: itemX, h: tops[tops.length - 1] + 58, taken: false, special: true };
     S.pickups.push(item);
     S.special = {
-      phase: 'intro',        // intro (svět stojí, Karel popisuje) → challenge → done
-      scale: 1, target: 0,   // zmrazení světa jako u encounteru
+      phase: 'approach',     // approach (schody vjíždějí) → intro (stop + popis) → challenge → done
+      scale: 1, target: 1,   // za jízdy se nemrazí
       bubbleA: 0,
       item,
       bubble: EVENTS.majesticIntro,
       resultT: 0,
       runT: 0,               // čas běhu ve výzvě – Karel se z klidu pozvolna rozjíždí
     };
-    AUDIO.play('quote');
   }
 
   // tiká reálným (neškálovaným) dt – volá se před škálováním, jako updateEncounter
@@ -824,6 +825,17 @@
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
     SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
 
+    if (SP.phase === 'approach') {
+      // schodiště klidně vjíždí zprava; jakmile první schod dorazí na doskočnou
+      // vzdálenost, svět se zastaví a spustí se Karlův popis – květ už je v záběru
+      const step1 = S.platforms[0];
+      if (step1 && (step1.x - S.worldX + px) <= px + 160) {
+        SP.phase = 'intro';
+        SP.target = 0; // teď se svět zmrazí (ease-out) a naběhne bublina
+        AUDIO.play('quote');
+      }
+      return;
+    }
     if (SP.phase === 'challenge') {
       SP.runT += dt; // Karel se po představení pozvolna rozjíždí (viz rampa rychlosti)
       if (SP.item.taken) { resolveSpecial(true); return; }               // sebráno
@@ -1193,8 +1205,12 @@
     // rozjezd se měří od kotvy speedAnchorX (po sebrání květu se resetuje = běží zas pomalu)
     if (running) {
       S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.23, 735);
-      // Výzva u Duhového květu: Karel se z klidu pozvolna rozjíždí (45 → 140 px/s
-      // za ~1,8 s), takže první schod připlouvá pomalu a je spousta času reagovat.
+      // Duhový květ: schodiště nejdřív klidně vjede do záběru (approach),
+      if (S.special && S.special.phase === 'approach') {
+        S.speed = Math.min(S.speed, 320); // ať je vjezd schodů plynulý, ne blesk
+      }
+      // …a při výzvě se Karel z klidu pozvolna rozjíždí (45 → 140 px/s za ~1,8 s),
+      // takže první schod připlouvá pomalu a je spousta času reagovat.
       if (S.special && S.special.phase === 'challenge') {
         const ramp = Math.min(1, S.special.runT / 1.8);
         S.speed = Math.min(S.speed, 45 + ramp * (140 - 45));
@@ -1316,6 +1332,7 @@
     S.floaters = S.floaters.filter(f => f.life > 0);
     for (const b of S.sideBubbles) b.t += dt;
     S.sideBubbles = S.sideBubbles.filter(b => b.t < b.dur);
+    if (S.milestone) { S.milestone.t += dt; if (S.milestone.t >= S.milestone.dur) S.milestone = null; }
 
     // ambientní částice prostředí
     ambientTimer -= dt;
@@ -1471,7 +1488,9 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     if (dist - S.lastMilestone >= 500) {
       S.lastMilestone = Math.floor(dist / 500) * 500;
-      floater(S.lastMilestone + ' m! ' + randomQuote(EVENTS.milestone), playerX(), groundY - 160, '#ffffff');
+      // krátká oslavná cedule nahoře uprostřed – hráč si jí všimne, ale
+      // nepřekáží Karlovým bublinám dole a rychle zmizí
+      S.milestone = { m: S.lastMilestone, t: 0, dur: 2.2, quote: randomQuote(EVENTS.milestone) };
     }
   }
 
@@ -1683,6 +1702,9 @@
       drawSideBubble(ax, ay, b.txt, fade);
     }
 
+    // oslavná cedule milníku – nahoře uprostřed, nad vším ostatním
+    if (S.milestone && S.mode === 'run') drawMilestone();
+
     ctx.restore();
 
     // Karlova lekce o HUD – pulzující rámeček kolem ukazatele mrkvové energie
@@ -1713,6 +1735,54 @@
   }
 
   // pulzující kroužek kolem představované novinky (škola běhu i novinky na trase)
+  // oslavná cedule milníku – decentní „pop" nahoře uprostřed: hráč si všimne,
+  // ale nepřekáží Karlovým bublinám dole a po ~2 s sama zmizí
+  function drawMilestone() {
+    const ms = S.milestone;
+    const t = ms.t, dur = ms.dur;
+    const inP = Math.min(1, t / 0.3);                                   // náběh
+    const outP = Math.max(0, 1 - Math.max(0, t - (dur - 0.55)) / 0.55); // dozvuk
+    const alpha = Math.min(inP, outP);
+    if (alpha <= 0.001) return;
+    // easeOutBack – při náběhu lehce přestřelí a usadí se
+    const k = inP - 1, sB = 1.9;
+    const eob = 1 + (sB + 1) * k * k * k + sB * k * k;
+    const scale = 0.82 + eob * 0.18;
+    const rise = (1 - outP) * -16; // ke konci lehce vypluje vzhůru
+
+    const label = '🏅 ' + ms.m + ' m';
+    const cheer = I18N.pick(ms.quote);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // nikdy ne výš než pod HUD (na nízkém telefonu na šířku), jinak ~čtvrtina výšky
+    ctx.translate(W / 2, Math.max(H * 0.26, 128) + rise);
+    ctx.scale(scale, scale);
+    ctx.textAlign = 'center';
+
+    ctx.font = '800 32px "Baloo 2", sans-serif';
+    const lw = ctx.measureText(label).width;
+    ctx.font = '700 16px "Baloo 2", sans-serif';
+    const cw = ctx.measureText(cheer).width;
+    const w = Math.min(Math.max(lw, cw) + 50, W - 24);
+    const h = 82;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    GFX.rr(ctx, -w / 2 + 3, -h / 2 + 5, w, h, 20); ctx.fill();
+    ctx.fillStyle = '#ffcf4d'; // teplý okraj jako medaile
+    GFX.rr(ctx, -w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 23); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    GFX.rr(ctx, -w / 2, -h / 2, w, h, 20); ctx.fill();
+
+    ctx.font = '800 32px "Baloo 2", sans-serif';
+    ctx.fillStyle = '#e0872a';
+    ctx.fillText(label, 0, -1);
+    ctx.font = '700 16px "Baloo 2", sans-serif';
+    ctx.fillStyle = '#6b6560';
+    ctx.fillText(cheer, 0, 25);
+    ctx.restore();
+  }
+
   function drawFocusRing(f, scale, px) {
     // cíl může být během představení až za pravým krajem (Duhový květ) –
     // prstenec přidržíme u kraje, ať hráč pořád vidí, kam se dívat
