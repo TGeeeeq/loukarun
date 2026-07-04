@@ -260,7 +260,7 @@ a.btn { text-decoration: none; display: inline-block; }
   background: linear-gradient(180deg, #7cc4b8, #dff3e8);
   justify-content: center;
   padding: max(12px, env(safe-area-inset-top)) 0 max(10px, env(safe-area-inset-bottom));
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 .shop-head {
   width: 100%; max-width: 1040px;
@@ -319,15 +319,15 @@ a.btn { text-decoration: none; display: inline-block; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .char-card .perk {
-  font-size: 0.74rem; color: #2c5e1e; font-weight: 700; line-height: 1.25;
-  background: rgba(122,201,94,0.18);
-  border-radius: 10px;
-  padding: 4px 10px;
+  width: 100%;
+  font-size: 0.78rem; color: #245018; font-weight: 700; line-height: 1.4;
+  background: rgba(122,201,94,0.2);
+  border: 1px solid rgba(122,201,94,0.42);
+  border-radius: 12px;
+  padding: 8px 12px;
 }
-/* ořez textu musí být na vnitřním prvku – jinak další řádek prosvítá skrz padding */
-.char-card .perk-text {
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
+/* celý popisek perku je vidět – žádné ořezávání */
+.char-card .perk-text { display: block; }
 .char-card .btn { margin-top: auto; }
 /* portrét na trávě, cenovka v rohu */
 .portrait-wrap {
@@ -374,9 +374,26 @@ a.btn { text-decoration: none; display: inline-block; }
 }
 @media (max-height: 420px) {
   .stat-rows { display: none; }
-  .char-card .perk-text { -webkit-line-clamp: 1; }
+  .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
   .portrait-wrap canvas { height: 72px; }
 }
+/* pozvánková karta na konci karuselu – ať zve poznat zvířata naživo */
+.cta-card {
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(180deg, #ffffff, #eafbe0);
+  border: 3px dashed #7ac95e;
+}
+.cta-card .cta-art {
+  font-size: 2.9rem; line-height: 1; margin-top: 6px;
+  filter: drop-shadow(0 4px 8px rgba(85,161,60,0.28));
+}
+.cta-card h3 { color: #2c5e1e; }
+.cta-card .cta-text {
+  font-size: 0.82rem; color: #3a5a2a; font-weight: 600; line-height: 1.45;
+  padding: 0 4px;
+}
+.cta-card .btn { margin-top: 6px; }
 
 /* konec běhu / pauza */
 #screen-over, #screen-pause { justify-content: center; background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }

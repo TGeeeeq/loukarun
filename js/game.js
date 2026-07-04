@@ -1838,6 +1838,30 @@
       drawPortrait(cv, ch);
       if (selected) selectedCard = card;
     }
+
+    // poslední karta v karuselu – pozvánka poznat zvířata naživo na webu azylu
+    const cta = document.createElement('div');
+    cta.className = 'char-card cta-card';
+    const ctaArt = document.createElement('div');
+    ctaArt.className = 'cta-art';
+    ctaArt.textContent = '🐾💚';
+    cta.appendChild(ctaArt);
+    const ctaQ = document.createElement('h3');
+    ctaQ.textContent = I18N.t('shop.cta.q');
+    cta.appendChild(ctaQ);
+    const ctaText = document.createElement('p');
+    ctaText.className = 'cta-text';
+    ctaText.textContent = I18N.t('shop.cta.text');
+    cta.appendChild(ctaText);
+    const ctaBtn = document.createElement('a');
+    ctaBtn.className = 'btn small buy';
+    ctaBtn.href = 'https://nechmerust.org/zvireci-obyvatele';
+    ctaBtn.target = '_blank';
+    ctaBtn.rel = 'noopener';
+    ctaBtn.textContent = I18N.t('shop.cta.btn');
+    cta.appendChild(ctaBtn);
+    grid.appendChild(cta);
+
     // vybrané zvířátko ať je po otevření rovnou vidět
     if (selectedCard) {
       requestAnimationFrame(() => {
