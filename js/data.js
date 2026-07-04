@@ -617,8 +617,8 @@ const DATA = (() => {
     ],
     // Zvířecí koncert Louky – rytmická minihra, co se objeví každých 2,5 km
     concertIntro: {
-      cs: 'Počkej… slyšíš to publikum? Pódium Louky čeká! 🎤✨ Zazpívej jim — ťukej přesně, když je ukazatel ve zlaté zóně, a spusť svůj nejlepší hlas. Zazpíváš to čistě?',
-      en: 'Wait… hear that crowd? The Meadow stage awaits! 🎤✨ Sing for them — tap right when the slider hits the golden zone and belt out your best voice. Can you nail it?',
+      cs: 'Pódium Louky! 🎤 Za chvíli začne koncert. Po liště jezdí puntík — pokaždé, když je v ZELENÉ, ťukni (mezerník nebo klepni na obrazovku). Trefíš dost not a je vyprodáno! 🎶',
+      en: 'The Meadow stage! 🎤 The show starts in a moment. A dot slides along the bar — each time it’s in the GREEN, tap (space or tap the screen). Hit enough notes and it’s sold out! 🎶',
     },
     concertWin: [ // pochvala po vyprodaném koncertu (popíše i odměnu)
       { cs: 'VYPRODÁNO! 🎶 Publikum šílí, energie po okraj a hrst mincí navrch. Popadnu dech a rozjedu se zas od začátku — ty jseš hvězda!', en: 'SOLD OUT! 🎶 The crowd’s going wild, energy to the brim and a fistful of coins on top. I’ll catch my breath and start fresh — you’re a star!' },

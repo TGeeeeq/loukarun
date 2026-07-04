@@ -784,9 +784,12 @@
       return true;
     }
     if (S.special && S.special.phase === 'intro') {
-      // koncert se rozjede na zmrazeném pódiu – target zůstává 0, ať svět stojí
+      // koncert se rozjede na zmrazeném pódiu – target zůstává 0, ať svět stojí.
+      // Nejdřív krátký odpočet „připrav se“, ať to nezačne znenadání.
       S.special.phase = 'challenge';
+      S.special.leadT = CONCERT.leadDur;
       S.special.beatT = 0;
+      S.special.restT = 0;
       S.special.bubble = null;
       AUDIO.play('click');
       return true;
@@ -801,10 +804,12 @@
      koncert je vyprodaný (výhra) a rychlost se vynuluje na základní; při propadáku
      se jen zkrátí nastřádané zrychlení na polovinu. */
   const CONCERT = {
-    total: 5,                 // kolik not koncert má
-    threshold: 3,             // kolik trefit = vyprodáno (výhra)
-    beatDur: 1.1,             // za jak dlouho jezdec přejede lištu (s)
-    zoneLo: 0.42, zoneHi: 0.58, // zlatá zóna na dráze 0..1
+    total: 4,                 // kolik not koncert má (kratší = přehlednější)
+    threshold: 2,             // kolik trefit = vyprodáno (výhra)
+    leadDur: 1.8,             // odpočet „připrav se“ před první notou (s)
+    beatDur: 1.7,             // za jak dlouho puntík přejede lištu (s) – pomalu, ať se stihne
+    restDur: 0.85,            // pauza po každé notě, ať zvuk dozní a je vidět výsledek (s)
+    zoneLo: 0.36, zoneHi: 0.64, // zelená zóna na dráze 0..1 (široká, ať to zvládnou i děti)
   };
 
   function currentChar() {
@@ -816,6 +821,7 @@
     // ať scéna nastoupí čistě – pryč s tím, co je ještě před hráčem
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
+    S.milestone = null;      // ať oslavná cedule 2500 m nepřekrývá lištu koncertu
     S.special = {
       phase: 'approach',     // approach (pódium najíždí) → intro (popis) → challenge (koncert) → done
       scale: 1, target: 1,   // za jízdy se nemrazí
@@ -826,39 +832,43 @@
       total: CONCERT.total,
       beatIdx: 0,            // kolikátá nota právě běží
       beatT: 0,              // 0..beatDur průběh aktuální noty
-      beatPos: 0,            // 0..1 pozice jezdce na liště
+      beatPos: 0,            // 0..1 pozice puntíku na liště
+      leadT: 0,              // odpočet „připrav se“ před první notou
+      restT: 0,              // pauza mezi notami, ať zvuk dozní
       hits: 0,               // trefené noty
       beats: [],             // true/false výsledky not (pro vykreslení)
       beatFlash: 0,          // krátký blik: >0 hit, <0 miss
+      lastHit: null,         // jak dopadla poslední nota (pro hlášku v pauze)
       won: null,
     };
   }
 
-  // trefení rytmu – ťuknutí za koncertu (viz jump())
+  // trefení rytmu – ťuknutí za koncertu (viz jump()); bere se jen, když puntík jede
   function concertTap() {
     const SP = S.special;
-    if (!SP || SP.phase !== 'challenge') return;
+    if (!SP || SP.phase !== 'challenge' || SP.leadT > 0 || SP.restT > 0) return;
     registerBeat(SP.beatPos >= CONCERT.zoneLo && SP.beatPos <= CONCERT.zoneHi);
   }
 
   function registerBeat(hit) {
     const SP = S.special;
     SP.beats.push(hit);
+    SP.lastHit = hit;
     if (hit) {
       SP.hits++;
-      SP.beatFlash = 0.35;
-      AUDIO.voice(currentChar().id); // zvířátko spustí svůj hlas
+      SP.beatFlash = 0.6;
+      AUDIO.voice(currentChar().id); // zvířátko spustí svůj hlas (v pauze dozní celý)
       const nx = playerX(), ny = groundY - S.py - 120;
       floater('♪', nx + (Math.random() * 44 - 22), ny, '#ffe14a');
-      burst(nx, ny, '#ffd24a', 10);
+      burst(nx, ny, '#ffd24a', 12);
     } else {
-      SP.beatFlash = -0.35;
+      SP.beatFlash = -0.6;
       AUDIO.play('quote'); // tichý dud
     }
     SP.beatIdx++;
     SP.beatT = 0;
     SP.beatPos = 0;
-    if (SP.beatIdx >= SP.total) resolveSpecial(SP.hits >= CONCERT.threshold);
+    SP.restT = CONCERT.restDur; // pauza – zvuk dozní, hráč vidí výsledek, pak přijde další nota
   }
 
   // tiká reálným (neškálovaným) dt – volá se před škálováním, jako updateEncounter
@@ -882,7 +892,22 @@
       return;
     }
     if (SP.phase === 'challenge') {
-      // jezdec přejíždí lištu; když nikdo nestihne ťuknout, nota propadne (miss)
+      if (SP.leadT > 0) {
+        // odpočet „připrav se“ – puntík ještě nejede, ať se hráč zorientuje
+        const before = Math.ceil(SP.leadT / 0.6);
+        SP.leadT -= dt;
+        const after = Math.ceil(SP.leadT / 0.6);
+        if (SP.leadT <= 0) AUDIO.play('carrot');       // cinknutí „začínáme“
+        else if (after < before) AUDIO.play('click');  // tik odpočtu
+        return;
+      }
+      if (SP.restT > 0) {
+        // pauza mezi notami – zvuk dozní a je vidět výsledek, pak další nota (nebo konec)
+        SP.restT -= dt;
+        if (SP.restT <= 0 && SP.beatIdx >= SP.total) resolveSpecial(SP.hits >= CONCERT.threshold);
+        return;
+      }
+      // puntík přejíždí lištu; když nikdo nestihne ťuknout, nota propadne (miss)
       SP.beatT += dt;
       SP.beatPos = Math.min(1, SP.beatT / CONCERT.beatDur);
       if (SP.beatT >= CONCERT.beatDur) registerBeat(false);
@@ -1521,8 +1546,9 @@
     if (dist - S.lastMilestone >= 500) {
       S.lastMilestone = Math.floor(dist / 500) * 500;
       // krátká oslavná cedule nahoře uprostřed – hráč si jí všimne, ale
-      // nepřekáží Karlovým bublinám dole a rychle zmizí
-      S.milestone = { m: S.lastMilestone, t: 0, dur: 2.2, quote: randomQuote(EVENTS.milestone) };
+      // nepřekáží Karlovým bublinám dole a rychle zmizí. Koncert (na 2,5 km
+      // = násobek 500) má přednost, jinak by cedule překryla jeho lištu.
+      if (!S.special) S.milestone = { m: S.lastMilestone, t: 0, dur: 2.2, quote: randomQuote(EVENTS.milestone) };
     }
   }
 
@@ -1714,7 +1740,7 @@
     // bublinky obyvatel a letců – plují se svým mluvčím;
     // dokud svítí Karlova lekce nebo představení novinky, nesmí do nich nikdo kecat
     const bigBubbleOn = (S.tut && S.tut.bubbleA > 0.1) || (S.enc && S.enc.bubbleA > 0.1)
-      || (S.special && S.special.bubbleA > 0.1);
+      || !!S.special; // po celou dobu koncertu ať do lišty nikdo nekecá
     for (const b of (bigBubbleOn ? [] : S.sideBubbles)) {
       let ax, ay;
       if (b.decor) {
@@ -1840,30 +1866,58 @@
     ctx.fillStyle = '#4a4652';
     ctx.beginPath(); ctx.ellipse(mx, my - 108, 8, 10, 0, 0, Math.PI * 2); ctx.fill();
 
-    // časovací lišta se zlatou zónou a jezdcem
-    const bw = Math.min(W * 0.6, 420), bh = 26;
-    const bx = cx - bw / 2, by = Math.max(70, groundY - S.py - 240);
-    GFX.rr(ctx, bx, by, bw, bh, 13);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
-    const zx = bx + bw * CONCERT.zoneLo, zw = bw * (CONCERT.zoneHi - CONCERT.zoneLo);
-    GFX.rr(ctx, zx, by, zw, bh, 8);
-    ctx.fillStyle = SP.beatFlash > 0 ? 'rgba(150,255,160,0.95)' : 'rgba(120,220,120,0.72)'; ctx.fill();
-    GFX.rr(ctx, bx, by, bw, bh, 13);
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.stroke();
-    const jx = bx + bw * SP.beatPos;
-    ctx.fillStyle = SP.beatFlash < 0 ? '#ff6b6b' : '#ffffff';
-    GFX.rr(ctx, jx - 4, by - 7, 8, bh + 14, 4); ctx.fill();
+    // časovací lišta – větší a jasnější, ať je vidět i na telefonu
+    const bw = Math.min(W * 0.68, 470), bh = 34;
+    const bx = cx - bw / 2, by = Math.max(84, groundY - S.py - 252);
+    const running = SP.leadT <= 0; // puntík už jede
 
-    // noty nad lištou: trefené/miny/zbývající
-    const ny = by - 27, nr = 9, gap = 26;
+    // zbývající noty nad lištou: trefené (žlutá) / miny (červená) / čeká (bílá)
+    const ny = by - 34, nr = 11, gap = 30;
     const startX = cx - ((SP.total - 1) * gap) / 2;
     for (let i = 0; i < SP.total; i++) {
       const nx = startX + i * gap;
       ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI * 2);
       if (i < SP.beats.length) ctx.fillStyle = SP.beats[i] ? '#ffe14a' : 'rgba(255,120,120,0.85)';
-      else if (i === SP.beatIdx) ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      else if (i === SP.beatIdx && running) ctx.fillStyle = 'rgba(255,255,255,0.98)';
       else ctx.fillStyle = 'rgba(255,255,255,0.35)';
       ctx.fill();
+    }
+
+    // podklad lišty
+    GFX.rr(ctx, bx, by, bw, bh, 15);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+    // ZELENÁ zóna
+    const zx = bx + bw * CONCERT.zoneLo, zw = bw * (CONCERT.zoneHi - CONCERT.zoneLo);
+    GFX.rr(ctx, zx, by, zw, bh, 10);
+    ctx.fillStyle = SP.beatFlash > 0 ? 'rgba(150,255,160,0.98)' : 'rgba(110,215,120,0.82)'; ctx.fill();
+    // šipka nad zónou – „ťukni tady“
+    const zcx = zx + zw / 2;
+    ctx.fillStyle = '#8ff0a0';
+    ctx.beginPath(); ctx.moveTo(zcx - 11, by - 7); ctx.lineTo(zcx + 11, by - 7); ctx.lineTo(zcx, by + 5); ctx.closePath(); ctx.fill();
+    // obrys
+    GFX.rr(ctx, bx, by, bw, bh, 15);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3; ctx.stroke();
+    // puntík (jen když už jede)
+    if (running) {
+      const jx = bx + bw * SP.beatPos, jy = by + bh / 2;
+      ctx.fillStyle = SP.beatFlash < 0 ? '#ff6b6b' : '#ffffff';
+      ctx.beginPath(); ctx.arc(jx, jy, bh * 0.42, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke();
+    }
+
+    // hláška pod lištou: odpočet / instrukce / výsledek noty / konec
+    let msg = null, col = '#ffffff';
+    if (SP.phase === 'done') { msg = SP.won ? 'VYPRODÁNO! 🎉' : 'Zkus to příště! 🎵'; col = SP.won ? '#ffe14a' : '#ffd0d0'; }
+    else if (SP.leadT > 0) { msg = 'PŘIPRAV SE… ' + Math.ceil(SP.leadT / 0.6); col = '#ffe14a'; }
+    else if (SP.restT > 0) { msg = SP.lastHit ? 'Trefa! 🎶' : 'Vedle!'; col = SP.lastHit ? '#8ff0a0' : '#ff9a9a'; }
+    else { msg = 'Ťukni, když je puntík v ZELENÉ!'; }
+    if (msg) {
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 30px "Baloo 2", sans-serif';
+      ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      const ty = by + bh + 44;
+      ctx.strokeText(msg, cx, ty);
+      ctx.fillStyle = col; ctx.fillText(msg, cx, ty);
     }
     ctx.restore();
   }
