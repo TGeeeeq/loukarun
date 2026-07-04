@@ -615,6 +615,21 @@ const DATA = (() => {
       { cs: 'Mince se najednou lesknou dvakrát tolik!', en: 'Coins suddenly shine twice as bright!' },
       { cs: 'Šťastná tlapka, plná peněženka!', en: 'Lucky paw, full wallet!' },
     ],
+    // Duhový květ Louky – vznešený předmět, co se objeví každých 2,5 km
+    majesticIntro: {
+      cs: 'Počkej… vidíš to co já? Prastarý DUHOVÝ KVĚT Louky! 🌈🌸 Roste jen tam, kam dohlédne opravdu vytrvalý běžec. Vede k němu schodiště ze světla — vyskákej ho až úplně nahoru a květ je tvůj. Ale pozor, jen tak zadarmo se nedá!',
+      en: 'Wait… do you see what I see? The ancient RAINBOW BLOOM of the Meadow! 🌈🌸 It grows only where a truly persistent runner can reach. A staircase of light leads up to it — hop all the way to the top and it’s yours. But careful, it won’t just hand itself over!',
+    },
+    majestic: [ // pochvala po sebrání Duhového květu
+      { cs: 'Fakt jako hustý! Hej, ty seš fakt king!', en: 'That was seriously epic! Hey, you’re a total king!' },
+      { cs: 'Vznešené! A tys to zvládl. Klobouk dolů!', en: 'Majestic! And you nailed it. Hats off!' },
+      { cs: 'Tohle byla paráda — seš přírodní talent!', en: 'What a run — you’re a natural!' },
+    ],
+    majesticMiss: [ // když se květ nepovede sebrat (+ smích)
+      { cs: 'Ha! Uklouzlo ti to o chlup. Zaber víc a brzy dostaneš další šanci!', en: 'Ha! Missed it by a whisker. Push harder — another chance is coming soon!' },
+      { cs: 'Skoro! Trénuj skoky a za chvilku to zkusíš znova.', en: 'So close! Practice those jumps, you’ll get another shot in a bit.' },
+      { cs: 'Tentokrát ne — ale hlavu vzhůru, další květ tě čeká už brzy!', en: 'Not this time — chin up, the next bloom is just around the corner!' },
+    ],
     chicken: [ // co zakřičí slepice, když do ní zvířátko vrazí
       { cs: 'Kokodák!!', en: 'Bawk-bawk!!' },
       { cs: 'Ko-ko-KATASTROFA!', en: 'Cluck-cluck-CATASTROPHE!' },
@@ -679,6 +694,7 @@ const DATA = (() => {
     drainRampDist: 3400,  // po kolika metrech se odčerpávání zdvojnásobí
     cloverDuration: 12,   // jak dlouho po sebrání čtyřlístku platí bonus (s)
     cloverCoinValue: 2,   // hodnota mince, dokud bonus běží
+    majesticCoins: 25,    // mince za sebrání Duhového květu (každých 2,5 km)
   };
 
   /* ---------- KARLOVA ŠKOLA BĚHU ----------
