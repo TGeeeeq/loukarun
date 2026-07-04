@@ -93,6 +93,7 @@ const AUDIO = (() => {
     ram()    { tone(150, 0.2, 'sawtooth', 0.7, 60); noise(0.2, 0.5); },
     quote()  { tone(520, 0.07, 'sine', 0.35); tone(700, 0.08, 'sine', 0.3, null, 0.06); },
     laugh()  { sample('assets/sfx/karel-smich.mp3', 0.7); },
+    bray()   { sample('assets/sfx/karel-hykani.mp3', 0.8); },
     finish() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.6, null, i * 0.13)); },
     click()  { tone(700, 0.05, 'sine', 0.4); },
     buy()    { [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', 0.55, null, i * 0.09)); },

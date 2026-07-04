@@ -749,6 +749,9 @@
     T.gate = step.gate;
     T.bubble = step.text;
     AUDIO.play('quote');
+    // u lekce o vlaštovkách a čápech se Karel chlubí, že umí hýkat –
+    // půl druhé vteřiny po zobrazení bubliny to i nahlas předvede
+    if (step.id === 'flyers') setTimeout(() => AUDIO.play('bray'), 1500);
   }
 
   function resumeTutorial() {
