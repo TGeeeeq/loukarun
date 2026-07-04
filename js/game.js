@@ -1210,7 +1210,7 @@
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
     // rozjezd se měří od kotvy speedAnchorX (po sebrání květu se resetuje = běží zas pomalu)
     if (running) {
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.23, 735);
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.15, 620);
       // Duhový květ: schodiště nejdřív klidně vjede do záběru (approach),
       if (S.special && S.special.phase === 'approach') {
         S.speed = Math.min(S.speed, 320); // ať je vjezd schodů plynulý, ne blesk
