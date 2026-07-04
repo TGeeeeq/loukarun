@@ -926,6 +926,9 @@
     save.tutorialDone = true;
     persist();
     S.tut = null;
+    // ostrý běh začíná s plnou energií – škola běhu není test výdrže
+    S.energy = 100;
+    S.saidLowEnergy = false;
     S.nextQuoteAt = 8 + Math.random() * 6; // běžné hlášky až po chvilce
   }
 
