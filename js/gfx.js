@@ -1336,6 +1336,68 @@ const GFX = (() => {
     ctx.restore();
   }
 
+  // Duhový květ Louky – vznešený sběratelný předmět s duhovou svatozáří
+  function drawMajestic(ctx, x, y, t) {
+    ctx.save();
+    ctx.translate(x, y + Math.sin(t * 0.004) * 5);
+    const pulse = 1 + 0.14 * Math.sin(t * 0.006);
+    // vícevrstvá duhová svatozář
+    const halo = [['rgba(255,180,220,0.30)', 34], ['rgba(180,220,255,0.28)', 26], ['rgba(255,240,170,0.32)', 18]];
+    for (const h of halo) { ctx.fillStyle = h[0]; ctx.beginPath(); ctx.arc(0, 0, h[1] * pulse, 0, Math.PI * 2); ctx.fill(); }
+    // třpytky kolem
+    for (let i = 0; i < 6; i++) {
+      const a = t * 0.002 + i * Math.PI / 3;
+      const rr2 = 30 + Math.sin(t * 0.005 + i) * 4;
+      ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.006 + i));
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(Math.cos(a) * rr2, Math.sin(a) * rr2, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.rotate(Math.sin(t * 0.002) * 0.15);
+    // duhové okvětní lístky
+    const petalCols = ['#ff6b9d', '#ff9f45', '#ffe14a', '#7ad06b', '#5bc6e8', '#9d7ae8'];
+    for (let i = 0; i < petalCols.length; i++) {
+      ctx.save();
+      ctx.rotate(i * 2 * Math.PI / petalCols.length + t * 0.0006);
+      ctx.fillStyle = petalCols[i];
+      ell(ctx, 0, -15, 6.5, 12, 0); ctx.fill();
+      ctx.restore();
+    }
+    // střed
+    ctx.fillStyle = '#fff3b0';
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffca3a';
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // kouzelný schod – jednosměrná světelná plošina s travnatým, přírodním vrškem
+  function drawStep(ctx, x, yTop, w, t) {
+    ctx.save();
+    ctx.translate(x, yTop);
+    const glow = 0.5 + 0.5 * Math.sin(t * 0.005 + x * 0.01);
+    const h = 16;
+    // měkká záře pod plošinou
+    ctx.fillStyle = 'rgba(150,210,255,' + (0.16 + 0.12 * glow) + ')';
+    rr(ctx, -w / 2 - 6, -8, w + 12, h + 16, 12); ctx.fill();
+    // tělo plošiny (světelný kámen)
+    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+    g.addColorStop(0, '#eafaff'); g.addColorStop(1, '#bfe3f2');
+    ctx.fillStyle = g;
+    rr(ctx, -w / 2, -h / 2, w, h, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,180,220,0.7)'; ctx.lineWidth = 2;
+    rr(ctx, -w / 2, -h / 2, w, h, 8); ctx.stroke();
+    // travnatý vršek s kytičkami, ať to působí přírodně
+    ctx.fillStyle = '#7ac95e';
+    rr(ctx, -w / 2, -h / 2 - 5, w, 8, 4); ctx.fill();
+    const cols = ['#ff6b9d', '#ffe14a', '#9d7ae8'];
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = cols[i];
+      ctx.beginPath(); ctx.arc(-w / 2 + (i + 1) * w / 4, -h / 2 - 7, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawClover(ctx, x, y, t) {
     ctx.save();
     ctx.translate(x, y + Math.sin(t * 0.005 + x * 0.01) * 4);
@@ -1671,7 +1733,7 @@ const GFX = (() => {
   return {
     lerp, lerpColor, shade, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround,
-    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawCharacter,
+    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter,
     PROPS,
   };
 })();

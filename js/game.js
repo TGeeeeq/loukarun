@@ -92,6 +92,10 @@
     introFlagged: new Set(),// druhy označené k představení v tomto běhu
     sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
+    special: null,          // vznešený Duhový květ každých 2,5 km (výzva se schody)
+    platforms: [],          // kouzelné schody – jednosměrné plošiny u květu
+    lastSpecial: 0,         // poslední milník 2500 m, kde se květ objevil
+    speedAnchorX: 0,        // odkud se měří rozjezd rychlosti (reset po sebrání květu)
     shake: 0,
     demo: true,             // atrakt mód za menu
     devReturn: null,        // kam se vrátit po zavření vývojářského menu
@@ -459,6 +463,7 @@
     S.saidLowEnergy = false; S.lastMilestone = 0; S.nextQuoteAt = 6 + Math.random() * 6;
     S.tut = null;
     S.enc = null; S.introFlagged = new Set();
+    S.special = null; S.platforms = []; S.lastSpecial = 0; S.speedAnchorX = 0;
   }
 
   function goLandscapeFullscreen() {
@@ -510,6 +515,7 @@
     S.shake = 0;
     S.tut = null; // pojistka – škola běhu končí s během (bez zápisu tutorialDone)
     S.enc = null;
+    S.special = null; S.platforms = [];
     save.coins += runCoins();
     save.runs += 1;
     const dist = Math.floor(S.worldX / PX_PER_M);
@@ -755,7 +761,8 @@
   // zastavenou lekci (školu běhu i novinku na trase) rozjede jedině
   // tlačítko Pokračovat (nebo mezerník) – herní vstupy zatím nic nedělají
   function lessonPaused() {
-    return (S.tut && S.tut.phase === 'paused') || (S.enc && !S.enc.done);
+    return (S.tut && S.tut.phase === 'paused') || (S.enc && !S.enc.done)
+      || (S.special && S.special.phase === 'intro');
   }
 
   function continueLesson() {
@@ -771,7 +778,70 @@
       AUDIO.play('click');
       return true;
     }
+    if (S.special && S.special.phase === 'intro') {
+      S.special.phase = 'challenge'; // Karel se rozejde, schody a květ připlují – teď je na hráči
+      S.special.target = 1;
+      AUDIO.play('click');
+      return true;
+    }
     return false;
+  }
+
+  /* ---------- Vznešený Duhový květ (výzva každých 2,5 km) ---------- */
+  // Květ visí vysoko nad kouzelnými schody – dá se sebrat jen z jejich vrcholu.
+  function startSpecial() {
+    const px = playerX();
+    const tops = [72, 150, 228, 300]; // 4 schody stoupající doprava
+    const gapX = 165;
+    const itemX = S.worldX + 0.9 * W - px;          // květ se objeví vpravo v dálce
+    const baseX = itemX - (tops.length - 1) * gapX; // schody vedou k němu zleva
+    // ať je scéna čistá – pryč s tím, co je ještě před hráčem
+    S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
+    S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
+    S.platforms = tops.map((top, i) => ({ x: baseX + i * gapX, w: 150, top }));
+    const item = { kind: 'majestic', x: itemX, h: 390, taken: false, special: true };
+    S.pickups.push(item);
+    S.special = {
+      phase: 'intro',        // intro (svět stojí, Karel popisuje) → challenge → done
+      scale: 1, target: 0,   // zmrazení světa jako u encounteru
+      bubbleA: 0,
+      item,
+      bubble: EVENTS.majesticIntro,
+      resultT: 0,
+    };
+    AUDIO.play('quote');
+  }
+
+  // tiká reálným (neškálovaným) dt – volá se před škálováním, jako updateEncounter
+  function updateSpecial(dt) {
+    const SP = S.special;
+    const px = playerX();
+    const k = SP.target < SP.scale ? ENC.easeIn : ENC.easeOut;
+    SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
+    if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
+    SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+
+    if (SP.phase === 'challenge') {
+      if (SP.item.taken) { resolveSpecial(true); return; }               // sebráno
+      if ((SP.item.x - S.worldX + px) < px - 130) resolveSpecial(false); // proběhlo kolem
+    } else if (SP.phase === 'done') {
+      SP.resultT -= dt;
+      if (SP.resultT <= 0) { S.platforms = []; S.special = null; }
+    }
+  }
+
+  function resolveSpecial(win) {
+    const SP = S.special;
+    SP.phase = 'done';
+    SP.resultT = 2.4;
+    S.speedAnchorX = S.worldX; // Karel zpomalí a znovu se pozvolna rozjede jako na začátku
+    if (!win) {
+      AUDIO.play('laugh');
+      sayBubble(randomQuote(EVENTS.majesticMiss));
+    }
+    // běžné spawnery se znovu nahodí kus za obrazovkou
+    S.nextObstacleX = S.worldX + W + 600;
+    S.nextPickupX = S.worldX + W + 350;
   }
 
   // DOM tlačítko Pokračovat se ukazuje jen po dobu zastavené lekce
@@ -1104,14 +1174,23 @@
       if (S.enc) dt *= S.enc.scale;
     }
 
+    // vznešený květ: během popisu (intro) zmrazí čas, během výzvy běží normálně (jen pomalu)
+    if (S.special && running && !S.tut) {
+      updateSpecial(dt);
+      if (S.special && S.special.phase === 'intro') dt *= S.special.scale;
+    }
+
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
     syncContinueBtn();
 
     const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * (running ? dev.speed : 1);
 
-    // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko
+    // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
+    // rozjezd se měří od kotvy speedAnchorX (po sebrání květu se resetuje = běží zas pomalu)
     if (running) {
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + (S.worldX / PX_PER_M) * 0.23, 735);
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.23, 735);
+      // během výzvy u Duhového květu běží svět pomalu, ať jde schody vyskákat férově
+      if (S.special && S.special.phase === 'challenge') S.speed = Math.min(S.speed, 180);
     }
 
     S.worldX += spd * dt * (S.stumble > 0 ? 0.55 : 1);
@@ -1121,8 +1200,26 @@
     // fyzika hráče
     if (S.airborne || S.py > 0) {
       S.vy += GRAVITY * dt;
+      const prevPy = S.py;
       S.py -= S.vy * dt;
-      if (S.py <= 0) {
+      let landed = false;
+      // přistání na kouzelných schodech (jednosměrné plošiny – přistát jde jen shora)
+      if (S.vy > 0 && S.platforms.length) {
+        const pxp = playerX();
+        for (const pl of S.platforms) {
+          const plsx = pl.x - S.worldX + pxp;
+          if (pxp + 26 > plsx - pl.w / 2 && pxp - 26 < plsx + pl.w / 2
+              && prevPy >= pl.top - 1 && S.py <= pl.top) {
+            S.py = pl.top; S.vy = 0;
+            if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
+            S.airborne = false; S.jumps = 0;
+            if (S.jumpBuf > 0) { S.jumpBuf = 0; jump(); }
+            landed = true;
+            break;
+          }
+        }
+      }
+      if (!landed && S.py <= 0) {
         S.py = 0; S.vy = 0;
         if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
         S.airborne = false; S.jumps = 0;
@@ -1145,10 +1242,19 @@
     while (S.nextFlyerX < S.worldX + W + 700) spawnFlyer();
     S.flyers = S.flyers.filter(f => f.cx > S.worldX - 700);
     updateFlyers(dt, running);
-    if (running) {
+    if (running && !S.special) {
       while (S.nextObstacleX < S.worldX + W + 300) spawnObstacle();
       while (S.nextPickupX < S.worldX + W + 300) spawnPickups();
       checkEncounters();
+    }
+
+    // Duhový květ každých 2,5 km – Karel se zastaví, jakmile se objeví, a představí ho
+    if (running && !S.tut && !S.enc && !S.special && !S.airborne) {
+      const distM2 = Math.floor(S.worldX / PX_PER_M);
+      if (distM2 >= S.lastSpecial + 2500) {
+        S.lastSpecial = Math.floor(distM2 / 2500) * 2500;
+        startSpecial();
+      }
     }
 
     // úklid za obrazovkou
@@ -1274,6 +1380,16 @@
           burst(sx, sy, '#6fce58', 18);
           sayBubble(randomQuote(EVENTS.clover));
           AUDIO.play('clover');
+        } else if (p.kind === 'majestic') {
+          // Duhový květ – plná energie, mince a velká oslava
+          S.energy = 100;
+          S.coinsRun += ECONOMY.majesticCoins;
+          floater(I18N.t('fl.majestic', { n: 100 }), sx, sy - 26, '#ff7ad0');
+          burst(sx, sy, '#ffe14a', 30);
+          burst(sx, sy, '#7ad0ff', 22);
+          S.shake = 0.6;
+          sayBubble(randomQuote(EVENTS.majestic));
+          AUDIO.play('golden');
         } else {
           const val = S.cloverT > 0 ? ECONOMY.cloverCoinValue : 1;
           S.coinsRun += val;
@@ -1338,7 +1454,7 @@
   function quotes(dt) {
     // během školy běhu mluví Karel jen lekce – náhodné hlášky počkají;
     // totéž platí, dokud běžec představuje novinku na trase
-    if (S.tut || S.enc) { S.nextQuoteAt = Math.max(S.nextQuoteAt, 2); return; }
+    if (S.tut || S.enc || S.special) { S.nextQuoteAt = Math.max(S.nextQuoteAt, 2); return; }
     S.nextQuoteAt -= dt;
     if (S.nextQuoteAt <= 0 && S.bubbleT <= 0) {
       sayBubble(randomQuote(S.char.quotes));
@@ -1355,8 +1471,8 @@
   const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
     // ve škole běhu má slovo jen Karel – lidé zafandí až po ní;
-    // a do představování novinky jim taky nic není
-    if (S.tut || S.enc) return;
+    // a do představování novinky ani k vznešenému květu jim nic není
+    if (S.tut || S.enc || S.special) return;
     const px = playerX();
     for (const d of S.decor) {
       if (!d.human || d.said) continue;
@@ -1416,6 +1532,13 @@
       ctx.globalAlpha = 1;
     }
 
+    // kouzelné schody (jednosměrné plošiny u Duhového květu)
+    for (const pl of S.platforms) {
+      const sx = pl.x - S.worldX + px;
+      if (sx < -160 || sx > W + 160) continue;
+      GFX.drawStep(ctx, sx, groundY - pl.top, pl.w, S.t);
+    }
+
     // sběratelné
     for (const p of S.pickups) {
       if (p.taken) continue;
@@ -1424,6 +1547,7 @@
       const sy = groundY - p.h;
       if (p.kind === 'coin') GFX.drawCoin(ctx, sx, sy, S.t);
       else if (p.kind === 'clover') GFX.drawClover(ctx, sx, sy, S.t);
+      else if (p.kind === 'majestic') GFX.drawMajestic(ctx, sx, sy, S.t);
       else GFX.drawCarrot(ctx, sx, sy, S.t, p.kind === 'golden');
     }
 
@@ -1477,6 +1601,9 @@
     if (S.enc && !S.enc.o.broken && S.enc.scale < 0.8) {
       drawFocusRing(S.enc.o, S.enc.scale, px);
     }
+    if (S.special && S.special.item && !S.special.item.taken && S.special.phase === 'intro' && S.special.scale < 0.8) {
+      drawFocusRing(S.special.item, S.special.scale, px);
+    }
 
     // částice
     for (const p of S.particles) {
@@ -1513,7 +1640,8 @@
     // aby do nich nic nezasahovalo a text byl vždy čistý a čitelný.
     // (tutoriálová bublina a představení novinky mají přednost před hláškou)
     if (S.bubbleT > 0 && S.bubble && S.mode === 'run'
-        && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)) {
+        && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)
+        && !(S.special && S.special.bubbleA > 0.1)) {
       drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
@@ -1526,10 +1654,14 @@
       drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
         S.enc.gate);
     }
+    if (S.special && S.special.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
+      drawTutorialBubble(px, groundY - S.py - 150, S.special.bubble, S.special.bubbleA, null);
+    }
 
     // bublinky obyvatel a letců – plují se svým mluvčím;
     // dokud svítí Karlova lekce nebo představení novinky, nesmí do nich nikdo kecat
-    const bigBubbleOn = (S.tut && S.tut.bubbleA > 0.1) || (S.enc && S.enc.bubbleA > 0.1);
+    const bigBubbleOn = (S.tut && S.tut.bubbleA > 0.1) || (S.enc && S.enc.bubbleA > 0.1)
+      || (S.special && S.special.bubbleA > 0.1);
     for (const b of (bigBubbleOn ? [] : S.sideBubbles)) {
       let ax, ay;
       if (b.decor) {
@@ -2054,6 +2186,8 @@
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0;
     S.stumble = 0; S.invuln = 0;
     S.lastMilestone = Math.floor(S.worldX / PX_PER_M / 500) * 500;
+    S.lastSpecial = Math.floor(S.worldX / PX_PER_M / 2500) * 2500;
+    S.special = null; S.platforms = []; S.speedAnchorX = S.worldX;
     S.lastEnvId = null; // ať naskočí hudba nového prostředí
     updateHud(true);
   }
