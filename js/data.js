@@ -615,20 +615,20 @@ const DATA = (() => {
       { cs: 'Mince se najednou lesknou dvakrát tolik!', en: 'Coins suddenly shine twice as bright!' },
       { cs: 'Šťastná tlapka, plná peněženka!', en: 'Lucky paw, full wallet!' },
     ],
-    // Duhový květ Louky – vznešený předmět, co se objeví každých 2,5 km
-    majesticIntro: {
-      cs: 'Počkej… vidíš to co já? Prastarý DUHOVÝ KVĚT Louky! 🌈🌸 Vede k němu schodiště ze světla — vyskákej ho až nahoru a květ je tvůj. Zadarmo to ale nedá!',
-      en: 'Wait… do you see what I see? The ancient RAINBOW BLOOM! 🌈🌸 A staircase of light leads up to it — hop to the top and it’s yours. It won’t come easy!',
+    // Zvířecí koncert Louky – rytmická minihra, co se objeví každých 2,5 km
+    concertIntro: {
+      cs: 'Počkej… slyšíš to publikum? Pódium Louky čeká! 🎤✨ Zazpívej jim — ťukej přesně, když je ukazatel ve zlaté zóně, a spusť svůj nejlepší hlas. Zazpíváš to čistě?',
+      en: 'Wait… hear that crowd? The Meadow stage awaits! 🎤✨ Sing for them — tap right when the slider hits the golden zone and belt out your best voice. Can you nail it?',
     },
-    majestic: [ // pochvala po sebrání Duhového květu (popíše i odměnu)
-      { cs: 'Fakt jako hustý! Plná energie, hrst mincí — a teď zpomalím, popadnu dech a zas se rozjedu. Hej, ty seš fakt king!', en: 'Seriously epic! Full energy, a fistful of coins — now I’ll slow down, catch my breath and get rolling again. Hey, you’re a total king!' },
-      { cs: 'Vznešené! Louka ti dala novou sílu do žil. Chytnu druhý dech, rozběhnu se nanovo — a ty seš king!', en: 'Majestic! The Meadow poured fresh strength into you. I’ll catch my second wind and start fresh — and you’re a king!' },
-      { cs: 'Tohle byla paráda! Energie po okraj, měšec těžší — a já zas nabírám tempo od začátku. Seš přírodní talent!', en: 'What a run! Energy to the brim, a heavier purse — and I’m building my pace from scratch again. You’re a natural!' },
+    concertWin: [ // pochvala po vyprodaném koncertu (popíše i odměnu)
+      { cs: 'VYPRODÁNO! 🎶 Publikum šílí, energie po okraj a hrst mincí navrch. Popadnu dech a rozjedu se zas od začátku — ty jseš hvězda!', en: 'SOLD OUT! 🎶 The crowd’s going wild, energy to the brim and a fistful of coins on top. I’ll catch my breath and start fresh — you’re a star!' },
+      { cs: 'To byl koncert! Ovace vestoje. Naberu druhý dech, rozběhnu se nanovo — a ty sklízíš potlesk!', en: 'What a show! A standing ovation. I’ll catch my second wind and start over — and you take the applause!' },
+      { cs: 'Bomba! Trefil jsi rytmus jako profík. Plná energie, těžší měšec a já nabírám tempo od nuly. Přídavek!', en: 'Smash hit! You hit every beat like a pro. Full energy, a heavier purse, and I’m building my pace from zero. Encore!' },
     ],
-    majesticMiss: [ // když se květ nepovede sebrat (+ smích)
-      { cs: 'Ha! Uklouzlo ti to o chlup. Zaber víc a brzy dostaneš další šanci!', en: 'Ha! Missed it by a whisker. Push harder — another chance is coming soon!' },
-      { cs: 'Skoro! Trénuj skoky a za chvilku to zkusíš znova.', en: 'So close! Practice those jumps, you’ll get another shot in a bit.' },
-      { cs: 'Tentokrát ne — ale hlavu vzhůru, další květ tě čeká už brzy!', en: 'Not this time — chin up, the next bloom is just around the corner!' },
+    concertMiss: [ // když koncert nevyjde (+ smích)
+      { cs: 'Ejhle, falešná nota! 🙉 Publikum je milé, ale přídavek nebude. Aspoň mě to trochu zbrzdilo — za chvíli zkusíme další koncert!', en: 'Ouch, a flat note! 🙉 The crowd’s kind, but no encore. At least it slowed me down a touch — another gig is coming soon!' },
+      { cs: 'No… koncert to nebyl úplně čistý. Nevadí, aspoň popadnu trochu dech. Příště to roztleskáš!', en: 'Well… that gig wasn’t exactly pitch-perfect. No worries, at least I caught a bit of breath. You’ll bring the house down next time!' },
+      { cs: 'Trošku mimo rytmus, co? 🎵 Hlavu vzhůru — a lehce jsem zvolnil. Další pódium tě čeká už brzy!', en: 'A bit off the beat, huh? 🎵 Chin up — and I eased off a little. The next stage is just around the corner!' },
     ],
     chicken: [ // co zakřičí slepice, když do ní zvířátko vrazí
       { cs: 'Kokodák!!', en: 'Bawk-bawk!!' },
@@ -694,7 +694,7 @@ const DATA = (() => {
     drainRampDist: 3400,  // po kolika metrech se odčerpávání zdvojnásobí
     cloverDuration: 12,   // jak dlouho po sebrání čtyřlístku platí bonus (s)
     cloverCoinValue: 2,   // hodnota mince, dokud bonus běží
-    majesticCoins: 25,    // mince za sebrání Duhového květu (každých 2,5 km)
+    concertCoins: 25,     // mince za vyprodaný Zvířecí koncert (každých 2,5 km)
   };
 
   /* ---------- KARLOVA ŠKOLA BĚHU ----------

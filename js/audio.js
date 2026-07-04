@@ -101,6 +101,18 @@ const AUDIO = (() => {
 
   function play(name) { if (SFX[name]) SFX[name](); }
 
+  // hlas zvířátka při Zvířecím koncertu – každá postava má svůj soubor.
+  // TODO: nahradit placeholder (hýkání) reálnými nahrávkami voice-<id>.mp3.
+  const VOICE_FILES = {
+    karel:  'karel-hykani',
+    pogo:   'karel-hykani',
+    avala:  'karel-hykani',
+    flicek: 'karel-hykani',
+    yakul:  'karel-hykani',
+    kveta:  'karel-hykani',
+  };
+  function voice(id) { sample('assets/sfx/' + (VOICE_FILES[id] || 'karel-hykani') + '.mp3', 0.85); }
+
   /* ---- hudba: dva přehrávače a plynulé prolínání (jen mp3) ----
      Změna skladby (nové prostředí) se prolne přes TRACK_FADE a stejně
      tak návrat smyčky na začátek: kousek před koncem skladby ji druhý
@@ -219,5 +231,5 @@ const AUDIO = (() => {
   }, 400);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
 
-  return { play, playMusic, stopMusic, setSfx, setMusic, ensureCtx };
+  return { play, voice, playMusic, stopMusic, setSfx, setMusic, ensureCtx };
 })();

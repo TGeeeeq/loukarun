@@ -93,10 +93,9 @@
     sideBubbles: [],        // bublinky obyvatel a letců v pozadí
     saidLowEnergy: false, lastMilestone: 0,
     milestone: null,        // krátká oslavná cedule po dosažení 500 m milníku
-    special: null,          // vznešený Duhový květ každých 2,5 km (výzva se schody)
-    platforms: [],          // kouzelné schody – jednosměrné plošiny u květu
-    lastSpecial: 0,         // poslední milník 2500 m, kde se květ objevil
-    speedAnchorX: 0,        // odkud se měří rozjezd rychlosti (reset po sebrání květu)
+    special: null,          // Zvířecí koncert každých 2,5 km (rytmická minihra)
+    lastSpecial: 0,         // poslední milník 2500 m, kde se koncert objevil
+    speedAnchorX: 0,        // odkud se měří rozjezd rychlosti (reset po výhře v koncertu)
     shake: 0,
     demo: true,             // atrakt mód za menu
     devReturn: null,        // kam se vrátit po zavření vývojářského menu
@@ -371,6 +370,8 @@
   function jump() {
     if (S.mode !== 'run' && !S.demo) return;
     if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
+    // během koncertu ťuknutí neskáče, ale trefuje rytmus
+    if (S.special && S.special.phase === 'challenge') { concertTap(); return; }
     if (S.sliding > 0) S.sliding = 0;
     // odraz 880 ≈ výška skoku 149 px, dvojskok z vrcholu přidá ~69 px –
     // nejvyšší překážka má 58 px a zlatá mrkev visí ve 130 px, takže
@@ -404,6 +405,7 @@
   function slide() {
     if (S.mode !== 'run') return;
     if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
+    if (S.special && S.special.phase === 'challenge') return; // koncert řídí jen ťukání
     if (S.airborne) { S.vy = Math.max(S.vy, 1500); } // rychlý sešup
     S.sliding = 0.65;
     AUDIO.play('slide');
@@ -464,7 +466,7 @@
     S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 6 + Math.random() * 6;
     S.tut = null;
     S.enc = null; S.introFlagged = new Set();
-    S.special = null; S.platforms = []; S.lastSpecial = 0; S.speedAnchorX = 0;
+    S.special = null; S.lastSpecial = 0; S.speedAnchorX = 0;
   }
 
   function goLandscapeFullscreen() {
@@ -516,7 +518,7 @@
     S.shake = 0;
     S.tut = null; // pojistka – škola běhu končí s během (bez zápisu tutorialDone)
     S.enc = null;
-    S.special = null; S.platforms = [];
+    S.special = null;
     save.coins += runCoins();
     save.runs += 1;
     const dist = Math.floor(S.worldX / PX_PER_M);
@@ -782,41 +784,81 @@
       return true;
     }
     if (S.special && S.special.phase === 'intro') {
-      S.special.phase = 'challenge'; // Karel se rozejde, schody a květ připlují – teď je na hráči
-      S.special.target = 1;
+      // koncert se rozjede na zmrazeném pódiu – target zůstává 0, ať svět stojí
+      S.special.phase = 'challenge';
+      S.special.beatT = 0;
+      S.special.bubble = null;
       AUDIO.play('click');
       return true;
     }
     return false;
   }
 
-  /* ---------- Vznešený Duhový květ (výzva každých 2,5 km) ---------- */
-  // Květ visí vysoko nad kouzelnými schody – dá se sebrat jen z jejich vrcholu.
+  /* ---------- Zvířecí koncert (rytmická minihra každých 2,5 km) ----------
+     Místo duhových schodů nastoupí pódium: svět zmrzne, právě běžící zvířátko
+     zazpívá publiku. Jezdec přejíždí časovací lištu a hráč ťuká, když je ve
+     zlaté zóně – trefená nota = zvířátko spustí svůj hlas. Trefí-li dost not,
+     koncert je vyprodaný (výhra) a rychlost se vynuluje na základní; při propadáku
+     se jen zkrátí nastřádané zrychlení na polovinu. */
+  const CONCERT = {
+    total: 5,                 // kolik not koncert má
+    threshold: 3,             // kolik trefit = vyprodáno (výhra)
+    beatDur: 1.1,             // za jak dlouho jezdec přejede lištu (s)
+    zoneLo: 0.42, zoneHi: 0.58, // zlatá zóna na dráze 0..1
+  };
+
+  function currentChar() {
+    return (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
+  }
+
   function startSpecial() {
     const px = playerX();
-    // Výšky schodů drží celé schodiště i květ v záběru i na telefonu na šířku
-    // (groundY = 0,78·H, takže nahoře je málo místa) a jsou snadno doskočné.
-    const tops = [40, 78, 116, 154];  // 4 schody stoupající doprava (krok +38)
-    const gapX = 110;                 // vodorovný rozestup schodů
-    // Schodiště i květ se zrodí až ZA pravým krajem a teprve vjedou do záběru
-    // (žádné bliknutí z ničeho). První schod začíná těsně za okrajem.
-    const firstX = S.worldX + (W + 60) - px;
-    // ať je scéna čistá – pryč s tím, co je ještě před hráčem
+    // ať scéna nastoupí čistě – pryč s tím, co je ještě před hráčem
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
-    S.platforms = tops.map((top, i) => ({ x: firstX + i * gapX, w: 150, top })); // široké = odpouští doskok
-    const itemX = firstX + (tops.length - 1) * gapX; // květ visí nad posledním schodem
-    const item = { kind: 'majestic', x: itemX, h: tops[tops.length - 1] + 58, taken: false, special: true };
-    S.pickups.push(item);
     S.special = {
-      phase: 'approach',     // approach (schody vjíždějí) → intro (stop + popis) → challenge → done
+      phase: 'approach',     // approach (pódium najíždí) → intro (popis) → challenge (koncert) → done
       scale: 1, target: 1,   // za jízdy se nemrazí
       bubbleA: 0,
-      item,
-      bubble: EVENTS.majesticIntro,
+      bubble: EVENTS.concertIntro,
       resultT: 0,
-      runT: 0,               // čas běhu ve výzvě – Karel se z klidu pozvolna rozjíždí
+      markX: S.worldX + (W + 60) - px, // pomyslný bod pódia připlouvá zprava
+      total: CONCERT.total,
+      beatIdx: 0,            // kolikátá nota právě běží
+      beatT: 0,              // 0..beatDur průběh aktuální noty
+      beatPos: 0,            // 0..1 pozice jezdce na liště
+      hits: 0,               // trefené noty
+      beats: [],             // true/false výsledky not (pro vykreslení)
+      beatFlash: 0,          // krátký blik: >0 hit, <0 miss
+      won: null,
     };
+  }
+
+  // trefení rytmu – ťuknutí za koncertu (viz jump())
+  function concertTap() {
+    const SP = S.special;
+    if (!SP || SP.phase !== 'challenge') return;
+    registerBeat(SP.beatPos >= CONCERT.zoneLo && SP.beatPos <= CONCERT.zoneHi);
+  }
+
+  function registerBeat(hit) {
+    const SP = S.special;
+    SP.beats.push(hit);
+    if (hit) {
+      SP.hits++;
+      SP.beatFlash = 0.35;
+      AUDIO.voice(currentChar().id); // zvířátko spustí svůj hlas
+      const nx = playerX(), ny = groundY - S.py - 120;
+      floater('♪', nx + (Math.random() * 44 - 22), ny, '#ffe14a');
+      burst(nx, ny, '#ffd24a', 10);
+    } else {
+      SP.beatFlash = -0.35;
+      AUDIO.play('quote'); // tichý dud
+    }
+    SP.beatIdx++;
+    SP.beatT = 0;
+    SP.beatPos = 0;
+    if (SP.beatIdx >= SP.total) resolveSpecial(SP.hits >= CONCERT.threshold);
   }
 
   // tiká reálným (neškálovaným) dt – volá se před škálováním, jako updateEncounter
@@ -827,12 +869,12 @@
     SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
     SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    if (SP.beatFlash > 0) SP.beatFlash = Math.max(0, SP.beatFlash - dt);
+    else if (SP.beatFlash < 0) SP.beatFlash = Math.min(0, SP.beatFlash + dt);
 
     if (SP.phase === 'approach') {
-      // schodiště klidně vjíždí zprava; jakmile první schod dorazí na doskočnou
-      // vzdálenost, svět se zastaví a spustí se Karlův popis – květ už je v záběru
-      const step1 = S.platforms[0];
-      if (step1 && (step1.x - S.worldX + px) <= px + 160) {
+      // pódium klidně připluje; jakmile dorazí ke středu, svět zmrzne a naběhne popis
+      if ((SP.markX - S.worldX + px) <= px + 40) {
         SP.phase = 'intro';
         SP.target = 0; // teď se svět zmrazí (ease-out) a naběhne bublina
         AUDIO.play('quote');
@@ -840,12 +882,13 @@
       return;
     }
     if (SP.phase === 'challenge') {
-      SP.runT += dt; // Karel se po představení pozvolna rozjíždí (viz rampa rychlosti)
-      if (SP.item.taken) { resolveSpecial(true); return; }               // sebráno
-      if ((SP.item.x - S.worldX + px) < px - 130) resolveSpecial(false); // proběhlo kolem
+      // jezdec přejíždí lištu; když nikdo nestihne ťuknout, nota propadne (miss)
+      SP.beatT += dt;
+      SP.beatPos = Math.min(1, SP.beatT / CONCERT.beatDur);
+      if (SP.beatT >= CONCERT.beatDur) registerBeat(false);
     } else if (SP.phase === 'done') {
       SP.resultT -= dt;
-      if (SP.resultT <= 0) { S.platforms = []; S.special = null; }
+      if (SP.resultT <= 0) S.special = null;
     }
   }
 
@@ -853,10 +896,27 @@
     const SP = S.special;
     SP.phase = 'done';
     SP.resultT = 2.4;
-    S.speedAnchorX = S.worldX; // Karel zpomalí a znovu se pozvolna rozjede jako na začátku
-    if (!win) {
+    SP.won = win;
+    SP.target = 1; // svět se zase rozjede
+    const base = S.baseSpeed * (S.stats?.speed || 1);
+    const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
+    if (win) {
+      // vyprodáno – zvířátko chytí dech a rychlost se rozjíždí od základu
+      S.speedAnchorX = S.worldX;
+      S.energy = 100;
+      S.coinsRun += ECONOMY.concertCoins;
+      floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
+      burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
+      burst(playerX(), groundY - S.py - 120, '#7ad0ff', 22);
+      S.shake = 0.6;
+      sayBubble(randomQuote(EVENTS.concertWin));
+      AUDIO.play('golden');
+    } else {
+      // propadák – rychlost se nevynuluje, jen se nastřádané zrychlení zkrátí na půl
+      const keep = extra * 0.5;
+      S.speedAnchorX = S.worldX - (keep / 0.15) * PX_PER_M; // 0.15 = koeficient rampy (viz níže)
       AUDIO.play('laugh');
-      sayBubble(randomQuote(EVENTS.majesticMiss));
+      sayBubble(randomQuote(EVENTS.concertMiss));
     }
     // běžné spawnery se znovu nahodí kus za obrazovkou
     S.nextObstacleX = S.worldX + W + 600;
@@ -1196,10 +1256,10 @@
       if (S.enc) dt *= S.enc.scale;
     }
 
-    // vznešený květ: během popisu (intro) zmrazí čas, během výzvy běží normálně (jen pomalu)
+    // koncert: během popisu i samotné rytmické výzvy je svět zmrazený (jen pódium)
     if (S.special && running && !S.tut) {
       updateSpecial(dt);
-      if (S.special && S.special.phase === 'intro') dt *= S.special.scale;
+      if (S.special && (S.special.phase === 'intro' || S.special.phase === 'challenge')) dt *= S.special.scale;
     }
 
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
@@ -1208,18 +1268,12 @@
     const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * (running ? dev.speed : 1);
 
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
-    // rozjezd se měří od kotvy speedAnchorX (po sebrání květu se resetuje = běží zas pomalu)
+    // rozjezd se měří od kotvy speedAnchorX (po výhře v koncertu se resetuje = běží zas pomalu)
     if (running) {
       S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.15, 620);
-      // Duhový květ: schodiště nejdřív klidně vjede do záběru (approach),
+      // pódium koncertu nejdřív klidně vjede do záběru (approach), pak svět zmrzne
       if (S.special && S.special.phase === 'approach') {
-        S.speed = Math.min(S.speed, 320); // ať je vjezd schodů plynulý, ne blesk
-      }
-      // …a při výzvě se Karel z klidu pozvolna rozjíždí (45 → 140 px/s za ~1,8 s),
-      // takže první schod připlouvá pomalu a je spousta času reagovat.
-      if (S.special && S.special.phase === 'challenge') {
-        const ramp = Math.min(1, S.special.runT / 1.8);
-        S.speed = Math.min(S.speed, 45 + ramp * (140 - 45));
+        S.speed = Math.min(S.speed, 320);
       }
     }
 
@@ -1230,26 +1284,8 @@
     // fyzika hráče
     if (S.airborne || S.py > 0) {
       S.vy += GRAVITY * dt;
-      const prevPy = S.py;
       S.py -= S.vy * dt;
-      let landed = false;
-      // přistání na kouzelných schodech (jednosměrné plošiny – přistát jde jen shora)
-      if (S.vy > 0 && S.platforms.length) {
-        const pxp = playerX();
-        for (const pl of S.platforms) {
-          const plsx = pl.x - S.worldX + pxp;
-          if (pxp + 26 > plsx - pl.w / 2 && pxp - 26 < plsx + pl.w / 2
-              && prevPy >= pl.top - 1 && S.py <= pl.top) {
-            S.py = pl.top; S.vy = 0;
-            if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
-            S.airborne = false; S.jumps = 0;
-            if (S.jumpBuf > 0) { S.jumpBuf = 0; jump(); }
-            landed = true;
-            break;
-          }
-        }
-      }
-      if (!landed && S.py <= 0) {
+      if (S.py <= 0) {
         S.py = 0; S.vy = 0;
         if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
         S.airborne = false; S.jumps = 0;
@@ -1278,7 +1314,7 @@
       checkEncounters();
     }
 
-    // Duhový květ každých 2,5 km – Karel se zastaví, jakmile se objeví, a představí ho
+    // Zvířecí koncert každých 2,5 km – zvířátko se zastaví na pódiu a zazpívá
     if (running && !S.tut && !S.enc && !S.special && !S.airborne) {
       const distM2 = Math.floor(S.worldX / PX_PER_M);
       if (distM2 >= S.lastSpecial + 2500) {
@@ -1411,16 +1447,6 @@
           burst(sx, sy, '#6fce58', 18);
           sayBubble(randomQuote(EVENTS.clover));
           AUDIO.play('clover');
-        } else if (p.kind === 'majestic') {
-          // Duhový květ – plná energie, mince a velká oslava
-          S.energy = 100;
-          S.coinsRun += ECONOMY.majesticCoins;
-          floater(I18N.t('fl.majestic', { n: 100 }), sx, sy - 26, '#ff7ad0');
-          burst(sx, sy, '#ffe14a', 30);
-          burst(sx, sy, '#7ad0ff', 22);
-          S.shake = 0.6;
-          sayBubble(randomQuote(EVENTS.majestic));
-          AUDIO.play('golden');
         } else {
           const val = S.cloverT > 0 ? ECONOMY.cloverCoinValue : 1;
           S.coinsRun += val;
@@ -1565,13 +1591,6 @@
       ctx.globalAlpha = 1;
     }
 
-    // kouzelné schody (jednosměrné plošiny u Duhového květu)
-    for (const pl of S.platforms) {
-      const sx = pl.x - S.worldX + px;
-      if (sx < -160 || sx > W + 160) continue;
-      GFX.drawStep(ctx, sx, groundY - pl.top, pl.w, S.t);
-    }
-
     // sběratelné
     for (const p of S.pickups) {
       if (p.taken) continue;
@@ -1580,7 +1599,6 @@
       const sy = groundY - p.h;
       if (p.kind === 'coin') GFX.drawCoin(ctx, sx, sy, S.t);
       else if (p.kind === 'clover') GFX.drawClover(ctx, sx, sy, S.t);
-      else if (p.kind === 'majestic') GFX.drawMajestic(ctx, sx, sy, S.t);
       else GFX.drawCarrot(ctx, sx, sy, S.t, p.kind === 'golden');
     }
 
@@ -1634,8 +1652,10 @@
     if (S.enc && !S.enc.o.broken && S.enc.scale < 0.8) {
       drawFocusRing(S.enc.o, S.enc.scale, px);
     }
-    if (S.special && S.special.item && !S.special.item.taken && S.special.phase === 'intro' && S.special.scale < 0.8) {
-      drawFocusRing(S.special.item, S.special.scale, px);
+
+    // pódium a časovací lišta koncertu (kreslí se přes zmrazenou scénu)
+    if (S.special && (S.special.phase === 'challenge' || S.special.phase === 'done')) {
+      drawConcert(S.special, px);
     }
 
     // částice
@@ -1687,7 +1707,7 @@
       drawTutorialBubble(px, groundY - S.py - 140, S.enc.o.intro, S.enc.bubbleA,
         S.enc.gate);
     }
-    if (S.special && S.special.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
+    if (S.special && S.special.bubble && S.special.bubbleA > 0.02 && S.mode === 'run' && !S.tut) {
       drawTutorialBubble(px, groundY - S.py - 150, S.special.bubble, S.special.bubbleA, null);
     }
 
@@ -1786,6 +1806,65 @@
     ctx.font = '700 16px "Baloo 2", sans-serif';
     ctx.fillStyle = '#6b6560';
     ctx.fillText(cheer, 0, 25);
+    ctx.restore();
+  }
+
+  // pódium Zvířecího koncertu: reflektor, mikrofon a časovací lišta se zlatou zónou
+  function drawConcert(SP, px) {
+    const cx = W / 2;
+    const fade = SP.phase === 'done' ? Math.max(0, Math.min(1, SP.resultT / 1.2)) : 1;
+    ctx.save();
+    ctx.globalAlpha = fade;
+
+    // jemné ztmavení scény, ať pódium vynikne
+    ctx.fillStyle = 'rgba(20, 12, 30, 0.28)';
+    ctx.fillRect(0, 0, W, H);
+
+    // reflektor shora na zpěváka
+    const spotY = groundY - S.py;
+    const g = ctx.createLinearGradient(px, 0, px, spotY);
+    g.addColorStop(0, 'rgba(255,240,180,0.30)');
+    g.addColorStop(1, 'rgba(255,240,180,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(px - 16, 0); ctx.lineTo(px + 16, 0);
+    ctx.lineTo(px + 122, spotY); ctx.lineTo(px - 122, spotY);
+    ctx.closePath(); ctx.fill();
+
+    // mikrofon před zpěvákem
+    const mx = px + 76, my = groundY;
+    ctx.strokeStyle = '#3a3340'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, my - 96); ctx.stroke();
+    ctx.fillStyle = '#22202a';
+    ctx.beginPath(); ctx.ellipse(mx, my - 104, 11, 15, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a4652';
+    ctx.beginPath(); ctx.ellipse(mx, my - 108, 8, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+    // časovací lišta se zlatou zónou a jezdcem
+    const bw = Math.min(W * 0.6, 420), bh = 26;
+    const bx = cx - bw / 2, by = Math.max(70, groundY - S.py - 240);
+    GFX.rr(ctx, bx, by, bw, bh, 13);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
+    const zx = bx + bw * CONCERT.zoneLo, zw = bw * (CONCERT.zoneHi - CONCERT.zoneLo);
+    GFX.rr(ctx, zx, by, zw, bh, 8);
+    ctx.fillStyle = SP.beatFlash > 0 ? 'rgba(150,255,160,0.95)' : 'rgba(120,220,120,0.72)'; ctx.fill();
+    GFX.rr(ctx, bx, by, bw, bh, 13);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.stroke();
+    const jx = bx + bw * SP.beatPos;
+    ctx.fillStyle = SP.beatFlash < 0 ? '#ff6b6b' : '#ffffff';
+    GFX.rr(ctx, jx - 4, by - 7, 8, bh + 14, 4); ctx.fill();
+
+    // noty nad lištou: trefené/miny/zbývající
+    const ny = by - 27, nr = 9, gap = 26;
+    const startX = cx - ((SP.total - 1) * gap) / 2;
+    for (let i = 0; i < SP.total; i++) {
+      const nx = startX + i * gap;
+      ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI * 2);
+      if (i < SP.beats.length) ctx.fillStyle = SP.beats[i] ? '#ffe14a' : 'rgba(255,120,120,0.85)';
+      else if (i === SP.beatIdx) ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      else ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -2277,7 +2356,7 @@
     S.stumble = 0; S.invuln = 0;
     S.lastMilestone = Math.floor(S.worldX / PX_PER_M / 500) * 500;
     S.lastSpecial = Math.floor(S.worldX / PX_PER_M / 2500) * 2500;
-    S.special = null; S.platforms = []; S.speedAnchorX = S.worldX;
+    S.special = null; S.speedAnchorX = S.worldX;
     S.lastEnvId = null; // ať naskočí hudba nového prostředí
     updateHud(true);
   }
