@@ -617,13 +617,13 @@ const DATA = (() => {
     ],
     // Duhový květ Louky – vznešený předmět, co se objeví každých 2,5 km
     majesticIntro: {
-      cs: 'Počkej… vidíš to co já? Prastarý DUHOVÝ KVĚT Louky! 🌈🌸 Roste jen tam, kam dohlédne opravdu vytrvalý běžec. Vede k němu schodiště ze světla — vyskákej ho až úplně nahoru a květ je tvůj. Ale pozor, jen tak zadarmo se nedá!',
-      en: 'Wait… do you see what I see? The ancient RAINBOW BLOOM of the Meadow! 🌈🌸 It grows only where a truly persistent runner can reach. A staircase of light leads up to it — hop all the way to the top and it’s yours. But careful, it won’t just hand itself over!',
+      cs: 'Počkej… vidíš to co já? Prastarý DUHOVÝ KVĚT Louky! 🌈🌸 Vede k němu schodiště ze světla — vyskákej ho až nahoru a květ je tvůj. Zadarmo to ale nedá!',
+      en: 'Wait… do you see what I see? The ancient RAINBOW BLOOM! 🌈🌸 A staircase of light leads up to it — hop to the top and it’s yours. It won’t come easy!',
     },
-    majestic: [ // pochvala po sebrání Duhového květu
-      { cs: 'Fakt jako hustý! Hej, ty seš fakt king!', en: 'That was seriously epic! Hey, you’re a total king!' },
-      { cs: 'Vznešené! A tys to zvládl. Klobouk dolů!', en: 'Majestic! And you nailed it. Hats off!' },
-      { cs: 'Tohle byla paráda — seš přírodní talent!', en: 'What a run — you’re a natural!' },
+    majestic: [ // pochvala po sebrání Duhového květu (popíše i odměnu)
+      { cs: 'Fakt jako hustý! Plná energie, hrst mincí — a teď zpomalím, popadnu dech a zas se rozjedu. Hej, ty seš fakt king!', en: 'Seriously epic! Full energy, a fistful of coins — now I’ll slow down, catch my breath and get rolling again. Hey, you’re a total king!' },
+      { cs: 'Vznešené! Louka ti dala novou sílu do žil. Chytnu druhý dech, rozběhnu se nanovo — a ty seš king!', en: 'Majestic! The Meadow poured fresh strength into you. I’ll catch my second wind and start fresh — and you’re a king!' },
+      { cs: 'Tohle byla paráda! Energie po okraj, měšec těžší — a já zas nabírám tempo od začátku. Seš přírodní talent!', en: 'What a run! Energy to the brim, a heavier purse — and I’m building my pace from scratch again. You’re a natural!' },
     ],
     majesticMiss: [ // když se květ nepovede sebrat (+ smích)
       { cs: 'Ha! Uklouzlo ti to o chlup. Zaber víc a brzy dostaneš další šanci!', en: 'Ha! Missed it by a whisker. Push harder — another chance is coming soon!' },
