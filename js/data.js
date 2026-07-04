@@ -758,7 +758,7 @@ const DATA = (() => {
       },
       {
         id: 'golden', gapM: 50, gate: 'jump',
-        spawn: { pickups: [{ kind: 'golden', dx: 0, h: 130 }] },
+        spawn: { pickups: [{ kind: 'golden', dx: 0, h: 180 }] },
         text: {
           cs: 'ZLATÁ MRKEV! Legenda. Visí vysoko — skoč a ve vzduchu ťukni ještě jednou. Když ji mineš, budu se smát. Nahlas.',
           en: 'GOLDEN CARROT! The legend. It hangs high — jump, then tap again mid-air. Miss it and I will laugh. Loudly.',
