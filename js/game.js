@@ -709,7 +709,7 @@
       const hs = W < 620 ? 0.62 : 0.82;
       // vykreslují se v parallaxu (pozadí) – rozestup a start počítáme přes něj,
       // ať začnou těsně za pravým okrajem a plynule připlují do záběru
-      const gap = (W * 0.16) / FAR_PARALLAX;
+      const gap = (W * 0.14) / FAR_PARALLAX;
       const leadX = S.worldX + (W * 1.12 - playerX()) / FAR_PARALLAX;
       let lead = null;
       HUMAN_PROPS.forEach((prop, i) => {
@@ -879,8 +879,8 @@
       else enterPause(next);
     } else if (T.phase === 'approach') {
       const sx = focusScreenX(T.focus, px);
-      // lidi Karel dobíhá dál, ať zastaví kousek před nimi a všichni tři jsou vidět
-      const trig = T.focus.human ? 0.56 : TUTORIAL.triggerX;
+      // lidi Karel dobíhá dál, ať zastaví s odstupem a bublina nezakrývá Tomáše
+      const trig = T.focus.human ? 0.64 : TUTORIAL.triggerX;
       if (sx < W * trig) enterPause(TUTORIAL.steps[T.idx]);
     } else if (T.phase === 'cooldown') {
       const passed = !T.focus
