@@ -929,6 +929,7 @@
       // vyprodáno – zvířátko chytí dech a rychlost se rozjíždí od základu
       S.speedAnchorX = S.worldX;
       S.energy = 100;
+      S.ramLeft = S.stats?.ram || 0; // Yakulovi se doplní i náboje beranidla
       S.coinsRun += ECONOMY.concertCoins;
       floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
       burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
