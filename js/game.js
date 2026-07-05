@@ -1321,7 +1321,12 @@
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
     // rozjezd se měří od kotvy speedAnchorX (po výhře v koncertu se resetuje = běží zas pomalu)
     if (running) {
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * 0.15, 620);
+      // s přibývající vzdáleností se běh stupňuje: každých 5 km (5/10/15 km…)
+      // přitvrdí – strmější náběh rychlosti i vyšší strop, ať je konec běhu výzva
+      const tier = Math.min(4, Math.floor((S.worldX / PX_PER_M) / 5000)); // 0,1,2,3,4 (od 20 km výš stejné)
+      const rampRate = 0.15 + tier * 0.05;   // strmější přírůstek rychlosti za každý 5km úsek
+      const speedCap = 620 + tier * 90;       // a vyšší strop, ať je pořád co zrychlovat
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * rampRate, speedCap);
       // pódium koncertu nejdřív klidně vjede do záběru (approach), pak svět zmrzne
       if (S.special && S.special.phase === 'approach') {
         S.speed = Math.min(S.speed, 320);
