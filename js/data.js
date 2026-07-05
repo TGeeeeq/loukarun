@@ -169,7 +169,7 @@ const DATA = (() => {
         cs: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
         en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
       },
-      stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 85 },
+      stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 105 },
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
       colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
