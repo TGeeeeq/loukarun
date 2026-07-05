@@ -540,6 +540,8 @@
     document.getElementById('over-best').textContent = save.best + ' m';
     drawPortrait(document.getElementById('over-portrait'), S.char);
     showScreen('over');
+    // nově splněné odznaky (rekord/počet běhů/…) oznámíme přes obrazovkou konce
+    toastAchievements(syncAchievements());
   }
 
   /* =========================================================
@@ -1017,6 +1019,7 @@
     S.nextPickupX = S.worldX + W + 350;
     save.tutorialDone = true;
     persist();
+    toastAchievements(syncAchievements()); // odznak za dokončení školy běhu
     S.tut = null;
     // ostrý běh začíná s plnou energií – škola běhu není test výdrže
     S.energy = 100;
@@ -1840,26 +1843,26 @@
     ctx.scale(scale, scale);
     ctx.textAlign = 'center';
 
-    ctx.font = '800 32px "Baloo 2", sans-serif';
+    ctx.font = '800 26px "Baloo 2", sans-serif';
     const lw = ctx.measureText(label).width;
-    ctx.font = '700 16px "Baloo 2", sans-serif';
+    ctx.font = '700 14px "Baloo 2", sans-serif';
     const cw = ctx.measureText(cheer).width;
-    const w = Math.min(Math.max(lw, cw) + 50, W - 24);
-    const h = 82;
+    const w = Math.min(Math.max(lw, cw) + 40, W - 24);
+    const h = 66;
 
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
-    GFX.rr(ctx, -w / 2 + 3, -h / 2 + 5, w, h, 20); ctx.fill();
+    GFX.rr(ctx, -w / 2 + 3, -h / 2 + 5, w, h, 17); ctx.fill();
     ctx.fillStyle = '#ffcf4d'; // teplý okraj jako medaile
-    GFX.rr(ctx, -w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 23); ctx.fill();
+    GFX.rr(ctx, -w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 20); ctx.fill();
     ctx.fillStyle = '#ffffff';
-    GFX.rr(ctx, -w / 2, -h / 2, w, h, 20); ctx.fill();
+    GFX.rr(ctx, -w / 2, -h / 2, w, h, 17); ctx.fill();
 
-    ctx.font = '800 32px "Baloo 2", sans-serif';
+    ctx.font = '800 26px "Baloo 2", sans-serif';
     ctx.fillStyle = '#e0872a';
-    ctx.fillText(label, 0, -1);
-    ctx.font = '700 16px "Baloo 2", sans-serif';
+    ctx.fillText(label, 0, -3);
+    ctx.font = '700 14px "Baloo 2", sans-serif';
     ctx.fillStyle = '#6b6560';
-    ctx.fillText(cheer, 0, 25);
+    ctx.fillText(cheer, 0, 19);
     ctx.restore();
   }
 
@@ -2096,7 +2099,7 @@
      HUD & OBRAZOVKY (DOM)
      ========================================================= */
   const $ = (id) => document.getElementById(id);
-  const screens = ['menu', 'shop', 'over', 'pause', 'dev'];
+  const screens = ['menu', 'shop', 'over', 'pause', 'dev', 'ach'];
 
   function showScreen(name) {
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
@@ -2131,8 +2134,75 @@
     GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: 0.6 }, 400);
   }
 
+  /* ---------- odznaky (achievementy) ----------
+     Jednoduchá sbírka, ať má hráč pro co běhat. Splnění se pozná
+     z uloženého postupu (rekord, počet běhů, parta, škola běhu),
+     takže nic dalšího se nemusí hlídat za běhu. */
+  const ACHIEVEMENTS = [
+    { id: 'tutorial', icon: '🎓', title: { cs: 'Karlova škola s vyznamenáním', en: 'Karel’s school, straight A’s' }, check: (s) => !!s.tutorialDone },
+    { id: 'm1000', icon: '🥉', title: { cs: 'První kilák v kopytech', en: 'First kilometer under the hooves' }, check: (s) => (s.best || 0) >= 1000 },
+    { id: 'm2000', icon: '🥈', title: { cs: 'Dvoukilometrový frajer', en: 'Two-kilometer hotshot' }, check: (s) => (s.best || 0) >= 2000 },
+    { id: 'm3000', icon: '🥇', title: { cs: 'Trojka jako řemen', en: 'Rock-solid three-K' }, check: (s) => (s.best || 0) >= 3000 },
+    { id: 'm5000', icon: '🏆', title: { cs: 'Šampion louky – 5 kiláků!', en: 'Meadow champion – 5 K!' }, check: (s) => (s.best || 0) >= 5000 },
+    { id: 'friend', icon: '🐾', title: { cs: 'Našel sis parťáka do běhu', en: 'You found a running buddy' }, check: (s) => (s.unlocked || []).length >= 2 },
+    { id: 'runs10', icon: '🔁', title: { cs: 'Deset rozběhů, nula lenosti', en: 'Ten runs, zero laziness' }, check: (s) => (s.runs || 0) >= 10 },
+  ];
+
+  // doplní nově splněné odznaky do postupu a vrátí ty čerstvě získané
+  function syncAchievements() {
+    if (!save.achievements) save.achievements = [];
+    const fresh = [];
+    for (const a of ACHIEVEMENTS) {
+      if (!save.achievements.includes(a.id) && a.check(save)) {
+        save.achievements.push(a.id);
+        fresh.push(a);
+      }
+    }
+    if (fresh.length) persist();
+    return fresh;
+  }
+
+  function achCount() {
+    const owned = (save.achievements || []).filter(id => ACHIEVEMENTS.some(a => a.id === id));
+    return { done: owned.length, total: ACHIEVEMENTS.length };
+  }
+
+  // krátce oznámí čerstvě získané odznaky (po jednom, ať si je hráč přečte)
+  function toastAchievements(fresh) {
+    fresh.forEach((a, i) => {
+      setTimeout(() => toast(`🎖️ ${I18N.t('ach.new')}: ${a.icon} ${I18N.pick(a.title)}`), 700 + i * 2800);
+    });
+  }
+
+  function buildAch() {
+    syncAchievements();
+    const { done, total } = achCount();
+    $('ach-count').textContent = `${done}/${total}`;
+    const list = $('ach-list');
+    list.innerHTML = '';
+    for (const a of ACHIEVEMENTS) {
+      const got = (save.achievements || []).includes(a.id);
+      const row = document.createElement('div');
+      row.className = 'ach-row' + (got ? ' got' : '');
+      const ico = document.createElement('span');
+      ico.className = 'ach-ico';
+      ico.textContent = got ? a.icon : '🔒';
+      const name = document.createElement('span');
+      name.className = 'ach-name';
+      name.textContent = I18N.pick(a.title);
+      const mark = document.createElement('span');
+      mark.className = 'ach-mark';
+      mark.textContent = got ? '✓' : '';
+      row.append(ico, name, mark);
+      list.appendChild(row);
+    }
+  }
+
   /* ---------- menu ---------- */
   function initMenu() {
+    syncAchievements();
+    const ac = achCount();
+    $('menu-ach').textContent = `${ac.done}/${ac.total}`;
     $('menu-best').textContent = save.best + ' m';
     $('menu-coins').textContent = save.coins;
     const ch = charById(save.selected);
@@ -2313,6 +2383,8 @@
       buildShop();
       initMenu();
       toast(I18N.t('toast.joined', { name: I18N.pick(ch.name) }));
+      toastAchievements(syncAchievements()); // odznak za prvního parťáka
+
     } else {
       const missing = ch.unlock.price - save.coins;
       toast(I18N.t('toast.needCoins', { n: missing }));
@@ -2332,6 +2404,8 @@
   $('btn-play').addEventListener('click', startRun);
   $('btn-shop').addEventListener('click', () => { buildShop(); showScreen('shop'); AUDIO.play('click'); });
   $('btn-shop-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
+  $('btn-ach').addEventListener('click', () => { buildAch(); showScreen('ach'); AUDIO.play('click'); });
+  $('btn-ach-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-again').addEventListener('click', startRun);
   $('btn-over-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
   $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });

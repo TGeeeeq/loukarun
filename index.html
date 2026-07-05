@@ -64,6 +64,7 @@
       <div class="menu-stats">
         <div class="hud-chip">🏆 <span id="menu-best">0 m</span></div>
         <div class="hud-chip">🪙 <span id="menu-coins">0</span></div>
+        <button id="btn-ach" class="hud-chip ach-chip" aria-label="Odznaky">🎖️ <span id="menu-ach">0/0</span></button>
       </div>
       <div class="menu-settings">
         <button id="btn-sfx" class="btn tiny">🔊 Zvuky</button>
@@ -84,6 +85,18 @@
     </div>
     <p class="shop-note" data-i18n="shop.note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
     <div id="shop-grid"></div>
+  </div>
+
+  <!-- ODZNAKY / ACHIEVEMENTY -->
+  <div id="screen-ach" class="screen">
+    <div class="over-card ach-card">
+      <div class="ach-head">
+        <button id="btn-ach-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+        <h2 data-i18n="ach.title">🎖️ Odznaky</h2>
+        <div class="hud-chip">🎖️ <span id="ach-count">0/0</span></div>
+      </div>
+      <div id="ach-list"></div>
+    </div>
   </div>
 
   <!-- KONEC BĚHU -->
