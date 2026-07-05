@@ -812,10 +812,22 @@
     total: 4,                 // kolik not koncert má (kratší = přehlednější)
     threshold: 2,             // kolik trefit = vyprodáno (výhra)
     leadDur: 1.8,             // odpočet „připrav se“ před první notou (s)
-    beatDur: 1.7,             // za jak dlouho puntík přejede lištu (s) – pomalu, ať se stihne
+    beatDur: 1.7,             // výchozí doba přejezdu puntíku (s); v pozdějších koncertech se zkracuje
+    beatDurMin: 1.15,         // rychleji už puntík nepojede
     restDur: 0.85,            // pauza po každé notě, ať zvuk dozní a je vidět výsledek (s)
-    zoneLo: 0.36, zoneHi: 0.64, // zelená zóna na dráze 0..1 (široká, ať to zvládnou i děti)
+    zoneHalf: 0.14,           // výchozí půlšířka zelené zóny (0..1) – první nota je nejširší
+    zoneHalfMin: 0.055,       // užší už zóna nebude, ať to jde vždycky trefit
+    shrinkPerNote: 0.024,     // každá další nota zónu zúží (postupné ztížení v rámci koncertu)
+    shrinkPerKm: 0.004,       // a mírně i za každý kilometr běhu (pozdější koncerty jsou těžší)
+    speedupPerKm: 0.03,       // o kolik se za kilometr zkrátí beatDur (puntík jede svižněji)
   };
+
+  // zelená zóna se postupně zmenšuje: každou další notou a trochu i s délkou běhu
+  function concertZone(SP) {
+    const half = Math.max(CONCERT.zoneHalfMin,
+      CONCERT.zoneHalf - (SP.beatIdx || 0) * CONCERT.shrinkPerNote - (SP.zoneKm || 0) * CONCERT.shrinkPerKm);
+    return { lo: 0.5 - half, hi: 0.5 + half };
+  }
 
   function currentChar() {
     return (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
@@ -835,6 +847,9 @@
       resultT: 0,
       markX: S.worldX + (W + 60) - px, // pomyslný bod pódia připlouvá zprava
       total: CONCERT.total,
+      // pozdější koncerty (dál v běhu) jedou svižněji a mají užší zónu
+      zoneKm: S.worldX / PX_PER_M / 1000,
+      beatDur: Math.max(CONCERT.beatDurMin, CONCERT.beatDur - (S.worldX / PX_PER_M / 1000) * CONCERT.speedupPerKm),
       beatIdx: 0,            // kolikátá nota právě běží
       beatT: 0,              // 0..beatDur průběh aktuální noty
       beatPos: 0,            // 0..1 pozice puntíku na liště
@@ -852,7 +867,8 @@
   function concertTap() {
     const SP = S.special;
     if (!SP || SP.phase !== 'challenge' || SP.leadT > 0 || SP.restT > 0) return;
-    registerBeat(SP.beatPos >= CONCERT.zoneLo && SP.beatPos <= CONCERT.zoneHi);
+    const z = concertZone(SP);
+    registerBeat(SP.beatPos >= z.lo && SP.beatPos <= z.hi);
   }
 
   function registerBeat(hit) {
@@ -914,8 +930,8 @@
       }
       // puntík přejíždí lištu; když nikdo nestihne ťuknout, nota propadne (miss)
       SP.beatT += dt;
-      SP.beatPos = Math.min(1, SP.beatT / CONCERT.beatDur);
-      if (SP.beatT >= CONCERT.beatDur) registerBeat(false);
+      SP.beatPos = Math.min(1, SP.beatT / SP.beatDur);
+      if (SP.beatT >= SP.beatDur) registerBeat(false);
     } else if (SP.phase === 'done') {
       SP.resultT -= dt;
       if (SP.resultT <= 0) S.special = null;
@@ -1922,8 +1938,9 @@
     // podklad lišty
     GFX.rr(ctx, bx, by, bw, bh, 15);
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
-    // ZELENÁ zóna
-    const zx = bx + bw * CONCERT.zoneLo, zw = bw * (CONCERT.zoneHi - CONCERT.zoneLo);
+    // ZELENÁ zóna – postupně se zužuje (viz concertZone)
+    const zone = concertZone(SP);
+    const zx = bx + bw * zone.lo, zw = bw * (zone.hi - zone.lo);
     GFX.rr(ctx, zx, by, zw, bh, 10);
     ctx.fillStyle = SP.beatFlash > 0 ? 'rgba(150,255,160,0.98)' : 'rgba(110,215,120,0.82)'; ctx.fill();
     // šipka nad zónou – „ťukni tady“
