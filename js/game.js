@@ -1092,6 +1092,7 @@
   // lidští obyvatelé Louky – objevují se vzácně a střídají se
   const HUMAN_PROPS = Object.keys(HUMANS);
   let humanIdx = Math.floor(Math.random() * HUMAN_PROPS.length);
+  let lastDecorProp = null; // ať se stejná rekvizita/postava neobjeví hned vedle sebe
 
   // prostředí v místě, kde dekorace vznikne (kvůli póze i noční ospalosti)
   function envIdxAt(worldX) {
@@ -1105,8 +1106,9 @@
     if (!S.tut && Math.random() < 0.13) {
       // v noci ospalá póza (3), přes den se střídají tři pracovní pózy (0–2)
       const night = ENVS[envIdxAt(S.nextDecorX)].night;
+      const hp = HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length];
       S.decor.push({
-        prop: HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length],
+        prop: hp,
         x: S.nextDecorX,
         far: true,
         human: true,
@@ -1114,12 +1116,18 @@
         extra: night ? 3 : Math.floor(Math.random() * 3),
         s: 0.8 + Math.random() * 0.15,
       });
+      lastDecorProp = hp;
       S.nextDecorX += 640 + Math.random() * 620;
       return;
     }
     const env = currentEnv().env;
     const props = env.props;
-    const p = props[Math.floor(Math.random() * props.length)];
+    let p = props[Math.floor(Math.random() * props.length)];
+    // stejná rekvizita ani postava se nesmí objevit hned vedle té předchozí
+    for (let tries = 0; tries < 5 && props.length > 1 && p === lastDecorProp; tries++) {
+      p = props[Math.floor(Math.random() * props.length)];
+    }
+    lastDecorProp = p;
     const far = !NEAR_PROPS.has(p) || Math.random() < 0.4;
     const isSign = p === 'signpost';
     S.decor.push({
@@ -1722,7 +1730,10 @@
     // (tutoriálová bublina a představení novinky mají přednost před hláškou)
     if (S.bubbleT > 0 && S.bubble && S.mode === 'run'
         && !(S.tut && S.tut.bubbleA > 0.1) && !(S.enc && S.enc.bubbleA > 0.1)
-        && !(S.special && S.special.bubbleA > 0.1)) {
+        && !(S.special && S.special.bubbleA > 0.1)
+        // během hraní koncertu (přílet, popis, výzva) žádná hláška nezakrývá lištu;
+        // výsledková hláška ve fázi 'done' se ukázat smí
+        && !(S.special && S.special.phase !== 'done')) {
       drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
