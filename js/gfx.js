@@ -1131,6 +1131,79 @@ const GFX = (() => {
       ctx.fillStyle = 'rgba(255,240,200,0.85)';
       ell(ctx, 16 * s, -13 * s, 4 * s * b, 3.5 * s * b); ctx.fill();
     },
+    cheersquad(ctx, s, extra, t) {
+      // dva zajíčci-fanoušci: poskakují, mávají tlapkami a jeden mává vlaječkou,
+      // ať to vypadá, že fandí běžci (Karlovi i ostatním zvířátkům)
+      const T = t || 0;
+      const flags = ['#e5533a', '#f2b134', '#5aa0e0', '#8ac24a'];
+      const flagCol = flags[(extra || 0) % flags.length];
+
+      // jeden fanoušek na pozici bx, s danou fází poskoku a barvou ouška
+      function fan(bx, phase, earCol) {
+        const bob = Math.abs(Math.sin(T * 0.006 + phase)) * 6 * s;
+        const y = -bob;
+        // stín na zemi
+        ctx.fillStyle = 'rgba(20,14,6,0.15)';
+        ell(ctx, bx, 0, 11 * s, 3 * s); ctx.fill();
+        // uši
+        ctx.fillStyle = '#d8ccbd';
+        ell(ctx, bx - 4 * s, y - 34 * s, 3 * s, 9 * s); ctx.fill();
+        ell(ctx, bx + 4 * s, y - 34 * s, 3 * s, 9 * s); ctx.fill();
+        ctx.fillStyle = earCol;
+        ell(ctx, bx - 4 * s, y - 34 * s, 1.4 * s, 6 * s); ctx.fill();
+        ell(ctx, bx + 4 * s, y - 34 * s, 1.4 * s, 6 * s); ctx.fill();
+        // tělo + bříško
+        ctx.fillStyle = '#d8ccbd';
+        ell(ctx, bx, y - 13 * s, 9 * s, 11 * s); ctx.fill();
+        ctx.fillStyle = '#ece2d6';
+        ell(ctx, bx, y - 11 * s, 5 * s, 7 * s); ctx.fill();
+        // hlava
+        ctx.fillStyle = '#d8ccbd';
+        ctx.beginPath(); ctx.arc(bx, y - 26 * s, 6.5 * s, 0, Math.PI * 2); ctx.fill();
+        // zvednuté tlapky – kmitají, jako když mávají
+        const wave = Math.sin(T * 0.012 + phase) * 4 * s;
+        ctx.strokeStyle = '#d8ccbd'; ctx.lineWidth = 3 * s; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(bx - 6 * s, y - 16 * s); ctx.lineTo(bx - 11 * s, y - 30 * s + wave);
+        ctx.moveTo(bx + 6 * s, y - 16 * s); ctx.lineTo(bx + 11 * s, y - 30 * s - wave);
+        ctx.stroke();
+        // oči + čumáček
+        ctx.fillStyle = '#4a3a2c';
+        ctx.beginPath(); ctx.arc(bx - 2.4 * s, y - 27 * s, 1.3 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bx + 2.4 * s, y - 27 * s, 1.3 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#c98a8a';
+        ctx.beginPath(); ctx.arc(bx, y - 24 * s, 1.2 * s, 0, Math.PI * 2); ctx.fill();
+      }
+
+      fan(-13 * s, 0, '#e6a6a6');
+      fan(11 * s, Math.PI, '#b6c6e6');
+
+      // vlaječka, kterou pravý fanoušek mává (plápolá)
+      const flap = Math.sin(T * 0.009) * 4 * s;
+      const bob2 = Math.abs(Math.sin(T * 0.006 + Math.PI)) * 6 * s;
+      const fx = 22 * s, fy = -bob2 - 30 * s;
+      ctx.strokeStyle = '#8a6a45'; ctx.lineWidth = 2 * s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(fx, fy + 16 * s); ctx.lineTo(fx, fy - 14 * s); ctx.stroke();
+      ctx.fillStyle = flagCol;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - 14 * s);
+      ctx.quadraticCurveTo(fx + 12 * s, fy - 12 * s + flap, fx + 20 * s, fy - 9 * s);
+      ctx.quadraticCurveTo(fx + 12 * s, fy - 6 * s + flap, fx, fy - 4 * s);
+      ctx.closePath(); ctx.fill();
+
+      // radostné srdíčko stoupá a mizí
+      const base = ctx.globalAlpha;
+      const ph = (((T * 0.001) % 1) + 1) % 1;
+      ctx.globalAlpha = base * (1 - ph);
+      const hx = -2 * s, hy = (-46 - ph * 16) * s, hs = 3 * s;
+      ctx.fillStyle = '#e5533a';
+      ctx.beginPath();
+      ctx.arc(hx - hs * 0.5, hy, hs * 0.5, Math.PI, 0);
+      ctx.arc(hx + hs * 0.5, hy, hs * 0.5, Math.PI, 0);
+      ctx.lineTo(hx, hy + hs * 1.2);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = base;
+    },
   };
 
   function drawProp(ctx, prop, x, y, s, extra, t) {
