@@ -1604,7 +1604,9 @@
       if (!d.far) continue;
       const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
       if (sx < -220 || sx > W + 220) continue;
-      ctx.globalAlpha = d.human ? 0.95 : (d.prop === 'signpost' ? 0.85 : 0.62);
+      ctx.globalAlpha = d.human ? 0.95
+        : (d.prop === 'signpost' || d.prop === 'cowboy' || d.prop === 'farmhouse') ? 0.85
+        : d.prop === 'grazingcow' ? 0.72 : 0.62;
       GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }

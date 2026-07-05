@@ -489,6 +489,139 @@ const GFX = (() => {
       }
     },
 
+    // kovboj vedoucí kravku – místní hospodář ve westernové póze (jako z fotky)
+    cowboy(ctx, s, extra, t) {
+      // --- kravička na provaze ---
+      ctx.save();
+      ctx.translate(-52 * s, 0);
+      ctx.strokeStyle = '#e8ddc8'; ctx.lineWidth = 5 * s; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-14 * s, -2 * s); ctx.lineTo(-14 * s, -20 * s);
+      ctx.moveTo(-2 * s, -2 * s); ctx.lineTo(-2 * s, -20 * s);
+      ctx.moveTo(10 * s, -2 * s); ctx.lineTo(10 * s, -20 * s);
+      ctx.moveTo(22 * s, -2 * s); ctx.lineTo(22 * s, -20 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#f0e7d6';
+      rr(ctx, -20 * s, -52 * s, 48 * s, 34 * s, 14 * s); ctx.fill();
+      ctx.fillStyle = '#c07a44';
+      ell(ctx, -6 * s, -40 * s, 10 * s, 8 * s); ctx.fill();
+      ell(ctx, 16 * s, -46 * s, 7 * s, 6 * s); ctx.fill();
+      ctx.fillStyle = '#f0e7d6';
+      ell(ctx, -26 * s, -30 * s, 12 * s, 10 * s, -0.5); ctx.fill();
+      ctx.fillStyle = '#e79a9a'; ell(ctx, -33 * s, -24 * s, 5 * s, 4 * s, -0.5); ctx.fill();
+      ctx.strokeStyle = '#d8c49a'; ctx.lineWidth = 3 * s;
+      ctx.beginPath(); ctx.moveTo(-24 * s, -40 * s); ctx.lineTo(-26 * s, -46 * s);
+      ctx.moveTo(-19 * s, -40 * s); ctx.lineTo(-16 * s, -46 * s); ctx.stroke();
+      ctx.strokeStyle = '#e8ddc8'; ctx.lineWidth = 3 * s;
+      ctx.beginPath(); ctx.moveTo(27 * s, -46 * s); ctx.quadraticCurveTo(34 * s, -34 * s, 30 * s, -20 * s); ctx.stroke();
+      ctx.restore();
+      // provaz od ruky ke kravce
+      ctx.strokeStyle = '#c9a86a'; ctx.lineWidth = 2.5 * s;
+      ctx.beginPath(); ctx.moveTo(-10 * s, -58 * s); ctx.quadraticCurveTo(-30 * s, -42 * s, -86 * s, -30 * s); ctx.stroke();
+      // --- kovboj ---
+      ctx.fillStyle = '#9c6b3f';
+      rr(ctx, -12 * s, -54 * s, 11 * s, 54 * s, 4 * s); ctx.fill();
+      rr(ctx, 3 * s, -54 * s, 11 * s, 54 * s, 4 * s); ctx.fill();
+      ctx.fillStyle = '#4a3320';
+      rr(ctx, -15 * s, -8 * s, 15 * s, 8 * s, 3 * s); ctx.fill();
+      rr(ctx, 2 * s, -8 * s, 15 * s, 8 * s, 3 * s); ctx.fill();
+      // červená kostkovaná košile
+      ctx.fillStyle = '#c23a34';
+      rr(ctx, -16 * s, -100 * s, 32 * s, 50 * s, 8 * s); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 1.4 * s;
+      ctx.beginPath();
+      ctx.moveTo(-9 * s, -100 * s); ctx.lineTo(-9 * s, -50 * s);
+      ctx.moveTo(3 * s, -100 * s); ctx.lineTo(3 * s, -50 * s);
+      ctx.moveTo(-16 * s, -84 * s); ctx.lineTo(16 * s, -84 * s);
+      ctx.moveTo(-16 * s, -68 * s); ctx.lineTo(16 * s, -68 * s);
+      ctx.stroke();
+      // rozepnutá džínová bunda
+      ctx.fillStyle = '#5b86b3';
+      rr(ctx, -20 * s, -102 * s, 14 * s, 52 * s, 7 * s); ctx.fill();
+      rr(ctx, 6 * s, -102 * s, 14 * s, 52 * s, 7 * s); ctx.fill();
+      ctx.fillStyle = '#4a6f96';
+      ctx.beginPath(); ctx.moveTo(-14 * s, -102 * s); ctx.lineTo(-4 * s, -96 * s); ctx.lineTo(-14 * s, -92 * s); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(14 * s, -102 * s); ctx.lineTo(4 * s, -96 * s); ctx.lineTo(14 * s, -92 * s); ctx.closePath(); ctx.fill();
+      // ruka drží provaz
+      ctx.strokeStyle = '#5b86b3'; ctx.lineWidth = 8 * s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-14 * s, -96 * s); ctx.quadraticCurveTo(-16 * s, -76 * s, -10 * s, -58 * s); ctx.stroke();
+      ctx.fillStyle = '#e8b88a'; ctx.beginPath(); ctx.arc(-10 * s, -57 * s, 4 * s, 0, Math.PI * 2); ctx.fill();
+      // druhá ruka palcem za pásek
+      ctx.strokeStyle = '#5b86b3'; ctx.lineWidth = 8 * s;
+      ctx.beginPath(); ctx.moveTo(14 * s, -96 * s); ctx.quadraticCurveTo(24 * s, -84 * s, 18 * s, -70 * s); ctx.stroke();
+      // hlava + zrzavý plnovous
+      ctx.fillStyle = '#e8b88a';
+      ctx.beginPath(); ctx.arc(0, -116 * s, 13 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#b5622e';
+      ctx.beginPath(); ctx.arc(0, -110 * s, 13 * s, 0.15, Math.PI - 0.15); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#8a4a24'; ctx.lineWidth = 1.6 * s;
+      ctx.beginPath(); ctx.arc(0, -113 * s, 4 * s, 0.2, Math.PI - 0.4); ctx.stroke();
+      ctx.fillStyle = '#3a2a1c';
+      ctx.beginPath(); ctx.arc(-4 * s, -119 * s, 1.5 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(5 * s, -119 * s, 1.5 * s, 0, Math.PI * 2); ctx.fill();
+      // kovbojský klobouk
+      ctx.fillStyle = '#6b4a2c';
+      ell(ctx, 0, -127 * s, 20 * s, 6 * s); ctx.fill();
+      rr(ctx, -9 * s, -143 * s, 18 * s, 17 * s, 5 * s); ctx.fill();
+      ctx.fillStyle = '#4a3320';
+      rr(ctx, -9 * s, -130 * s, 18 * s, 3 * s, 1 * s); ctx.fill();
+    },
+    // baráček se svítícími okny – v podvečer a v noci vzadu hřejivě svítí
+    farmhouse(ctx, s, extra, t) {
+      const flick = 0.82 + 0.18 * Math.sin((t || 0) * 0.005);
+      ctx.fillStyle = '#e6d3b3';
+      rr(ctx, -58 * s, -78 * s, 116 * s, 78 * s, 3 * s); ctx.fill();
+      ctx.fillStyle = '#7a4636';
+      ctx.beginPath(); ctx.moveTo(-70 * s, -78 * s); ctx.lineTo(70 * s, -78 * s); ctx.lineTo(0, -128 * s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8a5a3a'; rr(ctx, 30 * s, -120 * s, 13 * s, 26 * s, 2 * s); ctx.fill();
+      ctx.fillStyle = 'rgba(220,220,220,0.5)';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(37 * s + Math.sin((t || 0) * 0.003 + i) * 3 * s, (-128 - i * 11) * s, (4 + i * 1.5) * s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#5a3d28'; rr(ctx, -10 * s, -42 * s, 20 * s, 42 * s, 3 * s); ctx.fill();
+      const win = (wx, wy, ww, wh) => {
+        const g = ctx.createRadialGradient(wx, wy, 2 * s, wx, wy, ww * 1.8);
+        g.addColorStop(0, 'rgba(255,206,110,' + (0.9 * flick) + ')');
+        g.addColorStop(1, 'rgba(255,206,110,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(wx, wy, ww * 1.8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6b4a30'; rr(ctx, wx - ww / 2 - 2 * s, wy - wh / 2 - 2 * s, ww + 4 * s, wh + 4 * s, 2 * s); ctx.fill();
+        ctx.fillStyle = 'rgba(255,224,150,' + flick + ')'; rr(ctx, wx - ww / 2, wy - wh / 2, ww, wh, 1.5 * s); ctx.fill();
+        ctx.strokeStyle = '#6b4a30'; ctx.lineWidth = 1.5 * s;
+        ctx.beginPath(); ctx.moveTo(wx, wy - wh / 2); ctx.lineTo(wx, wy + wh / 2); ctx.moveTo(wx - ww / 2, wy); ctx.lineTo(wx + ww / 2, wy); ctx.stroke();
+      };
+      win(-34 * s, -56 * s, 22 * s, 20 * s);
+      win(34 * s, -56 * s, 22 * s, 20 * s);
+    },
+    // pasoucí se kravka – klidný obyvatel pastviny, ať je pozadí živější
+    grazingcow(ctx, s, extra, t) {
+      const tail = Math.sin((t || 0) * 0.004);
+      ctx.strokeStyle = '#e8ddc8'; ctx.lineWidth = 6 * s; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-20 * s, -2 * s); ctx.lineTo(-20 * s, -26 * s);
+      ctx.moveTo(-6 * s, -2 * s); ctx.lineTo(-6 * s, -26 * s);
+      ctx.moveTo(12 * s, -2 * s); ctx.lineTo(12 * s, -26 * s);
+      ctx.moveTo(26 * s, -2 * s); ctx.lineTo(26 * s, -26 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#f0e7d6'; rr(ctx, -28 * s, -64 * s, 62 * s, 42 * s, 18 * s); ctx.fill();
+      ctx.fillStyle = '#c07a44';
+      ell(ctx, -8 * s, -50 * s, 13 * s, 10 * s); ctx.fill();
+      ell(ctx, 20 * s, -56 * s, 9 * s, 7 * s); ctx.fill();
+      ctx.save(); ctx.translate(-34 * s, -30 * s); ctx.rotate(-0.35);
+      ctx.fillStyle = '#f0e7d6'; ell(ctx, 0, 0, 14 * s, 11 * s); ctx.fill();
+      ctx.fillStyle = '#e79a9a'; ell(ctx, -10 * s, 4 * s, 5 * s, 4 * s); ctx.fill();
+      ctx.strokeStyle = '#d8c49a'; ctx.lineWidth = 3 * s;
+      ctx.beginPath(); ctx.moveTo(2 * s, -9 * s); ctx.lineTo(0, -15 * s); ctx.moveTo(8 * s, -8 * s); ctx.lineTo(11 * s, -14 * s); ctx.stroke();
+      ctx.fillStyle = '#f0e7d6'; ell(ctx, 9 * s, -2 * s, 5 * s, 3 * s, 0.5); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = '#e8ddc8'; ctx.lineWidth = 3.5 * s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(33 * s, -58 * s); ctx.quadraticCurveTo((42 + tail * 4) * s, -40 * s, (38 + tail * 6) * s, -22 * s); ctx.stroke();
+      ctx.strokeStyle = '#6ea24a'; ctx.lineWidth = 2 * s;
+      ctx.beginPath(); ctx.moveTo(-40 * s, -2 * s); ctx.lineTo(-42 * s, -10 * s); ctx.moveTo(-36 * s, -2 * s); ctx.lineTo(-35 * s, -11 * s); ctx.stroke();
+    },
+
     /* ---------- lidští obyvatelé Louky ---------- */
     tomas(ctx, s, extra, t) {
       // Tomáš – pilně staví a slepice mu z hlavy dělá stavební dozor

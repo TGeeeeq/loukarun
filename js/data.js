@@ -311,7 +311,7 @@ const DATA = (() => {
       hillFar: '#a8d8a0', hillNear: '#7cc276',
       ground: '#5aa84f', groundDark: '#4a9440', path: '#c9b485',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone', 'catnap', 'frogpond'],
+      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone', 'catnap', 'frogpond', 'cowboy', 'grazingcow'],
       particles: 'petals',
     },
     {
@@ -320,7 +320,7 @@ const DATA = (() => {
       hillFar: '#b5d49a', hillNear: '#8cbf72',
       ground: '#6aab52', groundDark: '#589644', path: '#cdb489',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['appletree', 'ladder', 'basket', 'scarecrow', 'snail'],
+      props: ['appletree', 'ladder', 'basket', 'scarecrow', 'snail', 'cowboy'],
       particles: 'leaves',
     },
     {
@@ -347,7 +347,7 @@ const DATA = (() => {
       hillFar: '#c77b5a', hillNear: '#9c5f46',
       ground: '#8a6a45', groundDark: '#79593a', path: '#c9a06b',
       sun: '#ffce7a', clouds: '#ffd9b8',
-      props: ['haystack', 'sunflower', 'signpost', 'windmill', 'catnap'],
+      props: ['haystack', 'sunflower', 'signpost', 'windmill', 'catnap', 'cowboy', 'grazingcow', 'farmhouse'],
       particles: 'petals',
     },
     {
@@ -356,7 +356,7 @@ const DATA = (() => {
       hillFar: '#2e3c63', hillNear: '#26334f',
       ground: '#2c4038', groundDark: '#24352e', path: '#5a5f6e',
       sun: '#f5f2d0', clouds: '#39466b',
-      props: ['tree', 'tent', 'campfire', 'owlbox', 'frogpond'],
+      props: ['tree', 'tent', 'campfire', 'owlbox', 'frogpond', 'farmhouse'],
       particles: 'stars',
       night: true,
     },
