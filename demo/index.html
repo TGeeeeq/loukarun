@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Louka Run DEMO – ukázková verze běhací hry na podporu azylu Nech mě růst. Vyzkoušej první tři zvířátka! / Demo of the Nech mě růst animal sanctuary runner game.">
+  <meta name="theme-color" content="#8ed4f7">
+  <!-- Celá hra i všechny assety se sdílejí s plnou verzí o adresář výš.
+       Díky <base> se relativní cesty (js/, style.css, assets/…) načtou
+       stejně jako z kořene – tady měníme jen jedinou věc: zapneme DEMO. -->
+  <base href="../">
+  <title>Louka Run 🥕 DEMO – hra na podporu azylu Nech mě růst</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <link rel="manifest" href="demo/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <!-- písmo hostujeme sami (žádné požadavky na Google = žádné starosti s GDPR) -->
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
+  <link rel="preload" as="image" href="assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* nenápadný rožní odznak, ať tester pozná, že je to ukázková verze */
+    #demo-badge{
+      position:fixed; top:0; left:0; z-index:9999; pointer-events:none;
+      font-family:'Baloo 2',system-ui,sans-serif; font-weight:800;
+      font-size:12px; letter-spacing:.08em; color:#4a3b12;
+      background:linear-gradient(135deg,#ffe08a,#ffc23c);
+      padding:4px 30px; transform:translate(-30px,14px) rotate(-45deg);
+      box-shadow:0 2px 6px rgba(0,0,0,.25); text-shadow:0 1px 0 rgba(255,255,255,.4);
+    }
+    @media (max-width:640px){ #demo-badge{ font-size:10px; padding:3px 26px; } }
+  </style>
+  <script>
+    // ⬇️ jediná změna oproti plné hře: omezí nabídku na první 3 zvířátka.
+    //    Přečte to js/data.js hned při načtení (viz konec toho souboru).
+    window.LOUKA_DEMO = true;
+    window.LOUKA_DEMO_ANIMALS = 3;
+  </script>
+</head>
+<body>
+  <div id="demo-badge">DEMO</div>
+  <canvas id="game"></canvas>
+
+  <!-- HUD během běhu -->
+  <div id="hud">
+    <div class="hud-left">
+      <div id="hud-energy">
+        <span class="energy-icon">🥕</span>
+        <div class="energy-bar"><div id="hud-energy-fill"></div></div>
+      </div>
+      <div id="hud-ram" class="hud-chip"></div>
+      <div id="hud-clover" class="hud-chip lucky" style="display:none"></div>
+    </div>
+    <div class="hud-center">
+      <div id="hud-dist">0 m</div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-chip">🪙 <span id="hud-coins">0</span></div>
+      <button id="btn-pause" class="btn round" aria-label="Pauza" data-i18n-label="a11y.pause">⏸</button>
+    </div>
+    <!-- lekce školy běhu / novinka na trase: svět stojí, dokud hráč neklikne -->
+    <button id="btn-tut-continue" class="btn big" data-i18n="tut.continue" hidden>▶ Pokračovat</button>
+  </div>
+
+  <!-- HLAVNÍ MENU (dvojjazyčná úvodní obrazovka) -->
+  <div id="screen-menu" class="screen">
+    <div class="lang-switch" role="group" aria-label="Jazyk / Language">
+      <button class="lang-btn active" data-lang="cs">🇨🇿<span class="lang-label"> Česky</span></button>
+      <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
+    </div>
+    <div class="menu-top">
+      <h1 class="game-title" id="game-title">LOUKA<span>RUN</span></h1>
+      <p class="subtitle" data-i18n="menu.subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
+      <p class="subtitle-alt" data-i18n-other="menu.subtitle">A runner game supporting the <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> animal sanctuary 💚</p>
+    </div>
+    <div class="menu-mid">
+      <div class="menu-char-info">
+        <div class="charname" id="menu-charname">Osel Karel</div>
+        <div class="perk" id="menu-perk"></div>
+      </div>
+      <div class="menu-actions">
+        <button id="btn-play" class="btn big play" data-i18n="menu.play">▶ &nbsp;BĚŽET!</button>
+        <button id="btn-shop" class="btn" data-i18n="menu.shop">🐾 Zvířátka &amp; obchod</button>
+      </div>
+    </div>
+    <div class="menu-bottom">
+      <div class="menu-stats">
+        <div class="hud-chip">🏆 <span id="menu-best">0 m</span></div>
+        <div class="hud-chip">🪙 <span id="menu-coins">0</span></div>
+        <button id="btn-ach" class="hud-chip ach-chip" aria-label="Odznaky">🎖️ <span id="menu-ach">0/0</span></button>
+      </div>
+      <div class="menu-settings">
+        <button id="btn-sfx" class="btn tiny">🔊 Zvuky</button>
+        <button id="btn-music" class="btn tiny">🎵 Hudba</button>
+        <button id="btn-install" class="btn tiny" hidden>📲 Instalovat</button>
+        <a class="btn tiny buy" href="https://nechmerust.org/jak-se-zapojit" target="_blank" rel="noopener" data-i18n="menu.donate">💚 Podpoř azyl</a>
+      </div>
+      <p class="controls-hint"><span data-i18n="menu.hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</span> &nbsp;·&nbsp; <a class="privacy-link" href="soukromi.html" data-i18n="menu.privacy">🔒 Soukromí</a></p>
+    </div>
+  </div>
+
+  <!-- OBCHOD / VÝBĚR POSTAV -->
+  <div id="screen-shop" class="screen">
+    <div class="shop-head">
+      <button id="btn-shop-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+      <h2 data-i18n="shop.title">Zvířecí obyvatelé</h2>
+      <div class="hud-chip">🪙 <span id="shop-coins">0</span></div>
+    </div>
+    <p class="shop-note" data-i18n="shop.note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
+    <div id="shop-grid"></div>
+  </div>
+
+  <!-- ODZNAKY / ACHIEVEMENTY -->
+  <div id="screen-ach" class="screen">
+    <div class="over-card ach-card">
+      <div class="ach-head">
+        <button id="btn-ach-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+        <h2 data-i18n="ach.title">🎖️ Odznaky</h2>
+        <div class="hud-chip">🎖️ <span id="ach-count">0/0</span></div>
+      </div>
+      <div id="ach-list"></div>
+    </div>
+  </div>
+
+  <!-- KONEC BĚHU -->
+  <div id="screen-over" class="screen">
+    <div class="over-card">
+      <h2 id="over-title">CÍL DNEŠNÍHO BĚHU!</h2>
+      <canvas id="over-portrait" width="190" height="150"></canvas>
+      <p id="over-story" class="story"></p>
+      <div class="over-stats">
+        <div class="stat"><span class="stat-label" data-i18n="over.dist">Doběhnuto</span><span class="stat-val" id="over-dist">0 m</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.carrots">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.coins">Mince</span><span class="stat-val gold" id="over-coins">+0 🪙</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.best">Rekord</span><span class="stat-val" id="over-best">0 m</span></div>
+      </div>
+      <div class="over-buttons">
+        <button id="btn-again" class="btn big" data-i18n="over.again">🐾 Běžet znovu</button>
+        <div class="row">
+          <button id="btn-over-shop" class="btn" data-i18n="over.animals">🛍 Zvířátka</button>
+          <button id="btn-over-menu" class="btn" data-i18n="over.menu">🏠 Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUZA -->
+  <div id="screen-pause" class="screen">
+    <div class="over-card small">
+      <h2 id="pause-title" data-i18n="pause.title">Přestávka na trávu 🌱</h2>
+      <button id="btn-resume" class="btn big" data-i18n="pause.resume">▶ Pokračovat</button>
+      <button id="btn-pause-menu" class="btn" data-i18n="pause.menu">🏠 Zpět do menu</button>
+    </div>
+  </div>
+
+  <!-- VÝVOJÁŘSKÉ MENU (skryté – 5× ťuknout na titul, nebo klávesa `) -->
+  <div id="screen-dev" class="screen">
+    <div class="over-card dev-card">
+      <div class="dev-head">
+        <h2 id="dev-title">🔧 Vývojářské menu</h2>
+        <button id="btn-dev-close" class="btn round" aria-label="Zavřít">✕</button>
+      </div>
+      <div id="dev-body"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- výzva k otočení telefonu (jen mobil na výšku) – dvojjazyčná -->
+  <div id="rotate-overlay">
+    <div class="rotate-fireflies" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="rotate-card">
+      <div class="rotate-stage" aria-hidden="true">
+        <svg class="rotate-arc" viewBox="0 0 132 132">
+          <path d="M 66 10 A 56 56 0 0 1 122 66" fill="none" stroke="rgba(255,224,138,0.9)" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 11"/>
+          <path d="M 114 64 L 130 64 L 122 80 Z" fill="rgba(255,224,138,0.9)"/>
+        </svg>
+        <div class="rotate-device">
+          <span class="rotate-notch"></span>
+          <span class="rotate-screen">
+            <span class="rs-sun"></span>
+            <span class="rs-hill"></span>
+          </span>
+        </div>
+      </div>
+      <h2 class="rotate-title">Otoč telefon na&nbsp;šířku</h2>
+      <p class="rotate-sub">Uvidíš dál před sebe a stihneš víc. 🥕</p>
+      <div class="rotate-rule"></div>
+      <p class="rotate-en"><strong>Turn your phone sideways</strong>You’ll see further ahead and react in time.</p>
+    </div>
+    <div class="rotate-meadow" aria-hidden="true"></div>
+  </div>
+
+  <!-- AF signatura – filmová znělka autora před spuštěním hry -->
+  <div id="af-splash" role="img" aria-label="Antonín Figueroa — antoninfigueroa.cz">
+    <div class="af-inner">
+      <svg class="af-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
+        <g>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#d4a45a" stroke-opacity="0.35" stroke-width="0.6" stroke-dasharray="2 4"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="24s" repeatCount="indefinite"/>
+        </g>
+        <g>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#d4a45a" stroke-opacity="0.55" stroke-width="0.5"/>
+          <circle cx="50" cy="22" r="1.6" fill="#d4a45a"/>
+          <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="32s" repeatCount="indefinite"/>
+        </g>
+        <circle cx="40" cy="50" r="22" fill="none" stroke="#d4a45a" stroke-opacity="0.7" stroke-width="0.7"/>
+        <circle cx="60" cy="50" r="22" fill="none" stroke="#d4a45a" stroke-opacity="0.7" stroke-width="0.7"/>
+        <text x="39" y="60" font-size="28" text-anchor="middle" fill="#d4a45a" letter-spacing="-1" font-family="Cormorant Garamond, Times New Roman, Georgia, serif" font-weight="500">A</text>
+        <text x="58" y="60" font-size="28" text-anchor="middle" fill="#f1e9d8" letter-spacing="-1" font-family="Cormorant Garamond, Times New Roman, Georgia, serif" font-weight="500">F</text>
+      </svg>
+      <div class="af-rule"></div>
+      <p class="af-site">antoninfigueroa.cz</p>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // PWA: i demo jde nainstalovat na plochu jako samostatná appka „Louka Run DEMO"
+    // a funguje offline. Má vlastní service worker se scope demo/ – nemíchá se
+    // s plnou verzí.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('demo/sw.js', { scope: 'demo/' }));
+      const hadController = !!navigator.serviceWorker.controller;
+      let interacted = false;
+      window.addEventListener('pointerdown', () => { interacted = true; }, { capture: true });
+      window.addEventListener('keydown', () => { interacted = true; }, { capture: true });
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || interacted) return;
+        location.reload();
+      });
+    }
+  </script>
+</body>
+</html>

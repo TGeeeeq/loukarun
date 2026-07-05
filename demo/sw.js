@@ -1,29 +1,30 @@
 /* =========================================================
-   LOUKA RUN – service worker
-   Hra se dá nainstalovat na plochu a funguje i offline.
-   Při vydání nové verze zvyš číslo v názvu cache – stará
-   cache se automaticky smaže.
+   LOUKA RUN – DEMO service worker (scope: demo/)
+   Vlastní cache jen pro ukázkovou verzi – nemíchá se s plnou
+   hrou o adresář výš. Sdílené soubory (js/, style.css, assets/)
+   se cachují z ../, samotný vstup demo/ z ./.
+   Při vydání nové verze zvyš číslo v názvu cache.
    ========================================================= */
 
-const CACHE = 'loukarun-v14';
+const CACHE = 'loukarun-demo-v1';
 
 const CORE = [
   './',
-  'index.html',
-  'style.css',
-  'soukromi.html',
-  'manifest.webmanifest',
-  'js/i18n.js',
-  'js/data.js',
-  'js/gfx.js',
-  'js/audio.js',
-  'js/game.js',
-  'assets/logo.png',
-  'assets/icon-192.png',
-  'assets/icon-512.png',
-  'assets/icon-maskable-512.png',
-  'assets/fonts/baloo2-latin.woff2',
-  'assets/fonts/baloo2-latin-ext.woff2',
+  './index.html',
+  './manifest.webmanifest',
+  '../style.css',
+  '../soukromi.html',
+  '../js/i18n.js',
+  '../js/data.js',
+  '../js/gfx.js',
+  '../js/audio.js',
+  '../js/game.js',
+  '../assets/logo.png',
+  '../assets/icon-192.png',
+  '../assets/icon-512.png',
+  '../assets/icon-maskable-512.png',
+  '../assets/fonts/baloo2-latin.woff2',
+  '../assets/fonts/baloo2-latin-ext.woff2',
 ];
 
 self.addEventListener('install', (e) => {
@@ -61,7 +62,7 @@ self.addEventListener('fetch', (e) => {
           }
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || (req.mode === 'navigate' ? caches.match('index.html') : Promise.reject(new Error('offline')))))
+        .catch(() => caches.match(req).then((r) => r || (req.mode === 'navigate' ? caches.match('./index.html') : Promise.reject(new Error('offline')))))
     );
     return;
   }
