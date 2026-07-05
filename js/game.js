@@ -407,7 +407,7 @@
     if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
     if (S.special && S.special.phase === 'challenge') return; // koncert řídí jen ťukání
     if (S.airborne) { S.vy = Math.max(S.vy, 1500); } // rychlý sešup
-    S.sliding = 0.65;
+    S.sliding = 0.8; // dřep po svajpu dolů drží nepatrně déle
     AUDIO.play('slide');
   }
 
@@ -760,7 +760,10 @@
     const T = S.tut;
     T.phase = 'cooldown';
     T.target = 1;
-    // gate zůstává – nápověda ovládání svítí, dokud novinku míjí
+    // Karlova bublina mizí hned, jakmile hráč pokračuje – text se nedrží
+    // přes celou fázi míjení, ale zhasne okamžitě s kliknutím na Pokračovat
+    T.bubble = null;
+    T.bubbleA = 0;
   }
 
   // zastavenou lekci (školu běhu i novinku na trase) rozjede jedině
@@ -1107,17 +1110,28 @@
     if (!S.tut && Math.random() < 0.13) {
       // v noci ospalá póza (3), přes den se střídají tři pracovní pózy (0–2)
       const night = ENVS[envIdxAt(S.nextDecorX)].night;
-      const hp = HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length];
-      S.decor.push({
-        prop: hp,
-        x: S.nextDecorX,
-        far: true,
-        human: true,
-        said: false,
-        extra: night ? 3 : Math.floor(Math.random() * 3),
-        s: 0.8 + Math.random() * 0.15,
-      });
-      lastDecorProp = hp;
+      // každý člověk je jedinečný obyvatel – stejná postava se nikdy nesmí
+      // objevit dvakrát v jednom záběru. Přeskoč proto ty, kdo jsou zrovna
+      // ještě ve scéně (i ti právě zařazení kousek před obrazovkou).
+      const onScene = new Set(S.decor.filter(d => d.human).map(d => d.prop));
+      let hp = null;
+      for (let tries = 0; tries < HUMAN_PROPS.length; tries++) {
+        const cand = HUMAN_PROPS[humanIdx++ % HUMAN_PROPS.length];
+        if (!onScene.has(cand)) { hp = cand; break; }
+      }
+      // všichni tři už ve scéně jsou – tentokrát člověka vynech, ať se nikdo nezdvojí
+      if (hp) {
+        S.decor.push({
+          prop: hp,
+          x: S.nextDecorX,
+          far: true,
+          human: true,
+          said: false,
+          extra: night ? 3 : Math.floor(Math.random() * 3),
+          s: 0.8 + Math.random() * 0.15,
+        });
+        lastDecorProp = hp;
+      }
       S.nextDecorX += 640 + Math.random() * 620;
       return;
     }
