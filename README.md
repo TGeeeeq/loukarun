@@ -59,6 +59,21 @@ python3 -m http.server 8000
 a otevřít `http://localhost:8000`. Hra nemá žádný build krok ani závislosti –
 veškerá grafika se kreslí procedurálně do canvasu, zvukové efekty generuje WebAudio.
 
+## 🧪 Testovací (demo) verze pro rozeslání
+
+Vedle plné hry je v podadresáři **`demo/`** samostatná ukázková verze, která
+nabídne **jen první tři zvířátka** (Karel, Pogo, Avala) – ideální poslat
+testerovi, aniž by hned dostal celou hru.
+
+- **Odkaz pro testera:** `…/demo/` (u výchozí GitHub Pages tedy
+  `https://tgeeeeq.github.io/loukarun/demo/`). Jde nainstalovat na plochu jako
+  samostatná appka „Louka Run DEMO" a funguje i offline.
+- **Jak to funguje:** `demo/index.html` sdílí veškerý kód i assety s plnou hrou
+  (přes `<base href="../">`) a před načtením skriptů jen nastaví
+  `window.LOUKA_DEMO = true`. Podle toho `js/data.js` nabídku zvířátek ořízne.
+  Počet zvířátek se řídí `window.LOUKA_DEMO_ANIMALS` (výchozí 3).
+- **Plná verze zůstává beze změny** – bez toho flagu se nabízí všech šest zvířátek.
+
 ## 🎵 Hudba
 
 Hudbu tvoří MP3 skladby v `assets/music/` – každé prostředí má vlastní skladbu
