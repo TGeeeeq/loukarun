@@ -126,15 +126,26 @@ const AUDIO = (() => {
   let active = 0;
   let currentTrack = null;
 
+  // hlasitost přehrávače držíme v JS (el._vol = zdroj pravdy) a zapisujeme do
+  // el.volume. Na Androidu/desktopu se hlasitost skutečně mění (plynulé
+  // prolnutí); iOS/WebKit zápis do el.volume ignoruje, ale to nevadí –
+  // rozhodnutí „doznělo, zastav“ se řídí podle el._vol (viz musicTick), takže
+  // odcházející stopa se spolehlivě zastaví i tam a nehraje přes novou.
+  function setVol(el, v) {
+    el._vol = v;
+    el.volume = v;
+  }
+
   function makePlayer() {
     const el = new Audio();
     el.preload = 'auto';
     // pojistka: kdyby prolnutí smyčky nestihlo (uspaná karta apod.),
     // skladba aspoň skočí na začátek postaru
     el.loop = true;
-    el.volume = 0;
+    el._vol = 0;           // aktuální hlasitost (zdroj pravdy, viz setVol)
     el._target = 0;        // cílová hlasitost, k níž tick() klouže
     el._fade = TRACK_FADE; // délka aktuálního prolnutí (s)
+    setVol(el, 0);
     return el;
   }
 
@@ -149,10 +160,10 @@ const AUDIO = (() => {
     const dt = TICK_MS / 1000;
     for (const el of players) {
       const step = (MUSIC_VOL / (el._fade || TRACK_FADE)) * dt;
-      if (el.volume < el._target) el.volume = Math.min(el._target, el.volume + step);
-      else if (el.volume > el._target) {
-        el.volume = Math.max(el._target, el.volume - step);
-        if (el.volume === 0 && !el.paused) el.pause();
+      if (el._vol < el._target) setVol(el, Math.min(el._target, el._vol + step));
+      else if (el._vol > el._target) {
+        setVol(el, Math.max(el._target, el._vol - step));
+        if (el._vol <= 0 && !el.paused) el.pause();
       }
     }
     // blíží se konec aktivní skladby → prolnout do jejího vlastního začátku
@@ -198,7 +209,7 @@ const AUDIO = (() => {
   function stopMusic() {
     currentTrack = null;
     if (!players) return;
-    for (const el of players) { el.pause(); el._target = 0; el.volume = 0; }
+    for (const el of players) { el.pause(); el._target = 0; setVol(el, 0); }
   }
 
   function setSfx(on) { enabled = on; }
@@ -210,7 +221,7 @@ const AUDIO = (() => {
 
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
-    ensureCtx(); // probudí i WebAudio pro zvukové efekty
+    ensureCtx(); // probudí WebAudio pro zvukové efekty (hudba jede přes <audio>)
     if (!musicEnabled || !lastKey) return;
     if (players && currentTrack && players[active].paused) {
       players[active].play().catch(() => {});

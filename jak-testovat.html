@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Návod pro testery hry Louka Run: jak si vynutit nejnovější verzi (obnovení / vymazání mezipaměti) na iPhonu, Androidu i počítači a jak poslat zpětnou vazbu.">
+  <meta name="theme-color" content="#8ed4f7">
+  <title>Louka Run 🥕 – návod pro testery</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
+
+  <style>
+    /* Písmo hostujeme sami (žádné požadavky na Google = žádné starosti s GDPR) */
+    @font-face{
+      font-family:"Baloo 2"; font-style:normal; font-weight:400 800; font-display:swap;
+      src:url("assets/fonts/baloo2-latin.woff2") format("woff2");
+      unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    @font-face{
+      font-family:"Baloo 2"; font-style:normal; font-weight:400 800; font-display:swap;
+      src:url("assets/fonts/baloo2-latin-ext.woff2") format("woff2");
+      unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+
+    :root{
+      --sky:#8ed4f7; --grass:#7ec850; --grass-dark:#5aa832;
+      --carrot:#ff8c42; --carrot-dark:#e8681f;
+      --ink:#33421d; --paper:#fbfff2; --card:#ffffff;
+      --line:#e4e6d6; --muted:#6f7d54;
+      --shadow:0 8px 26px rgba(60,80,20,.12);
+    }
+    @media (prefers-color-scheme:dark){
+      :root{
+        --ink:#eef3e2; --paper:#1c2416; --card:#242e1b;
+        --line:#3a4a28; --muted:#a9bd8a;
+        --shadow:0 8px 26px rgba(0,0,0,.4);
+      }
+    }
+
+    *{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body{
+      margin:0; font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif;
+      color:var(--ink); background:var(--paper);
+      line-height:1.5; font-size:18px;
+      background-image:radial-gradient(120% 60% at 50% -10%, rgba(142,212,247,.55), transparent 60%);
+      background-repeat:no-repeat;
+    }
+    .wrap{max-width:720px; margin:0 auto; padding:22px 18px 60px}
+
+    /* ── Hlavička ─────────────────────────────── */
+    header{text-align:center; padding:14px 0 6px}
+    header img{width:160px; max-width:60%; height:auto; filter:drop-shadow(0 4px 10px rgba(0,0,0,.15))}
+    h1{font-size:1.9rem; margin:.4em 0 .1em; line-height:1.15}
+    .lead{color:var(--muted); font-size:1.05rem; margin:.2em auto 0; max-width:34em}
+
+    /* ── Karty ───────────────────────────────── */
+    .card{
+      background:var(--card); border:1px solid var(--line); border-radius:20px;
+      padding:20px 20px; margin:18px 0; box-shadow:var(--shadow);
+    }
+    .card h2{font-size:1.3rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:.4em}
+    .card h2 .num{
+      flex:0 0 auto; width:1.6em; height:1.6em; border-radius:50%;
+      background:var(--carrot); color:#fff; font-size:.85em;
+      display:grid; place-items:center; box-shadow:0 3px 0 var(--carrot-dark);
+    }
+    p{margin:.5em 0}
+    .muted{color:var(--muted)}
+
+    /* ── Tlačítka ────────────────────────────── */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:.5em;
+      font-family:inherit; font-weight:800; font-size:1.05rem; cursor:pointer;
+      border:none; border-radius:16px; padding:14px 22px; text-decoration:none;
+      color:#fff; background:var(--grass); box-shadow:0 4px 0 var(--grass-dark);
+      transition:transform .08s ease, box-shadow .08s ease;
+    }
+    .btn:active{transform:translateY(3px); box-shadow:0 1px 0 var(--grass-dark)}
+    .btn.play{background:var(--carrot); box-shadow:0 4px 0 var(--carrot-dark); font-size:1.25rem; padding:16px 30px}
+    .btn.play:active{box-shadow:0 1px 0 var(--carrot-dark)}
+    .btn.block{display:flex; width:100%}
+    .btn.ghost{background:transparent; color:var(--carrot-dark); box-shadow:none; border:2px solid var(--line); font-size:.95rem; padding:9px 14px}
+
+    .play-wrap{text-align:center; margin:6px 0 2px}
+
+    /* ── Výběr zařízení ──────────────────────── */
+    .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px}
+    .tab{
+      flex:1 1 30%; min-width:120px; font-family:inherit; font-weight:800; font-size:1rem;
+      cursor:pointer; border:2px solid var(--line); background:var(--card); color:var(--ink);
+      border-radius:14px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:4px;
+      transition:border-color .12s, background .12s;
+    }
+    .tab .ico{font-size:1.6rem; line-height:1}
+    .tab[aria-selected="true"]{border-color:var(--carrot); background:rgba(255,140,66,.12)}
+    .panel{display:none; margin-top:16px}
+    .panel[data-active="true"]{display:block; animation:fade .25s ease}
+    @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+    /* ── Postup (kroky) ──────────────────────── */
+    .method{border:1px solid var(--line); border-radius:16px; padding:14px 16px; margin:14px 0; background:var(--paper)}
+    .method.best{border-color:var(--grass-dark); box-shadow:inset 0 0 0 1px var(--grass-dark)}
+    .method h3{margin:.1em 0 .2em; font-size:1.1rem; display:flex; align-items:center; gap:.4em; flex-wrap:wrap}
+    .tag{font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em;
+      background:var(--grass); color:#fff; padding:3px 9px; border-radius:999px}
+    ol.steps{margin:.5em 0 .2em; padding-left:0; list-style:none; counter-reset:s}
+    ol.steps li{position:relative; padding:6px 0 6px 40px; counter-increment:s}
+    ol.steps li::before{
+      content:counter(s); position:absolute; left:0; top:5px;
+      width:26px; height:26px; border-radius:50%; background:var(--sky); color:#123;
+      font-size:.85rem; font-weight:800; display:grid; place-items:center;
+    }
+    kbd{
+      font-family:inherit; font-weight:800; background:var(--card); border:1px solid var(--line);
+      border-bottom-width:3px; border-radius:8px; padding:2px 9px; font-size:.92em; white-space:nowrap;
+      display:inline-block;
+    }
+    .callout{
+      background:rgba(255,140,66,.1); border:1px dashed var(--carrot);
+      border-radius:14px; padding:12px 16px; margin:14px 0; font-size:.98rem;
+    }
+    .callout b{color:var(--carrot-dark)}
+
+    /* schematická ilustrace „telefonu" */
+    .phone{
+      float:right; width:112px; margin:0 0 10px 16px; border:3px solid var(--ink);
+      border-radius:20px; padding:8px 7px; background:var(--card); opacity:.95;
+    }
+    .phone .scr{border:1px solid var(--line); border-radius:10px; height:130px; padding:6px; position:relative; overflow:hidden;
+      background:linear-gradient(180deg,var(--sky),#d9f3c2)}
+    .phone .dots{position:absolute; top:6px; right:8px; font-weight:800; font-size:1.1rem; color:#234}
+    .phone .pin{position:absolute; font-size:1.3rem; filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+    .phone .cap{text-align:center; font-size:.72rem; color:var(--muted); margin-top:6px; line-height:1.2}
+    @media (max-width:480px){ .phone{width:92px} .phone .scr{height:108px} }
+
+    details{border:1px solid var(--line); border-radius:14px; padding:2px 16px; margin:12px 0; background:var(--paper)}
+    details summary{cursor:pointer; font-weight:800; padding:12px 0; list-style:none}
+    details summary::-webkit-details-marker{display:none}
+    details summary::before{content:"▸ "; color:var(--carrot)}
+    details[open] summary::before{content:"▾ "}
+
+    /* ── Formulář ────────────────────────────── */
+    form{margin-top:8px}
+    label{display:block; font-weight:800; margin:14px 0 5px; font-size:.98rem}
+    label .opt{font-weight:400; color:var(--muted); font-size:.85em}
+    input, select, textarea{
+      width:100%; font-family:inherit; font-size:1rem; color:var(--ink);
+      background:var(--paper); border:2px solid var(--line); border-radius:12px; padding:12px 14px;
+    }
+    input:focus, select:focus, textarea:focus{outline:none; border-color:var(--carrot)}
+    textarea{min-height:120px; resize:vertical}
+    .stars{display:flex; gap:6px; font-size:2rem; margin:2px 0}
+    .stars button{background:none; border:none; cursor:pointer; font-size:inherit; padding:0 2px; filter:grayscale(1) opacity(.45); transition:filter .1s, transform .1s}
+    .stars button.on{filter:none} .stars button:active{transform:scale(1.2)}
+    .sent{
+      display:none; margin-top:14px; padding:14px 16px; border-radius:14px;
+      background:rgba(126,200,80,.18); border:1px solid var(--grass-dark); font-weight:700;
+    }
+    .fallback{font-size:.92rem; color:var(--muted); margin-top:16px; text-align:center}
+    .fallback a{color:var(--carrot-dark); font-weight:800}
+
+    footer{text-align:center; color:var(--muted); font-size:.9rem; margin-top:30px}
+    footer a{color:var(--carrot-dark)}
+    a{color:var(--carrot-dark)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="assets/logo.png" alt="Louka Run">
+    <h1>Vítej mezi testery! 🥕</h1>
+    <p class="lead">Díky, že si hru zkoušíš. Tady najdeš, jak mít vždycky tu <b>nejnovější verzi</b> – a taky kolonku, kam nám můžeš napsat, co ti šlo, co ne a co bys změnil(a).</p>
+  </header>
+
+  <div class="card">
+    <div class="play-wrap">
+      <a class="btn play" href="./">▶ Spustit hru</a>
+      <p class="muted" style="margin-top:12px">Nejdřív si ale přečti krok 1 níž – ať máš jistotu, že hraješ tu úplně poslední verzi.</p>
+    </div>
+  </div>
+
+  <!-- ── KROK 1: nejnovější verze ───────────────────────── -->
+  <div class="card">
+    <h2><span class="num">1</span> Jak mít nejnovější verzi</h2>
+    <p>Hra se v prohlížeči <b>ukládá do paměti</b>, aby se rychle spouštěla a fungovala i bez internetu. Někdy ti proto zůstane <b>starší verze</b>. Když ti pošlu zprávu „je tam něco nového“, udělej podle svého zařízení tohle:</p>
+
+    <div class="tabs" role="tablist" aria-label="Vyber si zařízení">
+      <button class="tab" role="tab" aria-selected="true"  data-target="ios"><span class="ico">📱</span>iPhone / iPad</button>
+      <button class="tab" role="tab" aria-selected="false" data-target="android"><span class="ico">🤖</span>Android telefon</button>
+      <button class="tab" role="tab" aria-selected="false" data-target="pc"><span class="ico">💻</span>Počítač</button>
+    </div>
+
+    <!-- iOS -->
+    <div class="panel" id="ios" data-active="true" role="tabpanel">
+      <div class="method best">
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <span class="pin" style="left:8px; bottom:8px">🔒</span>
+            <span class="pin" style="right:10px; bottom:8px; font-size:1.5rem">⧉</span>
+          </div>
+          <div class="cap">Přepínač oken → <b>Soukromé</b></div>
+        </div>
+        <h3>🥇 Nejjistější: otevřít v soukromém okně <span class="tag">doporučeno</span></h3>
+        <p class="muted">Soukromé okno nikdy nedrží starou verzi – vždy načte tu poslední.</p>
+        <ol class="steps">
+          <li>Otevři prohlížeč <b>Safari</b>.</li>
+          <li>Vpravo dole klepni na ikonu <b>dvou čtverečků</b> (přepínač oken) ⧉.</li>
+          <li>Dole uprostřed klepni na <b>„Soukromé“</b> a pak na <b>„+“</b>.</li>
+          <li>Do řádku s adresou vlož odkaz na hru a otevři ho.</li>
+        </ol>
+        <p class="muted" style="clear:both">Tip: odkaz na hru si můžeš zkopírovat tlačítkem níže.</p>
+      </div>
+
+      <details>
+        <summary>Nepomohlo to? Úplně vymazat paměť Safari</summary>
+        <ol class="steps">
+          <li>Otevři <b>Nastavení</b> (šedé ozubené kolo) telefonu.</li>
+          <li>Sjeď dolů na <b>Safari</b> a klepni.</li>
+          <li>Klepni na <b>„Vymazat historii a data webů“</b> a potvrď.</li>
+          <li>Vrať se do Safari a znovu otevři odkaz na hru.</li>
+        </ol>
+        <p class="muted">Pozn.: tímto se odhlásíš i z ostatních webů – proto je soukromé okno pohodlnější.</p>
+      </details>
+
+      <div class="callout">🏠 <b>Máš hru uloženou na ploše</b> jako ikonu appky? Podrž na ní prst → <b>Odebrat aplikaci</b> → a otevři odkaz znovu v Safari.</div>
+    </div>
+
+    <!-- Android -->
+    <div class="panel" id="android" role="tabpanel">
+      <div class="method best">
+        <div class="phone" aria-hidden="true">
+          <div class="scr"><span class="dots">⋮</span>
+            <span class="pin" style="right:8px; top:24px">🕵️</span>
+          </div>
+          <div class="cap">⋮ → <b>Nová anonymní karta</b></div>
+        </div>
+        <h3>🥇 Nejjistější: anonymní karta <span class="tag">doporučeno</span></h3>
+        <p class="muted">Anonymní karta nikdy nedrží starou verzi – vždy načte tu poslední.</p>
+        <ol class="steps">
+          <li>Otevři prohlížeč <b>Chrome</b>.</li>
+          <li>Vpravo nahoře klepni na <b>tři tečky ⋮</b>.</li>
+          <li>Vyber <b>„Nová anonymní karta“</b>.</li>
+          <li>Vlož odkaz na hru a otevři ho.</li>
+        </ol>
+      </div>
+
+      <div class="method">
+        <h3>⚡ Rychlá zkratka: obnovit tahem</h3>
+        <ol class="steps">
+          <li>Na stránce s hrou přejeď <b>prstem odshora dolů</b> (než začneš hrát).</li>
+          <li>Stránka se obnoví a stáhne nejnovější verzi.</li>
+        </ol>
+      </div>
+
+      <details>
+        <summary>Nepomohlo to? Vymazat mezipaměť Chromu</summary>
+        <ol class="steps">
+          <li>V Chromu klepni na <b>tři tečky ⋮</b> → <b>Historie</b>.</li>
+          <li>Klepni na <b>„Vymazat data prohlížení“</b>.</li>
+          <li>Zaškrtni <b>„Obrázky a soubory v mezipaměti“</b> (ostatní můžeš nechat).</li>
+          <li>Klepni na <b>„Vymazat data“</b> a znovu otevři odkaz na hru.</li>
+        </ol>
+      </details>
+
+      <div class="callout">🏠 <b>Máš hru uloženou na ploše</b> jako ikonu appky? Podrž na ní prst → <b>Odinstalovat / Odebrat</b> → a otevři odkaz znovu v Chromu.</div>
+    </div>
+
+    <!-- PC -->
+    <div class="panel" id="pc" role="tabpanel">
+      <div class="method best">
+        <h3>🥇 Nejrychlejší: „tvrdé obnovení“ <span class="tag">doporučeno</span></h3>
+        <p>Na stránce s hrou stiskni najednou:</p>
+        <ol class="steps">
+          <li>Windows: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></li>
+          <li>Mac: <kbd>Cmd ⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></li>
+        </ol>
+        <p class="muted">Tím se stránka načte úplně znovu, bez staré paměti.</p>
+      </div>
+
+      <div class="method">
+        <h3>🕵️ Nebo soukromé / anonymní okno</h3>
+        <ol class="steps">
+          <li>Chrome / Edge: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> (Mac: <kbd>Cmd ⌘</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>)</li>
+          <li>Firefox: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Mac: <kbd>Cmd ⌘</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>)</li>
+          <li>Safari: <kbd>Cmd ⌘</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></li>
+          <li>Do nového okna vlož odkaz na hru.</li>
+        </ol>
+      </div>
+
+      <details>
+        <summary>Nepomohlo to? Úplně vymazat mezipaměť</summary>
+        <ol class="steps">
+          <li>Stiskni <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Del</kbd> (Mac: <kbd>Cmd ⌘</kbd>+<kbd>Shift</kbd>+<kbd>Del</kbd>).</li>
+          <li>Zaškrtni <b>„Obrázky a soubory v mezipaměti“</b>.</li>
+          <li>Klepni na <b>Vymazat data</b> a znovu otevři odkaz na hru.</li>
+        </ol>
+      </details>
+    </div>
+
+    <p style="text-align:center; margin-top:18px">
+      <button class="btn ghost" type="button" id="copy-link">🔗 Zkopírovat odkaz na hru</button>
+    </p>
+  </div>
+
+  <!-- ── KROK 2: co sledovat ────────────────────────────── -->
+  <div class="card">
+    <h2><span class="num">2</span> Na co koukat při testování</h2>
+    <p>Nemusíš dělat nic odborného – prostě si hru užij a všímej si:</p>
+    <ol class="steps">
+      <li>Jde všechno ovládat, jak čekáš? (skok, skluz, pauza)</li>
+      <li>Nezaseklo se něco, nezmizel obrázek, nezněl špatně zvuk?</li>
+      <li>Bavilo tě to? Co bylo moc těžké nebo moc lehké?</li>
+      <li>Cokoli divného? Napiš mi to dole – i drobnost pomůže. 💚</li>
+    </ol>
+  </div>
+
+  <!-- ── KROK 3: feedback ───────────────────────────────── -->
+  <div class="card">
+    <h2><span class="num">3</span> Napiš nám zpětnou vazbu</h2>
+    <p class="muted">Vyplň, klepni na <b>Odeslat</b> – otevře se ti tvoje e-mailová aplikace s hotovou zprávou, jen ji potvrdíš odesláním. Přijde nám na e-mail. Nic víc. 🙂</p>
+
+    <form id="fb-form">
+      <label for="fb-name">Tvoje jméno <span class="opt">(nepovinné)</span></label>
+      <input type="text" id="fb-name" name="name" placeholder="třeba Anička">
+
+      <label for="fb-device">Na čem jsi hrál(a)?</label>
+      <select id="fb-device" name="device">
+        <option value="iPhone / iPad">iPhone / iPad</option>
+        <option value="Android telefon">Android telefon</option>
+        <option value="Android tablet">Android tablet</option>
+        <option value="Počítač (Windows)">Počítač (Windows)</option>
+        <option value="Počítač (Mac)">Počítač (Mac)</option>
+        <option value="Jiné / nevím">Jiné / nevím</option>
+      </select>
+
+      <label>Jak se ti demo líbí? <span class="opt">(nepovinné)</span></label>
+      <div class="stars" id="fb-stars" aria-label="Hodnocení hvězdičkami">
+        <button type="button" data-v="1" aria-label="1 hvězdička">⭐</button>
+        <button type="button" data-v="2" aria-label="2 hvězdičky">⭐</button>
+        <button type="button" data-v="3" aria-label="3 hvězdičky">⭐</button>
+        <button type="button" data-v="4" aria-label="4 hvězdičky">⭐</button>
+        <button type="button" data-v="5" aria-label="5 hvězdiček">⭐</button>
+      </div>
+      <input type="hidden" id="fb-rating" name="rating" value="">
+
+      <label for="fb-msg">Tvoje zpráva</label>
+      <textarea id="fb-msg" name="message" required placeholder="Co ti šlo, co ne, co tě napadlo…"></textarea>
+
+      <label for="fb-email">Tvůj e-mail <span class="opt">(nepovinné – kdybych ti chtěl odepsat)</span></label>
+      <input type="email" id="fb-email" name="email" placeholder="ty@example.cz">
+
+      <p style="margin-top:20px">
+        <button class="btn play block" type="submit">✉️ Odeslat zpětnou vazbu</button>
+      </p>
+    </form>
+
+    <div class="sent" id="fb-sent">✅ Otevřela se ti e-mailová aplikace. Zprávu prosím ještě <b>potvrď odesláním</b> – a je hotovo. Díky moc! 💚</div>
+
+    <p class="fallback">
+      Nefunguje tlačítko nebo nemáš e-mail v telefonu?<br>
+      Napiš rovnou na <a href="mailto:antoninfigueroa@nechmerust.org">antoninfigueroa@nechmerust.org</a>
+      &nbsp;<button class="btn ghost" type="button" id="copy-mail" style="padding:6px 12px; font-size:.85rem">Zkopírovat e-mail</button>
+    </p>
+  </div>
+
+  <footer>
+    Louka Run vzniká na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚<br>
+    Díky, že pomáháš hru vylepšit!
+  </footer>
+
+</div>
+
+<script>
+  // ── Přepínání zařízení (taby) ─────────────────────────
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.setAttribute('aria-selected','false'); });
+      t.setAttribute('aria-selected','true');
+      document.querySelectorAll('.panel').forEach(function(p){ p.setAttribute('data-active','false'); });
+      document.getElementById(t.dataset.target).setAttribute('data-active','true');
+    });
+  });
+
+  // předvyber tab podle zařízení
+  (function(){
+    var ua = navigator.userAgent || '';
+    var pick = null;
+    if(/iPhone|iPad|iPod/i.test(ua)) pick = 'ios';
+    else if(/Android/i.test(ua)) pick = 'android';
+    else if(!/Mobi/i.test(ua)) pick = 'pc';
+    if(pick){
+      var btn = document.querySelector('.tab[data-target="'+pick+'"]');
+      if(btn) btn.click();
+      // předvyplň i pole „na čem hraješ"
+      var sel = document.getElementById('fb-device');
+      if(pick==='ios') sel.value='iPhone / iPad';
+      else if(pick==='android') sel.value='Android telefon';
+      else if(pick==='pc') sel.value = /Macintosh|Mac OS/i.test(ua) ? 'Počítač (Mac)' : 'Počítač (Windows)';
+    }
+  })();
+
+  // ── Hvězdičky ─────────────────────────────────────────
+  var stars = document.querySelectorAll('#fb-stars button');
+  stars.forEach(function(s){
+    s.addEventListener('click', function(){
+      var v = +s.dataset.v;
+      document.getElementById('fb-rating').value = v;
+      stars.forEach(function(x){ x.classList.toggle('on', +x.dataset.v <= v); });
+    });
+  });
+
+  // ── Kopírování odkazu na hru ──────────────────────────
+  var gameUrl = new URL('./', location.href).href;
+  function copy(text, btn, done){
+    var reset = btn.textContent;
+    var ok = function(){ btn.textContent = done; setTimeout(function(){ btn.textContent = reset; }, 1800); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ window.prompt('Zkopíruj ručně:', text); });
+    } else { window.prompt('Zkopíruj ručně:', text); }
+  }
+  document.getElementById('copy-link').addEventListener('click', function(){ copy(gameUrl, this, '✅ Zkopírováno!'); });
+  document.getElementById('copy-mail').addEventListener('click', function(){ copy('antoninfigueroa@nechmerust.org', this, '✅ Zkopírováno!'); });
+
+  // ── Odeslání feedbacku e-mailem (mailto) ──────────────
+  document.getElementById('fb-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = document.getElementById('fb-name').value.trim();
+    var device = document.getElementById('fb-device').value;
+    var rating = document.getElementById('fb-rating').value;
+    var msg = document.getElementById('fb-msg').value.trim();
+    var email = document.getElementById('fb-email').value.trim();
+    if(!msg){ document.getElementById('fb-msg').focus(); return; }
+
+    var subject = 'Louka Run – zpětná vazba' + (name ? ' od: ' + name : '');
+    var lines = [
+      msg, '',
+      '— — —',
+      'Zařízení: ' + device,
+      rating ? 'Hodnocení: ' + rating + '/5' : null,
+      name ? 'Jméno: ' + name : null,
+      email ? 'Kontakt: ' + email : null,
+      'Verze stránky: ' + gameUrl
+    ].filter(Boolean);
+
+    var href = 'mailto:antoninfigueroa@nechmerust.org'
+      + '?subject=' + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(lines.join('\n'));
+
+    document.getElementById('fb-sent').style.display = 'block';
+    window.location.href = href;
+  });
+</script>
+</body>
+</html>

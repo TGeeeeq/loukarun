@@ -86,7 +86,7 @@
     flyers: [],             // zvířátka kroužící na obloze
     nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
-    bubble: null, bubbleT: 0, nextQuoteAt: 6,
+    bubble: null, bubbleT: 0, nextQuoteAt: 10,
     tut: null,              // Karlova škola běhu (tutoriál prvního běhu)
     enc: null,              // novinka na trase – první setkání s překážkou
     introFlagged: new Set(),// druhy označené k představení v tomto běhu
@@ -463,7 +463,7 @@
     S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
-    S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 6 + Math.random() * 6;
+    S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 10 + Math.random() * 8;
     S.tut = null;
     S.enc = null; S.introFlagged = new Set();
     S.special = null; S.lastSpecial = 0; S.speedAnchorX = 0;
@@ -772,7 +772,7 @@
   // tlačítko Pokračovat (nebo mezerník) – herní vstupy zatím nic nedělají
   function lessonPaused() {
     return (S.tut && S.tut.phase === 'paused') || (S.enc && !S.enc.done)
-      || (S.special && S.special.phase === 'intro');
+      || (S.special && (S.special.phase === 'intro' || S.special.phase === 'result'));
   }
 
   function continueLesson() {
@@ -796,6 +796,25 @@
       S.special.beatT = 0;
       S.special.restT = 0;
       S.special.bubble = null;
+      AUDIO.play('click');
+      return true;
+    }
+    if (S.special && S.special.phase === 'result') {
+      // po koncertu chvíli neberem potvrzení (SP.gateT), ať stray ťuk z minihry
+      // výsledek hned nezruší; vstup zatím spolkneme (return true = žádný skok)
+      if (S.special.gateT > 0) return true;
+      // hráč si přečetl výsledek koncertu – svět se zase rozjede, bublina zhasne
+      const SP = S.special;
+      SP.phase = 'done';
+      SP.target = 1;
+      SP.resultT = 1.0; // krátké doznění, pak se scéna vrátí k běžné hře
+      if (SP.won) {
+        // oslavu spustíme až teď, ať částice hrají za rozjezdu (ne zmrazené přes bublinu)
+        floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
+        burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
+        burst(playerX(), groundY - S.py - 120, '#7ad0ff', 22);
+        S.shake = 0.6;
+      }
       AUDIO.play('click');
       return true;
     }
@@ -899,7 +918,8 @@
     const k = SP.target < SP.scale ? ENC.easeIn : ENC.easeOut;
     SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
-    SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    SP.bubbleA += (((SP.phase === 'intro' || SP.phase === 'result') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    if (SP.phase === 'result' && SP.gateT > 0) SP.gateT = Math.max(0, SP.gateT - dt);
     if (SP.beatFlash > 0) SP.beatFlash = Math.max(0, SP.beatFlash - dt);
     else if (SP.beatFlash < 0) SP.beatFlash = Math.min(0, SP.beatFlash + dt);
 
@@ -940,10 +960,17 @@
 
   function resolveSpecial(win) {
     const SP = S.special;
-    SP.phase = 'done';
-    SP.resultT = 2.4;
+    // výsledek koncertu: svět zůstane zmrazený a zvířátko v bublině řekne, jak
+    // koncert dopadl a co dostalo. Dál se rozběhne až po ťuknutí na Pokračovat
+    // (jako v tutoriálu) – hláška se tak nestihne ztratit dřív, než ji hráč přečte.
+    SP.phase = 'result';
     SP.won = win;
-    SP.target = 1; // svět se zase rozjede
+    SP.target = 0; // svět stojí, dokud hráč nepotvrdí
+    // krátká pojistka: hráč u minihry zběsile ťuká, a tlačítko Pokračovat
+    // vyskočí přesně tam, kam ťuká – bez téhle prodlevy by ho stray ťuk hned
+    // zmáčkl a výsledek by problikl. Tlačítko se proto ukáže a potvrzení začne
+    // brát až po gateT (viz syncContinueBtn a continueLesson).
+    SP.gateT = 0.7;
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
     if (win) {
@@ -952,18 +979,14 @@
       S.energy = 100;
       S.ramLeft = S.stats?.ram || 0; // Yakulovi se doplní i náboje beranidla
       S.coinsRun += ECONOMY.concertCoins;
-      floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
-      burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
-      burst(playerX(), groundY - S.py - 120, '#7ad0ff', 22);
-      S.shake = 0.6;
-      sayBubble(randomQuote(EVENTS.concertWin));
+      SP.bubble = pickOne(EVENTS.concertWin);
       AUDIO.play('golden');
     } else {
       // propadák – rychlost se nevynuluje, jen se nastřádané zrychlení zkrátí na půl
       const keep = extra * 0.5;
       S.speedAnchorX = S.worldX - (keep / 0.15) * PX_PER_M; // 0.15 = koeficient rampy (viz níže)
+      SP.bubble = pickOne(EVENTS.concertMiss);
       AUDIO.play('laugh');
-      sayBubble(randomQuote(EVENTS.concertMiss));
     }
     // běžné spawnery se znovu nahodí kus za obrazovkou
     S.nextObstacleX = S.worldX + W + 600;
@@ -974,7 +997,10 @@
   let contBtn = null;
   function syncContinueBtn() {
     if (!contBtn) contBtn = document.getElementById('btn-tut-continue');
-    const show = S.mode === 'run' && lessonPaused();
+    // po koncertu tlačítko chvíli schováme (gateT), ať ho ťukání z minihry
+    // omylem hned nezmáčkne – svět je i tak zmrazený a hláška zatím naběhne
+    const gated = S.special && S.special.phase === 'result' && S.special.gateT > 0;
+    const show = S.mode === 'run' && lessonPaused() && !gated;
     if (contBtn.hidden !== !show) contBtn.hidden = !show;
   }
 
@@ -1040,7 +1066,7 @@
     // ostrý běh začíná s plnou energií – škola běhu není test výdrže
     S.energy = 100;
     S.saidLowEnergy = false;
-    S.nextQuoteAt = 8 + Math.random() * 6; // běžné hlášky až po chvilce
+    S.nextQuoteAt = 12 + Math.random() * 6; // běžné hlášky až po chvilce
   }
 
   /* =========================================================
@@ -1220,14 +1246,9 @@
           S.particles.push({ x: f.sx, y: f.sy + 6, vx: -30, vy: 35, r: 3, life: 4, a: 0.85, sway: Math.random() * 6, c: '#f5f2ea' });
         }
       }
-      // jednou za přelet něco vesele zavolá (ve škole běhu mlčí,
-      // aby nepřekřikoval Karlovy lekce)
-      if (!f.said && running && !S.tut && !S.enc && f.sx > W * 0.3 && f.sx < W * 0.85) {
-        f.said = true;
-        if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
-          S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
-        }
-      }
+      // hlášky letců (ptáků) jsou vypnuté – na malém displeji zbytečně
+      // překážely ve výhledu; mluví jen sám běžec
+      if (!f.said && running && f.sx > W * 0.85) f.said = true;
     }
   }
 
@@ -1290,11 +1311,12 @@
 
   function sayBubble(text) {
     S.bubble = text;
-    S.bubbleT = 4.2;
+    S.bubbleT = 3.0; // kratší zobrazení, ať hláška méně překáží
     AUDIO.play('quote');
   }
   // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
-  function randomQuote(list) { return I18N.pick(list[Math.floor(Math.random() * list.length)]); }
+  function pickOne(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function randomQuote(list) { return I18N.pick(pickOne(list)); }
 
   /* =========================================================
      UPDATE
@@ -1326,7 +1348,7 @@
     // koncert: během popisu i samotné rytmické výzvy je svět zmrazený (jen pódium)
     if (S.special && running && !S.tut) {
       updateSpecial(dt);
-      if (S.special && (S.special.phase === 'intro' || S.special.phase === 'challenge')) dt *= S.special.scale;
+      if (S.special && (S.special.phase === 'intro' || S.special.phase === 'challenge' || S.special.phase === 'result')) dt *= S.special.scale;
     }
 
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
@@ -1587,7 +1609,7 @@
     S.nextQuoteAt -= dt;
     if (S.nextQuoteAt <= 0 && S.bubbleT <= 0) {
       sayBubble(randomQuote(S.char.quotes));
-      S.nextQuoteAt = 11 + Math.random() * 8;
+      S.nextQuoteAt = 16 + Math.random() * 10;
     }
     const dist = Math.floor(S.worldX / PX_PER_M);
     if (dist - S.lastMilestone >= 500) {
@@ -1602,6 +1624,10 @@
   // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
   const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
+    // Hlášky lidí v pozadí (Tomáš, Tony, Maruška) jsou vypnuté – během běhu
+    // jich bylo moc a na malém displeji překážely. Mluví jen sám běžec.
+    return;
+    // eslint-disable-next-line no-unreachable
     // ve škole běhu má slovo jen Karel – lidé zafandí až po ní;
     // a do představování novinky ani k vznešenému květu jim nic není
     if (S.tut || S.enc || S.special) return;
@@ -1729,7 +1755,7 @@
     }
 
     // pódium a časovací lišta koncertu (kreslí se přes zmrazenou scénu)
-    if (S.special && (S.special.phase === 'challenge' || S.special.phase === 'done')) {
+    if (S.special && S.special.phase === 'challenge') {
       drawConcert(S.special, px);
     }
 
@@ -1773,7 +1799,7 @@
         // během hraní koncertu (přílet, popis, výzva) žádná hláška nezakrývá lištu;
         // výsledková hláška ve fázi 'done' se ukázat smí
         && !(S.special && S.special.phase !== 'done')) {
-      drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
+      drawBubble(px + 10, groundY - S.py - 160, S.bubble, Math.min(1, S.bubbleT * 3));
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
       // u představení lidí je bublina výš, ať Karel nezakrývá ty tři, o kterých mluví
@@ -1997,24 +2023,25 @@
   function drawBubble(x, y, text, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.font = '700 23px "Baloo 2", sans-serif';
-    const w = Math.min(ctx.measureText(text).width + 40, W - 40);
+    // menší a plošší bublina, ať na malém displeji nepřekáží ve výhledu
+    ctx.font = '700 19px "Baloo 2", sans-serif';
+    const w = Math.min(ctx.measureText(text).width + 32, W - 40);
     const bx = Math.min(Math.max(x - w / 2, 10), W - w - 10);
-    const by = y - 60;
+    const by = y - 52;
     // ostrý stín posunutou siluetou místo shadowBlur – rychlejší a bublina se nechvěje
     ctx.fillStyle = 'rgba(0,0,0,0.14)';
-    GFX.rr(ctx, bx + 2, by + 4, w, 50, 24);
+    GFX.rr(ctx, bx + 2, by + 3, w, 42, 21);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    GFX.rr(ctx, bx, by, w, 50, 24);
+    GFX.rr(ctx, bx, by, w, 42, 21);
     ctx.fill();
     // ocásek bubliny
     ctx.beginPath();
-    ctx.moveTo(x - 7, by + 49); ctx.lineTo(x + 12, by + 49); ctx.lineTo(x, by + 68);
+    ctx.moveTo(x - 6, by + 41); ctx.lineTo(x + 10, by + 41); ctx.lineTo(x, by + 57);
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
-    ctx.fillText(text, bx + w / 2, by + 33, w - 26);
+    ctx.fillText(text, bx + w / 2, by + 28, w - 22);
     ctx.restore();
   }
 
