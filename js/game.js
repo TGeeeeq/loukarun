@@ -629,32 +629,47 @@
 
   function spawnPickups() {
     const x0 = S.nextPickupX;
+    const distM = S.worldX / PX_PER_M;
+    // S ujetou vzdáleností ubývá energie čím dál rychleji (viz ECONOMY.drainRampDist
+    // a stupňující se tempo po 5 km). Aby po 5 km nezačalo mrkví „docházet“, roste
+    // úměrně i jejich přísun: fuel jde od 0 na startu k 1 od 5 km výš a přelévá
+    // pravděpodobnosti i množství ve prospěch mrkví a zlatých mrkví.
+    const fuel = Math.min(1, distM / 5000);
     const roll = Math.random();
     let width = 0;
 
-    if (roll < 0.30) {
-      // mrkve ve vzduchu – musí se pro ně skočit
-      const n = 2 + (Math.random() < 0.5 ? 1 : 0);
+    // kumulativní prahy – dál v běhu je víc mrkví i zlatých mrkví a míň prázdných
+    // mincových řad, takže palivo drží krok s rychleji ubývající energií
+    const tAirCarrot    = 0.30 + 0.08 * fuel;                 // vzdušné mrkve
+    const tCoinArc      = tAirCarrot + 0.22 - 0.06 * fuel;    // oblouk mincí
+    const tGroundCarrot = tCoinArc + 0.15 + 0.06 * fuel;      // pozemní mrkve
+    const tGolden       = tGroundCarrot + 0.07 + 0.06 * fuel; // ZLATÁ MRKEV – dál v běhu častěji
+    const tClover       = tGolden + 0.05;                     // čtyřlístek
+    // zbytek do 1.0 = řádka pozemních mincí
+
+    if (roll < tAirCarrot) {
+      // mrkve ve vzduchu – musí se pro ně skočit; dál v běhu je jich v řadě víc
+      const n = 2 + (Math.random() < 0.5 ? 1 : 0) + (Math.random() < fuel ? 1 : 0);
       const h = 95 + Math.random() * 40;
       for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: h + i * 6 });
       width = n * 46;
-    } else if (roll < 0.60) {
+    } else if (roll < tCoinArc) {
       // oblouk mincí ve vzduchu
       const n = 5;
       for (let i = 0; i < n; i++) {
         S.pickups.push({ kind: 'coin', x: x0 + i * 40, h: 60 + Math.sin(i / (n - 1) * Math.PI) * 70 });
       }
       width = n * 40;
-    } else if (roll < 0.75) {
-      // krátká řada mrkví na zemi (vzácná odměna zadarmo)
-      const n = 2;
+    } else if (roll < tGroundCarrot) {
+      // krátká řada mrkví na zemi (odměna zadarmo); dál v běhu delší
+      const n = 2 + (Math.random() < fuel ? 1 : 0);
       for (let i = 0; i < n; i++) S.pickups.push({ kind: 'carrot', x: x0 + i * 46, h: 26 });
       width = n * 46;
-    } else if (roll < 0.82) {
+    } else if (roll < tGolden) {
       // ZLATÁ MRKEV – vysoko, chce to dvojskok
       S.pickups.push({ kind: 'golden', x: x0, h: 130 });
       width = 40;
-    } else if (roll < 0.87) {
+    } else if (roll < tClover) {
       // ČTYŘLÍSTEK PRO ŠTĚSTÍ – vzácný, chvíli po něm platí mince dvojnásob
       S.pickups.push({ kind: 'clover', x: x0, h: 105 + Math.random() * 30 });
       width = 40;
@@ -668,9 +683,11 @@
     for (const o of S.obstacles) {
       if (!o.broken && o.x + o.w / 2 + 60 > x0 && o.x - o.w / 2 - 60 < x0 + width) resolvePickupConflicts(o);
     }
-    // rozestup svačin je konstantní po celý běh – mrkví, mincí ani zlatých
-    // mrkví neubývá s ujetou vzdáleností (energie ubývá, tak ať je čím doplňovat)
-    S.nextPickupX = x0 + width + 470 + Math.random() * 430;
+    // rozestup svačin se s ujetou vzdáleností zkracuje (až o 30 %), takže mrkví,
+    // mincí i zlatých mrkví s délkou běhu spíš přibývá – přísun je neustálý a
+    // roste stejně jako spotřeba energie (energie ubývá, tak ať je čím doplňovat)
+    const gap = (470 + Math.random() * 430) * (1 - 0.30 * fuel);
+    S.nextPickupX = x0 + width + gap;
   }
 
   /* =========================================================
@@ -1453,7 +1470,12 @@
       // energie – ubývá rychleji s tempem i vzdáleností, ať běh nemůže trvat věčně
       const distM = S.worldX / PX_PER_M;
       const speedFactor = Math.max(0, (S.speed - S.baseSpeed) / 400);
-      const ramp = 1 + speedFactor * 0.45 + distM / ECONOMY.drainRampDist;
+      // odčerpávání sílí s tempem i vzdáleností, ale člen za vzdálenost se
+      // zastropuje – jinak by po 5 km energie padala tak rychle, že ji přísun
+      // mrkví nedožene. Se zastropovaným poklesem drží běh naživu dovednost
+      // (uhýbání a sbírání), ne nedostatek paliva.
+      const distRamp = Math.min(2, distM / ECONOMY.drainRampDist);
+      const ramp = 1 + speedFactor * 0.45 + distRamp;
       // God Mode (vývojářský režim): energie nikdy neubývá, běh se nedá ukončit
       if (dev.god) {
         S.energy = 100;
