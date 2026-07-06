@@ -800,6 +800,9 @@
       return true;
     }
     if (S.special && S.special.phase === 'result') {
+      // po koncertu chvíli neberem potvrzení (SP.gateT), ať stray ťuk z minihry
+      // výsledek hned nezruší; vstup zatím spolkneme (return true = žádný skok)
+      if (S.special.gateT > 0) return true;
       // hráč si přečetl výsledek koncertu – svět se zase rozjede, bublina zhasne
       const SP = S.special;
       SP.phase = 'done';
@@ -916,6 +919,7 @@
     SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
     SP.bubbleA += (((SP.phase === 'intro' || SP.phase === 'result') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    if (SP.phase === 'result' && SP.gateT > 0) SP.gateT = Math.max(0, SP.gateT - dt);
     if (SP.beatFlash > 0) SP.beatFlash = Math.max(0, SP.beatFlash - dt);
     else if (SP.beatFlash < 0) SP.beatFlash = Math.min(0, SP.beatFlash + dt);
 
@@ -962,6 +966,11 @@
     SP.phase = 'result';
     SP.won = win;
     SP.target = 0; // svět stojí, dokud hráč nepotvrdí
+    // krátká pojistka: hráč u minihry zběsile ťuká, a tlačítko Pokračovat
+    // vyskočí přesně tam, kam ťuká – bez téhle prodlevy by ho stray ťuk hned
+    // zmáčkl a výsledek by problikl. Tlačítko se proto ukáže a potvrzení začne
+    // brát až po gateT (viz syncContinueBtn a continueLesson).
+    SP.gateT = 0.7;
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
     if (win) {
@@ -988,7 +997,10 @@
   let contBtn = null;
   function syncContinueBtn() {
     if (!contBtn) contBtn = document.getElementById('btn-tut-continue');
-    const show = S.mode === 'run' && lessonPaused();
+    // po koncertu tlačítko chvíli schováme (gateT), ať ho ťukání z minihry
+    // omylem hned nezmáčkne – svět je i tak zmrazený a hláška zatím naběhne
+    const gated = S.special && S.special.phase === 'result' && S.special.gateT > 0;
+    const show = S.mode === 'run' && lessonPaused() && !gated;
     if (contBtn.hidden !== !show) contBtn.hidden = !show;
   }
 
