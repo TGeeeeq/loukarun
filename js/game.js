@@ -103,6 +103,16 @@
 
   const PX_PER_M = 42;
   const GRAVITY = 2600;
+
+  // Na užším displeji urazí překážka kratší dráhu, než dorazí k běžci, takže
+  // při stejné rychlosti zbývá míň času na reakci (na malých telefonech to
+  // je „strašně rychlé“). Zpomalíme proto celý svět úměrně šířce plátna –
+  // na telefonu běží o něco klidněji a čas na reakci zůstává hratelný jako
+  // na širokém displeji. Na širokém plátně (≥ 760 px) se nemění vůbec nic.
+  const SPEED_REF_W = 760;
+  function worldSpeedScale() {
+    return Math.max(0.72, Math.min(1, W / SPEED_REF_W));
+  }
   // pozadí se posouvá pomaleji než pěšina – kulisy jsou déle na očích,
   // takže si hráč stihne přečíst cedule a všimnout si vtípků
   const FAR_PARALLAX = 0.45;
@@ -594,11 +604,12 @@
     resolvePickupConflicts(o);
 
     // mezera podle rychlosti – s ujetou vzdáleností se zmenšuje,
-    // prvních pár set metrů je naopak vzdušnějších
-    const tighten = Math.max(0.6, 1 - distM / 4000);
-    const easyGap = 1 + 0.35 * Math.max(0, 1 - distM / 800);
-    const reaction = S.speed * (1.0 + Math.random() * 0.9) * tighten * easyGap;
-    S.nextObstacleX += Math.max(380, reaction);
+    // prvních pár set metrů je naopak vzdušnějších. Rozestupy držíme
+    // vzdušnější, ať zbývá víc času na reakci a hra není jen samé skákání.
+    const tighten = Math.max(0.72, 1 - distM / 4000);
+    const easyGap = 1 + 0.45 * Math.max(0, 1 - distM / 800);
+    const reaction = S.speed * (1.25 + Math.random() * 0.95) * tighten * easyGap;
+    S.nextObstacleX += Math.max(470, reaction);
   }
 
   // itemy nesmí ležet „v“ překážce, kde by nešly sebrat: pozemní se
@@ -1010,6 +1021,14 @@
     return f.human ? (f.x - S.worldX) * FAR_PARALLAX + px : (f.x - S.worldX + px);
   }
 
+  // Na úzkém displeji zastavíme novinku víc vpravo, ať po kliknutí na
+  // Pokračovat zbývá delší dráha (= víc času), než doběhne k běžci.
+  // Na širokém plátně zůstává původní hodnota (TUTORIAL.triggerX).
+  function tutTriggerX() {
+    const t = Math.max(0, Math.min(1, (760 - W) / (760 - 420)));
+    return TUTORIAL.triggerX + t * (0.82 - TUTORIAL.triggerX);
+  }
+
   // tiká reálným (neškálovaným) dt – zastavený svět nesmí zastavit i skript
   function updateTutorial(dt) {
     const T = S.tut;
@@ -1032,7 +1051,7 @@
     } else if (T.phase === 'approach') {
       const sx = focusScreenX(T.focus, px);
       // lidi Karel dobíhá dál, ať zastaví s odstupem a bublina nezakrývá Tomáše
-      const trig = T.focus.human ? 0.64 : TUTORIAL.triggerX;
+      const trig = T.focus.human ? 0.64 : tutTriggerX();
       if (sx < W * trig) enterPause(TUTORIAL.steps[T.idx]);
     } else if (T.phase === 'cooldown') {
       const passed = !T.focus
@@ -1354,7 +1373,7 @@
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
     syncContinueBtn();
 
-    const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * (running ? dev.speed : 1);
+    const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * (running ? dev.speed : 1) * worldSpeedScale();
 
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
     // rozjezd se měří od kotvy speedAnchorX (po výhře v koncertu se resetuje = běží zas pomalu)
