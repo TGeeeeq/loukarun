@@ -86,7 +86,7 @@
     flyers: [],             // zvířátka kroužící na obloze
     nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
-    bubble: null, bubbleT: 0, nextQuoteAt: 6,
+    bubble: null, bubbleT: 0, nextQuoteAt: 10,
     tut: null,              // Karlova škola běhu (tutoriál prvního běhu)
     enc: null,              // novinka na trase – první setkání s překážkou
     introFlagged: new Set(),// druhy označené k představení v tomto běhu
@@ -463,7 +463,7 @@
     S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
-    S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 6 + Math.random() * 6;
+    S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 10 + Math.random() * 8;
     S.tut = null;
     S.enc = null; S.introFlagged = new Set();
     S.special = null; S.lastSpecial = 0; S.speedAnchorX = 0;
@@ -1040,7 +1040,7 @@
     // ostrý běh začíná s plnou energií – škola běhu není test výdrže
     S.energy = 100;
     S.saidLowEnergy = false;
-    S.nextQuoteAt = 8 + Math.random() * 6; // běžné hlášky až po chvilce
+    S.nextQuoteAt = 12 + Math.random() * 6; // běžné hlášky až po chvilce
   }
 
   /* =========================================================
@@ -1220,14 +1220,9 @@
           S.particles.push({ x: f.sx, y: f.sy + 6, vx: -30, vy: 35, r: 3, life: 4, a: 0.85, sway: Math.random() * 6, c: '#f5f2ea' });
         }
       }
-      // jednou za přelet něco vesele zavolá (ve škole běhu mlčí,
-      // aby nepřekřikoval Karlovy lekce)
-      if (!f.said && running && !S.tut && !S.enc && f.sx > W * 0.3 && f.sx < W * 0.85) {
-        f.said = true;
-        if (Math.random() < 0.45 && S.sideBubbles.length < 2) {
-          S.sideBubbles.push({ txt: randomQuote(EVENTS.flyer[f.type]), t: 0, dur: 3, flyer: f });
-        }
-      }
+      // hlášky letců (ptáků) jsou vypnuté – na malém displeji zbytečně
+      // překážely ve výhledu; mluví jen sám běžec
+      if (!f.said && running && f.sx > W * 0.85) f.said = true;
     }
   }
 
@@ -1290,7 +1285,7 @@
 
   function sayBubble(text) {
     S.bubble = text;
-    S.bubbleT = 4.2;
+    S.bubbleT = 3.0; // kratší zobrazení, ať hláška méně překáží
     AUDIO.play('quote');
   }
   // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
@@ -1587,7 +1582,7 @@
     S.nextQuoteAt -= dt;
     if (S.nextQuoteAt <= 0 && S.bubbleT <= 0) {
       sayBubble(randomQuote(S.char.quotes));
-      S.nextQuoteAt = 11 + Math.random() * 8;
+      S.nextQuoteAt = 16 + Math.random() * 10;
     }
     const dist = Math.floor(S.worldX / PX_PER_M);
     if (dist - S.lastMilestone >= 500) {
@@ -1602,6 +1597,10 @@
   // lidé v pozadí na běžce vesele zavolají, když kolem nich probíhá
   const lastHumanQuote = {}; // aby nikdo neopakoval stejnou hlášku dvakrát po sobě
   function humanQuotes() {
+    // Hlášky lidí v pozadí (Tomáš, Tony, Maruška) jsou vypnuté – během běhu
+    // jich bylo moc a na malém displeji překážely. Mluví jen sám běžec.
+    return;
+    // eslint-disable-next-line no-unreachable
     // ve škole běhu má slovo jen Karel – lidé zafandí až po ní;
     // a do představování novinky ani k vznešenému květu jim nic není
     if (S.tut || S.enc || S.special) return;
@@ -1773,7 +1772,7 @@
         // během hraní koncertu (přílet, popis, výzva) žádná hláška nezakrývá lištu;
         // výsledková hláška ve fázi 'done' se ukázat smí
         && !(S.special && S.special.phase !== 'done')) {
-      drawBubble(px + 10, groundY - S.py - 134, S.bubble, Math.min(1, S.bubbleT * 3));
+      drawBubble(px + 10, groundY - S.py - 160, S.bubble, Math.min(1, S.bubbleT * 3));
     }
     if (S.tut && S.tut.bubbleA > 0.02 && S.tut.bubble && S.mode === 'run') {
       // u představení lidí je bublina výš, ať Karel nezakrývá ty tři, o kterých mluví
@@ -1997,24 +1996,25 @@
   function drawBubble(x, y, text, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.font = '700 23px "Baloo 2", sans-serif';
-    const w = Math.min(ctx.measureText(text).width + 40, W - 40);
+    // menší a plošší bublina, ať na malém displeji nepřekáží ve výhledu
+    ctx.font = '700 19px "Baloo 2", sans-serif';
+    const w = Math.min(ctx.measureText(text).width + 32, W - 40);
     const bx = Math.min(Math.max(x - w / 2, 10), W - w - 10);
-    const by = y - 60;
+    const by = y - 52;
     // ostrý stín posunutou siluetou místo shadowBlur – rychlejší a bublina se nechvěje
     ctx.fillStyle = 'rgba(0,0,0,0.14)';
-    GFX.rr(ctx, bx + 2, by + 4, w, 50, 24);
+    GFX.rr(ctx, bx + 2, by + 3, w, 42, 21);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    GFX.rr(ctx, bx, by, w, 50, 24);
+    GFX.rr(ctx, bx, by, w, 42, 21);
     ctx.fill();
     // ocásek bubliny
     ctx.beginPath();
-    ctx.moveTo(x - 7, by + 49); ctx.lineTo(x + 12, by + 49); ctx.lineTo(x, by + 68);
+    ctx.moveTo(x - 6, by + 41); ctx.lineTo(x + 10, by + 41); ctx.lineTo(x, by + 57);
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#3a3230';
     ctx.textAlign = 'center';
-    ctx.fillText(text, bx + w / 2, by + 33, w - 26);
+    ctx.fillText(text, bx + w / 2, by + 28, w - 22);
     ctx.restore();
   }
 
