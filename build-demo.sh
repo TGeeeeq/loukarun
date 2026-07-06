@@ -16,6 +16,9 @@ mkdir -p "$OUT"
 # sdílené soubory hry (jeden zdroj pravdy – nic se needuplikuje v gitu)
 cp -r js assets style.css sw.js soukromi.html "$OUT"/
 
+# návod pro testery (jak mít nejnovější verzi + formulář na zpětnou vazbu)
+cp jak-testovat.html "$OUT"/
+
 # z kořenového index.html vyrobí demo variantu (+ přepínač, odznak, manifest)
 node tools/make-demo.mjs . "$OUT"
 
