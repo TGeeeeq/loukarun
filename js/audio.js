@@ -126,27 +126,14 @@ const AUDIO = (() => {
   let active = 0;
   let currentTrack = null;
 
-  // hlasitost přehrávače: iOS/WebKit ignoruje zápis do el.volume, proto ji
-  // řídíme přes WebAudio GainNode (funguje všude). Skutečnou hodnotu držíme
-  // v el._vol, ať se dá spolehlivě číst i tam, kde by el.volume lhal.
+  // hlasitost přehrávače držíme v JS (el._vol = zdroj pravdy) a zapisujeme do
+  // el.volume. Na Androidu/desktopu se hlasitost skutečně mění (plynulé
+  // prolnutí); iOS/WebKit zápis do el.volume ignoruje, ale to nevadí –
+  // rozhodnutí „doznělo, zastav“ se řídí podle el._vol (viz musicTick), takže
+  // odcházející stopa se spolehlivě zastaví i tam a nehraje přes novou.
   function setVol(el, v) {
     el._vol = v;
-    if (el._gain) el._gain.gain.value = v; // element hraje naplno, hlasitost řídí gain
-    else el.volume = v;                    // fallback bez WebAudio (staré prohlížeče)
-  }
-
-  // napojí přehrávač do WebAudio grafu (idempotentní). createMediaElementSource
-  // jde na elementu zavolat jen jednou → chráníme příznakem el._gain.
-  function attachGraph(el) {
-    if (el._gain || !ensureCtx()) return;
-    try {
-      const node = ctx.createMediaElementSource(el);
-      const g = ctx.createGain();
-      g.gain.value = el._vol || 0;
-      node.connect(g); g.connect(ctx.destination);
-      el._gain = g;
-      el.volume = 1; // od teď hlasitost řídí gain; element musí hrát naplno
-    } catch (e) { /* už napojený / nepodporováno – zůstane u el.volume */ }
+    el.volume = v;
   }
 
   function makePlayer() {
@@ -165,8 +152,6 @@ const AUDIO = (() => {
   function ensurePlayers() {
     if (players) return;
     players = [makePlayer(), makePlayer()];
-    ensureCtx();
-    players.forEach(attachGraph);
     setInterval(musicTick, TICK_MS);
   }
 
@@ -178,7 +163,7 @@ const AUDIO = (() => {
       if (el._vol < el._target) setVol(el, Math.min(el._target, el._vol + step));
       else if (el._vol > el._target) {
         setVol(el, Math.max(el._target, el._vol - step));
-        if (el._vol === 0 && !el.paused) el.pause();
+        if (el._vol <= 0 && !el.paused) el.pause();
       }
     }
     // blíží se konec aktivní skladby → prolnout do jejího vlastního začátku
@@ -196,7 +181,6 @@ const AUDIO = (() => {
     from._fade = fade;
     active = 1 - active;
     const to = players[active];
-    attachGraph(to); // zajistí WebAudio cestu, jakmile je kontext k dispozici
     if (to._src !== src) { to._src = src; to.src = src; }
     else { try { to.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ } }
     to._target = MUSIC_VOL;
@@ -237,8 +221,7 @@ const AUDIO = (() => {
 
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
-    ensureCtx(); // probudí i WebAudio pro zvukové efekty
-    if (players) players.forEach(attachGraph); // dožene napojení, když kontext chyběl dřív
+    ensureCtx(); // probudí WebAudio pro zvukové efekty (hudba jede přes <audio>)
     if (!musicEnabled || !lastKey) return;
     if (players && currentTrack && players[active].paused) {
       players[active].play().catch(() => {});
