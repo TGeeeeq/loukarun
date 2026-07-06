@@ -772,7 +772,7 @@
   // tlačítko Pokračovat (nebo mezerník) – herní vstupy zatím nic nedělají
   function lessonPaused() {
     return (S.tut && S.tut.phase === 'paused') || (S.enc && !S.enc.done)
-      || (S.special && S.special.phase === 'intro');
+      || (S.special && (S.special.phase === 'intro' || S.special.phase === 'result'));
   }
 
   function continueLesson() {
@@ -796,6 +796,22 @@
       S.special.beatT = 0;
       S.special.restT = 0;
       S.special.bubble = null;
+      AUDIO.play('click');
+      return true;
+    }
+    if (S.special && S.special.phase === 'result') {
+      // hráč si přečetl výsledek koncertu – svět se zase rozjede, bublina zhasne
+      const SP = S.special;
+      SP.phase = 'done';
+      SP.target = 1;
+      SP.resultT = 1.0; // krátké doznění, pak se scéna vrátí k běžné hře
+      if (SP.won) {
+        // oslavu spustíme až teď, ať částice hrají za rozjezdu (ne zmrazené přes bublinu)
+        floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
+        burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
+        burst(playerX(), groundY - S.py - 120, '#7ad0ff', 22);
+        S.shake = 0.6;
+      }
       AUDIO.play('click');
       return true;
     }
@@ -899,7 +915,7 @@
     const k = SP.target < SP.scale ? ENC.easeIn : ENC.easeOut;
     SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
-    SP.bubbleA += (((SP.phase === 'intro') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    SP.bubbleA += (((SP.phase === 'intro' || SP.phase === 'result') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
     if (SP.beatFlash > 0) SP.beatFlash = Math.max(0, SP.beatFlash - dt);
     else if (SP.beatFlash < 0) SP.beatFlash = Math.min(0, SP.beatFlash + dt);
 
@@ -940,10 +956,12 @@
 
   function resolveSpecial(win) {
     const SP = S.special;
-    SP.phase = 'done';
-    SP.resultT = 2.4;
+    // výsledek koncertu: svět zůstane zmrazený a zvířátko v bublině řekne, jak
+    // koncert dopadl a co dostalo. Dál se rozběhne až po ťuknutí na Pokračovat
+    // (jako v tutoriálu) – hláška se tak nestihne ztratit dřív, než ji hráč přečte.
+    SP.phase = 'result';
     SP.won = win;
-    SP.target = 1; // svět se zase rozjede
+    SP.target = 0; // svět stojí, dokud hráč nepotvrdí
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
     if (win) {
@@ -952,18 +970,14 @@
       S.energy = 100;
       S.ramLeft = S.stats?.ram || 0; // Yakulovi se doplní i náboje beranidla
       S.coinsRun += ECONOMY.concertCoins;
-      floater(I18N.t('fl.concert', { n: 100 }), playerX(), groundY - S.py - 150, '#ff7ad0');
-      burst(playerX(), groundY - S.py - 120, '#ffe14a', 30);
-      burst(playerX(), groundY - S.py - 120, '#7ad0ff', 22);
-      S.shake = 0.6;
-      sayBubble(randomQuote(EVENTS.concertWin));
+      SP.bubble = pickOne(EVENTS.concertWin);
       AUDIO.play('golden');
     } else {
       // propadák – rychlost se nevynuluje, jen se nastřádané zrychlení zkrátí na půl
       const keep = extra * 0.5;
       S.speedAnchorX = S.worldX - (keep / 0.15) * PX_PER_M; // 0.15 = koeficient rampy (viz níže)
+      SP.bubble = pickOne(EVENTS.concertMiss);
       AUDIO.play('laugh');
-      sayBubble(randomQuote(EVENTS.concertMiss));
     }
     // běžné spawnery se znovu nahodí kus za obrazovkou
     S.nextObstacleX = S.worldX + W + 600;
@@ -1289,7 +1303,8 @@
     AUDIO.play('quote');
   }
   // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
-  function randomQuote(list) { return I18N.pick(list[Math.floor(Math.random() * list.length)]); }
+  function pickOne(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function randomQuote(list) { return I18N.pick(pickOne(list)); }
 
   /* =========================================================
      UPDATE
@@ -1321,7 +1336,7 @@
     // koncert: během popisu i samotné rytmické výzvy je svět zmrazený (jen pódium)
     if (S.special && running && !S.tut) {
       updateSpecial(dt);
-      if (S.special && (S.special.phase === 'intro' || S.special.phase === 'challenge')) dt *= S.special.scale;
+      if (S.special && (S.special.phase === 'intro' || S.special.phase === 'challenge' || S.special.phase === 'result')) dt *= S.special.scale;
     }
 
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
@@ -1728,7 +1743,7 @@
     }
 
     // pódium a časovací lišta koncertu (kreslí se přes zmrazenou scénu)
-    if (S.special && (S.special.phase === 'challenge' || S.special.phase === 'done')) {
+    if (S.special && S.special.phase === 'challenge') {
       drawConcert(S.special, px);
     }
 
