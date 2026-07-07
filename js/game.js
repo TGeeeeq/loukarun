@@ -41,7 +41,12 @@
     } catch (e) { /* poškozený záznam – začneme znovu */ }
     return { coins: 0, unlocked: ['karel'], selected: 'karel', best: 0, runs: 0, sfx: true, music: true, tutorialDone: false };
   }
-  function persist() { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
+  // zápis nesmí shodit běh: na iPhonu (anonymní režim / plné úložiště) umí
+  // localStorage.setItem vyhodit výjimku – jinak by spadl konec běhu ještě
+  // před přidělením odznaků (achievementů) a nezapsaly by se ani mince/rekord
+  function persist() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* úložiště nedostupné – postup zůstane aspoň v paměti do konce sezení */ }
+  }
 
   /* ---------- vývojářský (testovací) režim ----------
      Skryté menu pro pořádné testování hry – přepínače se drží ve

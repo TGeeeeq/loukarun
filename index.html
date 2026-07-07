@@ -9,6 +9,13 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <!-- iPhone Safari fullscreen API nemá – naplno jde hra jen po „Přidat na plochu“.
+       Tyto značky zařídí, že spuštění z ikony na ploše poběží bez lišt Safari
+       (iOS ignoruje display:fullscreen z manifestu a řídí se těmito značkami). -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Louka Run">
   <!-- písmo hostujeme sami (žádné požadavky na Google = žádné starosti s GDPR) -->
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
