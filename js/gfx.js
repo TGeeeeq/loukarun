@@ -621,6 +621,116 @@ const GFX = (() => {
       ctx.strokeStyle = '#6ea24a'; ctx.lineWidth = 2 * s;
       ctx.beginPath(); ctx.moveTo(-40 * s, -2 * s); ctx.lineTo(-42 * s, -10 * s); ctx.moveTo(-36 * s, -2 * s); ctx.lineTo(-35 * s, -11 * s); ctx.stroke();
     },
+    // pasoucí se ovečky – dvě chundelaté, přední občas zvedne hlavu od trávy
+    grazingsheep(ctx, s, extra, t) {
+      const lift = Math.max(0, Math.sin((t || 0) * 0.0012) - 0.4) * 20; // 0..12 zvednutí hlavy
+      for (let i = 0; i < 2; i++) {
+        const ox = (i ? 24 : -20) * s;
+        const sc = (i ? 0.78 : 1) * s;
+        const hy = (-13 - (i ? 0 : lift)) * sc; // hlavu zvedá jen přední ovečka
+        ctx.strokeStyle = '#8a7a66'; ctx.lineWidth = 3.5 * sc; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ox - 9 * sc, -2 * sc); ctx.lineTo(ox - 9 * sc, -16 * sc);
+        ctx.moveTo(ox + 9 * sc, -2 * sc); ctx.lineTo(ox + 9 * sc, -16 * sc);
+        ctx.stroke();
+        ctx.fillStyle = '#f2eee0';
+        ell(ctx, ox, -24 * sc, 17 * sc, 11 * sc); ctx.fill();
+        ell(ctx, ox - 9 * sc, -31 * sc, 9 * sc, 7 * sc); ctx.fill();
+        ell(ctx, ox + 8 * sc, -30 * sc, 8 * sc, 6 * sc); ctx.fill();
+        ell(ctx, ox + 17 * sc, -27 * sc, 4 * sc, 4 * sc); ctx.fill(); // ocásek
+        ctx.fillStyle = '#6e6052';
+        ell(ctx, ox - 17 * sc, hy, 6 * sc, 7.5 * sc, -0.4); ctx.fill(); // hlava
+        ell(ctx, ox - 13 * sc, hy - 6 * sc, 3.5 * sc, 2 * sc, -0.5); ctx.fill(); // ouško
+        ctx.fillStyle = '#f2eee0';
+        ell(ctx, ox - 16 * sc, hy - 7 * sc, 5 * sc, 3.5 * sc); ctx.fill(); // čupřina
+        ctx.strokeStyle = '#6ea24a'; ctx.lineWidth = 2 * sc;
+        ctx.beginPath();
+        ctx.moveTo(ox - 22 * sc, -2 * sc); ctx.lineTo(ox - 24 * sc, -9 * sc);
+        ctx.moveTo(ox - 18 * sc, -2 * sc); ctx.lineTo(ox - 17 * sc, -10 * sc);
+        ctx.stroke();
+      }
+    },
+    // zobající slepičky – každá kluje v jiném rytmu
+    chickens(ctx, s, extra, t) {
+      for (let i = 0; i < 3; i++) {
+        const ox = (i - 1) * 22 * s;
+        const sc = (0.85 + (i % 2) * 0.15) * s;
+        const peck = Math.max(0, Math.sin((t || 0) * 0.006 + i * 2.1)); // 0..1 klovnutí
+        ctx.strokeStyle = '#d9a03c'; ctx.lineWidth = 2.5 * sc; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ox - 3 * sc, -2 * sc); ctx.lineTo(ox - 3 * sc, -8 * sc);
+        ctx.moveTo(ox + 3 * sc, -2 * sc); ctx.lineTo(ox + 3 * sc, -8 * sc);
+        ctx.stroke();
+        ctx.fillStyle = ['#f0e7d6', '#c07a44', '#8a6a52'][i];
+        ell(ctx, ox, -14 * sc, 10 * sc, 8 * sc); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(ox + 8 * sc, -18 * sc); // ocásek
+        ctx.lineTo(ox + 15 * sc, -24 * sc); ctx.lineTo(ox + 10 * sc, -14 * sc);
+        ctx.closePath(); ctx.fill();
+        const hx = ox - 9 * sc, hyC = -20 * sc + peck * 12 * sc; // hlava klove dolů
+        ell(ctx, hx, hyC, 4.5 * sc, 4.5 * sc); ctx.fill();
+        ctx.fillStyle = '#d9534f'; ell(ctx, hx + 1 * sc, hyC - 4.5 * sc, 2.5 * sc, 2 * sc); ctx.fill(); // hřebínek
+        ctx.fillStyle = '#e8973a';
+        ctx.beginPath(); ctx.moveTo(hx - 4 * sc, hyC); ctx.lineTo(hx - 9 * sc, hyC + 2 * sc); ctx.lineTo(hx - 4 * sc, hyC + 3 * sc); ctx.closePath(); ctx.fill(); // zobáček
+      }
+    },
+    // srnka – zvědavě postává, jen ouško jí občas cukne
+    deer(ctx, s, extra, t) {
+      const ear = Math.sin((t || 0) * 0.008) > 0.92 ? 0.4 : 0;
+      ctx.strokeStyle = '#8a6748'; ctx.lineWidth = 4 * s; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-14 * s, -2 * s); ctx.lineTo(-13 * s, -26 * s);
+      ctx.moveTo(-4 * s, -2 * s); ctx.lineTo(-5 * s, -26 * s);
+      ctx.moveTo(10 * s, -2 * s); ctx.lineTo(9 * s, -26 * s);
+      ctx.moveTo(17 * s, -2 * s); ctx.lineTo(16 * s, -26 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#a97e54';
+      ell(ctx, 0, -34 * s, 22 * s, 12 * s); ctx.fill();
+      ctx.fillStyle = '#f2eadb'; ell(ctx, 18 * s, -30 * s, 5 * s, 5 * s); ctx.fill(); // zrcátko
+      ctx.strokeStyle = '#a97e54'; ctx.lineWidth = 7 * s;
+      ctx.beginPath(); ctx.moveTo(-16 * s, -38 * s); ctx.lineTo(-24 * s, -58 * s); ctx.stroke(); // krk
+      ctx.fillStyle = '#a97e54';
+      ell(ctx, -26 * s, -62 * s, 7 * s, 5.5 * s, -0.3); ctx.fill(); // hlava
+      ctx.fillStyle = '#3d2f24'; ell(ctx, -32 * s, -63 * s, 2 * s, 2 * s); ctx.fill(); // čumáček
+      ctx.fillStyle = '#a97e54';
+      ctx.save(); ctx.translate(-24 * s, -67 * s); ctx.rotate(-0.5 - ear);
+      ell(ctx, 0, -4 * s, 2.5 * s, 5 * s); ctx.fill();
+      ctx.restore();
+      ctx.save(); ctx.translate(-20 * s, -66 * s); ctx.rotate(0.35);
+      ell(ctx, 0, -4 * s, 2.5 * s, 5 * s); ctx.fill();
+      ctx.restore();
+    },
+    // husy – jedna hlídá s krkem nahoru, druhá se pase
+    geese(ctx, s, extra, t) {
+      const sway = Math.sin((t || 0) * 0.0025) * 2;
+      for (let i = 0; i < 2; i++) {
+        const ox = (i ? 22 : -16) * s;
+        const sc = (i ? 0.9 : 1) * s;
+        ctx.strokeStyle = '#e8973a'; ctx.lineWidth = 2.5 * sc; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ox - 3 * sc, -2 * sc); ctx.lineTo(ox - 3 * sc, -10 * sc);
+        ctx.moveTo(ox + 4 * sc, -2 * sc); ctx.lineTo(ox + 4 * sc, -10 * sc);
+        ctx.stroke();
+        ctx.fillStyle = '#f4f1e6';
+        ell(ctx, ox, -16 * sc, 13 * sc, 9 * sc); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(ox + 10 * sc, -20 * sc); // ocásek
+        ctx.lineTo(ox + 17 * sc, -25 * sc); ctx.lineTo(ox + 12 * sc, -16 * sc);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#f4f1e6'; ctx.lineWidth = 4 * sc;
+        if (i === 0) {
+          const hx = ox - (8 + sway) * sc, hy = -40 * sc; // hlídka, krk se pohupuje
+          ctx.beginPath(); ctx.moveTo(ox - 7 * sc, -20 * sc); ctx.quadraticCurveTo(ox - 12 * sc, -32 * sc, hx, hy); ctx.stroke();
+          ctx.fillStyle = '#f4f1e6'; ell(ctx, hx, hy - 2 * sc, 4.5 * sc, 4 * sc); ctx.fill();
+          ctx.fillStyle = '#e8973a';
+          ctx.beginPath(); ctx.moveTo(hx - 4 * sc, hy - 3 * sc); ctx.lineTo(hx - 10 * sc, hy - 1 * sc); ctx.lineTo(hx - 4 * sc, hy); ctx.closePath(); ctx.fill();
+        } else {
+          const hx = ox - 13 * sc, hy = -6 * sc; // pastva, krk obloukem k zemi
+          ctx.beginPath(); ctx.moveTo(ox - 7 * sc, -18 * sc); ctx.quadraticCurveTo(ox - 15 * sc, -14 * sc, hx, hy); ctx.stroke();
+          ctx.fillStyle = '#f4f1e6'; ell(ctx, hx, hy, 4 * sc, 3.5 * sc); ctx.fill();
+          ctx.fillStyle = '#e8973a';
+          ctx.beginPath(); ctx.moveTo(hx - 3 * sc, hy); ctx.lineTo(hx - 9 * sc, hy + 2 * sc); ctx.lineTo(hx - 2 * sc, hy + 3 * sc); ctx.closePath(); ctx.fill();
+        }
+      }
+    },
 
     /* ---------- lidští obyvatelé Louky ---------- */
     tomas(ctx, s, extra, t) {

@@ -858,26 +858,28 @@
      Místo duhových schodů nastoupí pódium: svět zmrzne, právě běžící zvířátko
      zazpívá publiku. Jezdec přejíždí časovací lištu a hráč ťuká, když je ve
      zlaté zóně – trefená nota = zvířátko spustí svůj hlas. Trefí-li dost not,
-     koncert je vyprodaný (výhra) a rychlost se vynuluje na základní; při propadáku
-     se jen zkrátí nastřádané zrychlení na polovinu. */
+     koncert je vyprodaný (výhra): po prvním se rychlost vrací na základní, po
+     každém dalším zůstává +5 % základu navíc (viz resolveSpecial). Při propadáku
+     se jen zkrátí nastřádané zrychlení na polovinu. Každý další koncert je navíc
+     svižnější a má užší zónu (speedupPerConcert / shrinkPerConcert). */
   const CONCERT = {
     total: 4,                 // kolik not koncert má (kratší = přehlednější)
-    threshold: 2,             // kolik trefit = vyprodáno (výhra)
+    threshold: 3,             // kolik trefit = vyprodáno (výhra)
     leadDur: 1.8,             // odpočet „připrav se“ před první notou (s)
-    beatDur: 1.7,             // výchozí doba přejezdu puntíku (s); v pozdějších koncertech se zkracuje
+    beatDur: 1.7,             // doba přejezdu puntíku v 1. koncertu (s); další koncerty ji zkracují
     beatDurMin: 1.15,         // rychleji už puntík nepojede
     restDur: 0.85,            // pauza po každé notě, ať zvuk dozní a je vidět výsledek (s)
-    zoneHalf: 0.14,           // výchozí půlšířka zelené zóny (0..1) – první nota je nejširší
+    zoneHalf: 0.14,           // půlšířka zelené zóny v 1. koncertu (0..1) – první nota je nejširší
     zoneHalfMin: 0.055,       // užší už zóna nebude, ať to jde vždycky trefit
     shrinkPerNote: 0.024,     // každá další nota zónu zúží (postupné ztížení v rámci koncertu)
-    shrinkPerKm: 0.004,       // a mírně i za každý kilometr běhu (pozdější koncerty jsou těžší)
-    speedupPerKm: 0.03,       // o kolik se za kilometr zkrátí beatDur (puntík jede svižněji)
+    shrinkPerConcert: 0.008,  // každý další koncert (5/7,5/10 km…) začíná s užší zónou
+    speedupPerConcert: 0.085, // a puntík mu jede svižněji (o tolik kratší beatDur)
   };
 
-  // zelená zóna se postupně zmenšuje: každou další notou a trochu i s délkou běhu
+  // zelená zóna se postupně zmenšuje: každou další notou a každým dalším koncertem
   function concertZone(SP) {
     const half = Math.max(CONCERT.zoneHalfMin,
-      CONCERT.zoneHalf - (SP.beatIdx || 0) * CONCERT.shrinkPerNote - (SP.zoneKm || 0) * CONCERT.shrinkPerKm);
+      CONCERT.zoneHalf - (SP.beatIdx || 0) * CONCERT.shrinkPerNote - (SP.concertIdx || 0) * CONCERT.shrinkPerConcert);
     return { lo: 0.5 - half, hi: 0.5 + half };
   }
 
@@ -887,6 +889,8 @@
 
   function startSpecial() {
     const px = playerX();
+    // pořadí koncertu (0 = první na 2,5 km) – řídí tempo noty, šířku zóny i obnovu rychlosti
+    const concertIdx = Math.max(0, Math.round(S.worldX / PX_PER_M / 2500) - 1);
     // ať scéna nastoupí čistě – pryč s tím, co je ještě před hráčem
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
@@ -899,9 +903,9 @@
       resultT: 0,
       markX: S.worldX + (W + 60) - px, // pomyslný bod pódia připlouvá zprava
       total: CONCERT.total,
-      // pozdější koncerty (dál v běhu) jedou svižněji a mají užší zónu
-      zoneKm: S.worldX / PX_PER_M / 1000,
-      beatDur: Math.max(CONCERT.beatDurMin, CONCERT.beatDur - (S.worldX / PX_PER_M / 1000) * CONCERT.speedupPerKm),
+      // každý další koncert jede svižněji a má užší zónu
+      concertIdx,
+      beatDur: Math.max(CONCERT.beatDurMin, CONCERT.beatDur - concertIdx * CONCERT.speedupPerConcert),
       beatIdx: 0,            // kolikátá nota právě běží
       beatT: 0,              // 0..beatDur průběh aktuální noty
       beatPos: 0,            // 0..1 pozice puntíku na liště
@@ -991,6 +995,13 @@
     }
   }
 
+  // aktuální strmost rychlostní rampy (px/s za metr) – každých 5 km přitvrdí;
+  // jedno místo pravdy pro update smyčku i přepočty kotvy po koncertu
+  function rampRateNow() {
+    const tier = Math.min(4, Math.floor((S.worldX / PX_PER_M) / 5000));
+    return 0.15 + tier * 0.05;
+  }
+
   function resolveSpecial(win) {
     const SP = S.special;
     // výsledek koncertu: svět zůstane zmrazený a zvířátko v bublině řekne, jak
@@ -1007,8 +1018,11 @@
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
     if (win) {
-      // vyprodáno – zvířátko chytí dech a rychlost se rozjíždí od základu
-      S.speedAnchorX = S.worldX;
+      // vyprodáno – zvířátko chytí dech; první koncert vrací rychlost úplně na
+      // základ, každý další už nechává +5 % základu navíc (kumulativně), ať se
+      // běh nedá natahovat donekonečna
+      const residual = base * 0.05 * (SP.concertIdx || 0);
+      S.speedAnchorX = S.worldX - (residual / rampRateNow()) * PX_PER_M;
       S.energy = 100;
       S.ramLeft = S.stats?.ram || 0; // Yakulovi se doplní i náboje beranidla
       S.coinsRun += ECONOMY.concertCoins;
@@ -1017,7 +1031,7 @@
     } else {
       // propadák – rychlost se nevynuluje, jen se nastřádané zrychlení zkrátí na půl
       const keep = extra * 0.5;
-      S.speedAnchorX = S.worldX - (keep / 0.15) * PX_PER_M; // 0.15 = koeficient rampy (viz níže)
+      S.speedAnchorX = S.worldX - (keep / rampRateNow()) * PX_PER_M;
       SP.bubble = pickOne(EVENTS.concertMiss);
       AUDIO.play('laugh');
     }
@@ -1179,6 +1193,11 @@
   // aby se nepletlo s překážkami na pěšině
   const NEAR_PROPS = new Set(['flower', 'mushroom', 'stump', 'basket', 'gnome', 'campfire']);
 
+  // figurální kulisy (postavy a zvířata) – stejně jako lidé se nesmí objevit
+  // dvakrát v jednom záběru; obyčejné rostliny/stavby se opakovat můžou
+  const FIGURE_PROPS = new Set(['cowboy', 'cheersquad', 'grazingcow', 'catnap', 'scarecrow', 'gnome',
+                                'grazingsheep', 'chickens', 'deer', 'geese']);
+
   // lidští obyvatelé Louky – objevují se vzácně a střídají se
   const HUMAN_PROPS = Object.keys(HUMANS);
   let humanIdx = Math.floor(Math.random() * HUMAN_PROPS.length);
@@ -1223,11 +1242,13 @@
     }
     const env = currentEnv().env;
     const props = env.props;
-    let p = props[Math.floor(Math.random() * props.length)];
-    // stejná rekvizita ani postava se nesmí objevit hned vedle té předchozí
-    for (let tries = 0; tries < 5 && props.length > 1 && p === lastDecorProp; tries++) {
-      p = props[Math.floor(Math.random() * props.length)];
-    }
+    // figura, která je ještě ve scéně (i těsně před obrazovkou), se nesmí
+    // zdvojit; a žádná rekvizita se neobjeví hned vedle té samé předchozí
+    const figuresOnScene = new Set(S.decor.filter(d => FIGURE_PROPS.has(d.prop)).map(d => d.prop));
+    let pool = props.filter(pp => pp !== lastDecorProp && !(FIGURE_PROPS.has(pp) && figuresOnScene.has(pp)));
+    if (!pool.length) pool = props.filter(pp => !(FIGURE_PROPS.has(pp) && figuresOnScene.has(pp)));
+    if (!pool.length) { S.nextDecorX += 460 + Math.random() * 640; return; } // vše blokováno – spawn vynech
+    const p = pool[Math.floor(Math.random() * pool.length)];
     lastDecorProp = p;
     const far = !NEAR_PROPS.has(p) || Math.random() < 0.4;
     const isSign = p === 'signpost';
@@ -1403,9 +1424,8 @@
       // s přibývající vzdáleností se běh stupňuje: každých 5 km (5/10/15 km…)
       // přitvrdí – strmější náběh rychlosti i vyšší strop, ať je konec běhu výzva
       const tier = Math.min(4, Math.floor((S.worldX / PX_PER_M) / 5000)); // 0,1,2,3,4 (od 20 km výš stejné)
-      const rampRate = 0.15 + tier * 0.05;   // strmější přírůstek rychlosti za každý 5km úsek
-      const speedCap = 620 + tier * 90;       // a vyšší strop, ať je pořád co zrychlovat
-      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * rampRate, speedCap);
+      const speedCap = 620 + tier * 90;       // vyšší strop, ať je pořád co zrychlovat
+      S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * rampRateNow(), speedCap);
       // pódium koncertu nejdřív klidně vjede do záběru (approach), pak svět zmrzne
       if (S.special && S.special.phase === 'approach') {
         S.speed = Math.min(S.speed, 320);
@@ -1725,7 +1745,8 @@
       if (sx < -220 || sx > W + 220) continue;
       ctx.globalAlpha = d.human ? 0.95
         : (d.prop === 'signpost' || d.prop === 'cowboy' || d.prop === 'farmhouse' || d.prop === 'cheersquad') ? 0.85
-        : d.prop === 'grazingcow' ? 0.72 : 0.62;
+        : (d.prop === 'grazingcow' || d.prop === 'grazingsheep' || d.prop === 'chickens'
+           || d.prop === 'deer' || d.prop === 'geese') ? 0.72 : 0.62;
       GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }
