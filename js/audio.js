@@ -117,6 +117,22 @@ const AUDIO = (() => {
      tak návrat smyčky na začátek: kousek před koncem skladby ji druhý
      přehrávač rozehraje od nuly a hlasitosti se prokříží, takže hudba
      nikdy tvrdě neusekne ani necvakne. */
+  // V Capacitoru (Android app) není service worker, takže by se mp3 streamovalo
+  // Range požadavky z lokálního serveru a při zátěži herní smyčky se kouše.
+  // Předtažení celé skladby do blobu vrací webové „hraj z paměti" chování.
+  const musicBlobs = {};
+  function prefetchMusic(src) {
+    if (!window.Capacitor || musicBlobs[src]) return;
+    musicBlobs[src] = src; // rezervace, ať fetch neběží dvakrát
+    fetch(src)
+      .then((r) => r.blob())
+      .then((b) => { musicBlobs[src] = URL.createObjectURL(b); })
+      .catch(() => { delete musicBlobs[src]; });
+  }
+  if (window.Capacitor) {
+    for (const k in MUSIC_FILES) prefetchMusic(MUSIC_FILES[k]);
+  }
+
   const MUSIC_VOL = 0.5;
   const TRACK_FADE = 1.8;  // prolnutí mezi skladbami (s)
   const LOOP_FADE = 1.4;   // prolnutí přes konec smyčky (s)
@@ -181,7 +197,9 @@ const AUDIO = (() => {
     from._fade = fade;
     active = 1 - active;
     const to = players[active];
-    if (to._src !== src) { to._src = src; to.src = src; }
+    // hraj z blobu, jakmile je předtažený (Capacitor); jinak přímo ze src
+    const url = musicBlobs[src] && musicBlobs[src] !== src ? musicBlobs[src] : src;
+    if (to._url !== url) { to._url = url; to.src = url; }
     else { try { to.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ } }
     to._target = MUSIC_VOL;
     to._fade = fade;
