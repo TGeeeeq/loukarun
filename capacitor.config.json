@@ -1,0 +1,8 @@
+{
+  "appId": "org.nechmerust.loukarun",
+  "appName": "Louka Run",
+  "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "disable"
+  }
+}

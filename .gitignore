@@ -1,2 +1,15 @@
 # sestavené soběstačné demo (generuje build-demo.sh / Netlify)
 _site/
+
+# Capacitor / Android build
+node_modules/
+www/
+resources/
+*.jks
+keystore.properties
+
+# Godot experiment leftovers (pre-pivot)
+.godot/
+tools/godot
+tools/gut-src/
+RUN/

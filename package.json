@@ -1,0 +1,29 @@
+{
+  "name": "loukarun",
+  "version": "1.0.0",
+  "description": "**Veselá běhací hra na podporu zvířecího azylu [Nech mě růst](https://nechmerust.org).**",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TGeeeeq/loukarun.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TGeeeeq/loukarun/issues"
+  },
+  "homepage": "https://github.com/TGeeeeq/loukarun#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.1",
+    "sharp": "^0.35.3"
+  }
+}
