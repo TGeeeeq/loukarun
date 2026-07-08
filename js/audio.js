@@ -117,22 +117,6 @@ const AUDIO = (() => {
      tak návrat smyčky na začátek: kousek před koncem skladby ji druhý
      přehrávač rozehraje od nuly a hlasitosti se prokříží, takže hudba
      nikdy tvrdě neusekne ani necvakne. */
-  // V Capacitoru (Android app) není service worker, takže by se mp3 streamovalo
-  // Range požadavky z lokálního serveru a při zátěži herní smyčky se kouše.
-  // Předtažení celé skladby do blobu vrací webové „hraj z paměti" chování.
-  const musicBlobs = {};
-  function prefetchMusic(src) {
-    if (!window.Capacitor || musicBlobs[src]) return;
-    musicBlobs[src] = src; // rezervace, ať fetch neběží dvakrát
-    fetch(src)
-      .then((r) => r.blob())
-      .then((b) => { musicBlobs[src] = URL.createObjectURL(b); })
-      .catch(() => { delete musicBlobs[src]; });
-  }
-  if (window.Capacitor) {
-    for (const k in MUSIC_FILES) prefetchMusic(MUSIC_FILES[k]);
-  }
-
   const MUSIC_VOL = 0.5;
   const TRACK_FADE = 1.8;  // prolnutí mezi skladbami (s)
   const LOOP_FADE = 1.4;   // prolnutí přes konec smyčky (s)
@@ -141,6 +125,79 @@ const AUDIO = (() => {
   let players = null;      // [Audio, Audio] – aktivní se střídá
   let active = 0;
   let currentTrack = null;
+
+  /* ---- Capacitor (Android app): hudba přes WebAudio ----
+     HTMLAudio se v Android WebView při zátěži herní smyčky zadrhává, i když
+     hraje z blobu v paměti. WebAudio mixuje předem dekódovanou skladbu
+     v audio vlákně, které zásek hlavního vlákna nezastaví. Web zůstává
+     u <audio> – tam hudba jede plynule ze service worker cache. */
+  const WA = window.Capacitor ? { buffers: {}, active: null, watch: null } : null;
+  let waSeq = 0; // pořadí požadavků – ať pozdě dodekódovaná stopa nepřebije novější
+
+  function waBuffer(src) {
+    if (!WA.buffers[src]) {
+      WA.buffers[src] = fetch(src)
+        .then((r) => r.arrayBuffer())
+        .then((ab) => ctx.decodeAudioData(ab))
+        .catch((e) => { delete WA.buffers[src]; throw e; });
+    }
+    return WA.buffers[src];
+  }
+
+  function waStop(fade) {
+    if (!WA.active) return;
+    const a = WA.active; WA.active = null;
+    const t = ctx.currentTime;
+    a.gain.gain.cancelScheduledValues(t);
+    a.gain.gain.setValueAtTime(a.gain.gain.value, t);
+    a.gain.gain.linearRampToValueAtTime(0.0001, t + fade);
+    try { a.node.stop(t + fade + 0.1); } catch (e) { /* už zastavená */ }
+  }
+
+  function waStart(src, buf, fade) {
+    waStop(fade);
+    const t = ctx.currentTime;
+    const node = ctx.createBufferSource();
+    node.buffer = buf;
+    node.loop = true; // pojistka: kdyby prolnutí smyčky nestihlo, hraje dál postaru
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(MUSIC_VOL, t + fade);
+    node.connect(gain); gain.connect(ctx.destination);
+    node.start(t);
+    WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
+    // dekódovaná skladba zabírá desítky MB – v cache drž jen hrající a menu
+    for (const k in WA.buffers) {
+      if (k !== src && k !== MUSIC_FILES.menu) delete WA.buffers[k];
+    }
+  }
+
+  // hlídá konec smyčky a prolne stopu do jejího vlastního začátku
+  function waTick() {
+    if (!WA.active || !ctx) return;
+    const a = WA.active;
+    if (ctx.currentTime - a.t0 > a.dur - LOOP_FADE) waStart(a.src, a.buf, LOOP_FADE);
+  }
+
+  function waPlay(src, fade) {
+    if (!ensureCtx()) return;
+    if (!WA.watch) WA.watch = setInterval(waTick, TICK_MS);
+    if (WA.active && WA.active.src === src) return;
+    const seq = ++waSeq;
+    waBuffer(src)
+      .then((buf) => {
+        if (seq !== waSeq || !musicEnabled) return; // mezitím se chtělo něco jiného
+        waStart(src, buf, fade);
+      })
+      .catch(() => {});
+  }
+
+  // v pozadí aplikace hudbu utne; návrat dořeší visibilitychange → unlock()
+  if (WA) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && ctx) ctx.suspend();
+    });
+  }
 
   // hlasitost přehrávače držíme v JS (el._vol = zdroj pravdy) a zapisujeme do
   // el.volume. Na Androidu/desktopu se hlasitost skutečně mění (plynulé
@@ -197,9 +254,7 @@ const AUDIO = (() => {
     from._fade = fade;
     active = 1 - active;
     const to = players[active];
-    // hraj z blobu, jakmile je předtažený (Capacitor); jinak přímo ze src
-    const url = musicBlobs[src] && musicBlobs[src] !== src ? musicBlobs[src] : src;
-    if (to._url !== url) { to._url = url; to.src = url; }
+    if (to._src !== src) { to._src = src; to.src = src; }
     else { try { to.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ } }
     to._target = MUSIC_VOL;
     to._fade = fade;
@@ -211,6 +266,12 @@ const AUDIO = (() => {
     if (!musicEnabled) return;
     const src = MUSIC_FILES[key];
     if (!src) { stopMusic(); return; }
+    if (WA) {
+      const firstStart = !currentTrack;
+      currentTrack = src;
+      waPlay(src, firstStart ? 0.6 : TRACK_FADE);
+      return;
+    }
     ensurePlayers();
     if (currentTrack === src) {
       const el = players[active];
@@ -226,6 +287,7 @@ const AUDIO = (() => {
 
   function stopMusic() {
     currentTrack = null;
+    if (WA) { waSeq++; if (ctx) waStop(0.2); return; }
     if (!players) return;
     for (const el of players) { el.pause(); el._target = 0; setVol(el, 0); }
   }
@@ -239,8 +301,12 @@ const AUDIO = (() => {
 
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
-    ensureCtx(); // probudí WebAudio pro zvukové efekty (hudba jede přes <audio>)
+    ensureCtx(); // probudí WebAudio (efekty vždy, v Capacitoru i hudba)
     if (!musicEnabled || !lastKey) return;
+    if (WA) {
+      if (!WA.active && currentTrack) waPlay(currentTrack, 0.6);
+      return;
+    }
     if (players && currentTrack && players[active].paused) {
       players[active].play().catch(() => {});
     }
@@ -253,6 +319,7 @@ const AUDIO = (() => {
   // na známý web…), hraje okamžitě; jinak počká na první dotek/klávesu
   let eagerTries = 0;
   const eagerTimer = setInterval(() => {
+    if (WA && WA.active) { clearInterval(eagerTimer); return; }
     if (players && !players[active].paused) { clearInterval(eagerTimer); return; }
     if (++eagerTries > 8) { clearInterval(eagerTimer); return; }
     if (lastKey) unlock();
