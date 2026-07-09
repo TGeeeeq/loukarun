@@ -689,6 +689,8 @@ const DATA = (() => {
     carrotEnergy: 7,
     goldenCarrotEnergy: 26,
     hitPenalty: 18,
+    hitRampDist: 5000,    // každých X metrů začnou nárazy bolet víc…
+    hitRampStep: 0.05,    // …o tolik (5 %) za každý dokončený úsek
     startEnergy: 100,
     drainPerSecond: 1.8,  // základ, násobí se statistikou postavy, rychlostí a vzdáleností
     drainRampDist: 3400,  // po kolika metrech se odčerpávání zdvojnásobí

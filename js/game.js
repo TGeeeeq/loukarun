@@ -1654,7 +1654,10 @@
         burst(sx, groundY - 90, '#55524c', 18); // tmavá pírka rozprášeného hejna
         floater(randomQuote(EVENTS.flock), sx, groundY - 160, '#e5533a');
       }
-      const penalty = Math.round((o.soft ? 8 : ECONOMY.hitPenalty) * (S.stats.hitFactor || 1));
+      // s ujetou vzdáleností přituhuje: každých 5 km bolí náraz do jakékoli
+      // překážky o 5 % víc (viz ECONOMY.hitRampDist/hitRampStep, bez stropu)
+      const hitRamp = 1 + ECONOMY.hitRampStep * Math.floor((S.worldX / PX_PER_M) / ECONOMY.hitRampDist);
+      const penalty = Math.round((o.soft ? 8 : ECONOMY.hitPenalty) * (S.stats.hitFactor || 1) * hitRamp);
       // ve škole běhu drží energie rezervu – klopýtnutí nesmí běh ukončit
       S.energy = Math.max(S.tut ? 15 : 0, S.energy - penalty);
       S.stumble = 0.7;

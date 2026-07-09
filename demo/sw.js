@@ -6,7 +6,7 @@
    Při vydání nové verze zvyš číslo v názvu cache.
    ========================================================= */
 
-const CACHE = 'loukarun-demo-v2';
+const CACHE = 'loukarun-demo-v3';
 
 const CORE = [
   './',
