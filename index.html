@@ -7,7 +7,11 @@
   <meta name="theme-color" content="#8ed4f7">
   <title>Louka Run 🥕 – hra na podporu azylu Nech mě růst</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥕</text></svg>">
-  <link rel="manifest" href="manifest.webmanifest">
+  <!-- use-credentials: prohlížeč jinak manifest stahuje BEZ cookies. Na webu
+       (nechmerust.org/loukarun/app) hru hlídá pozvánková brána – bez cookie
+       vrátí místo manifestu přesměrování a Chrome na Androidu pak instalaci
+       na plochu vůbec nenabídne (iOS manifest neřeší, proto tam to fungovalo). -->
+  <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <!-- iPhone Safari fullscreen API nemá – naplno jde hra jen po „Přidat na plochu“.
        Tyto značky zařídí, že spuštění z ikony na ploše poběží bez lišt Safari
