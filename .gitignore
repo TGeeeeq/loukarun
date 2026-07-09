@@ -1,6 +1,3 @@
-# sestavené soběstačné demo (generuje build-demo.sh / Netlify)
-_site/
-
 # Capacitor / Android build
 node_modules/
 www/

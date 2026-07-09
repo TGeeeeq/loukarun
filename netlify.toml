@@ -1,5 +1,0 @@
-# Nasazení soběstačného DEMA na Netlify (vlastní doména = jen demo).
-# Netlify při každém pushi do repozitáře spustí build a nasadí obsah _site/.
-[build]
-  command = "bash build-demo.sh"
-  publish = "_site"

@@ -805,13 +805,5 @@ const DATA = (() => {
     ],
   };
 
-  /* ---------- DEMO / testovací verze ----------
-     Když stránka před načtením skriptů nastaví window.LOUKA_DEMO = true
-     (viz demo/index.html), nabídne hra jen prvních pár zvířátek – pro
-     rozeslání testerům. Bez toho flagu je plná verze úplně beze změny. */
-  const DEMO = (typeof window !== 'undefined') && window.LOUKA_DEMO === true;
-  const DEMO_ANIMALS = (typeof window !== 'undefined' && +window.LOUKA_DEMO_ANIMALS) || 3;
-  const CHARS = DEMO ? CHARACTERS.slice(0, DEMO_ANIMALS) : CHARACTERS;
-
-  return { CHARACTERS: CHARS, DEMO, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL };
+  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL };
 })();
