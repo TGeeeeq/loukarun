@@ -1,6 +1,6 @@
 # Google Play — vše pro nahrání
 
-Kompletní balíček pro publikaci Louka Run v1.0.0 (versionCode 1) na Google Play.
+Kompletní balíček pro publikaci Louka Run na Google Play. Aktuální build: v1.0.1 (versionCode 2).
 
 ## Co je ve složce
 

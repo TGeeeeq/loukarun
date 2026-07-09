@@ -1,6 +1,6 @@
 # Google Play – podklady pro záznam v obchodě
 
-Vyplněno pro první vydání (v1.0.0, versionCode 1). AAB: `app-release.aab` v této složce (zdroj: `android/app/build/outputs/bundle/release/`).
+Vyplněno pro první vydání. Aktuální AAB: v1.0.1 (versionCode 2) — `app-release.aab` v této složce (zdroj: `android/app/build/outputs/bundle/release/`).
 
 ## Základní údaje
 
