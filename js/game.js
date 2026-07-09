@@ -12,6 +12,17 @@
   let W = 0, H = 0, DPR = 1, groundY = 0;
   let vignette = null; // cachovaný gradient vinětace
 
+  // levý okraj panelu menu (.menu-mid) – zvířátko v demu mu uhýbá,
+  // aby na malých displejích nebylo schované za panelem
+  let menuPanelLeft = Infinity;
+  function measureMenuPanel() {
+    const menu = document.getElementById('screen-menu');
+    const mid = menu && menu.querySelector('.menu-mid');
+    menuPanelLeft = (mid && menu.classList.contains('visible'))
+      ? mid.getBoundingClientRect().left
+      : Infinity;
+  }
+
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth;
@@ -23,6 +34,7 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     groundY = H * 0.78;
     vignette = null;
+    measureMenuPanel();
   }
   window.addEventListener('resize', resize);
   resize();
@@ -465,8 +477,20 @@
   /* =========================================================
      PRŮBĚH HRY
      ========================================================= */
-  // v demu za menu běhá zvířátko víc vlevo, aby ho nezakrýval panel menu
-  function playerX() { return S.demo ? Math.min(W * 0.16, 170) : Math.min(W * 0.3, 260); }
+  // v demu za menu běhá zvířátko víc vlevo, aby ho nezakrýval panel menu.
+  // Na malých displejích panel sahá téměř až k levému okraji, proto se
+  // podle jeho skutečné polohy zvířátko zmenší a uhne, aby bylo vidět celé.
+  // Šířka zvířátka v demu je ~150 px (scale 1); pod ni se zmenšuje až na 0.6.
+  function demoScale() {
+    if (!S.demo) return 1;
+    const avail = Math.min(menuPanelLeft, W) - 10;
+    return Math.max(0.6, Math.min(1, avail / 150));
+  }
+  function playerX() {
+    if (!S.demo) return Math.min(W * 0.3, 260);
+    const avail = Math.min(menuPanelLeft, W) - 10;
+    return Math.max(40, Math.min(W * 0.16, 170, avail - 72 * demoScale()));
+  }
 
   function resetWorld(demo) {
     S.worldX = 0;
@@ -1794,8 +1818,9 @@
       // v intru místo hráče pobíhá celý azyl + kreslí se logo
       renderIntro(px);
     } else {
-      // stín hráče
-      const shScale = Math.max(0.4, 1 - S.py / 400);
+      // stín hráče (v demu na malém displeji se zvířátko i stín zmenšují)
+      const ds = demoScale();
+      const shScale = Math.max(0.4, 1 - S.py / 400) * ds;
       ctx.fillStyle = 'rgba(0,0,0,0.18)';
       GFX.ell(ctx, px, groundY + 6, 44 * shScale, 8 * shScale);
       ctx.fill();
@@ -1805,7 +1830,7 @@
       const ch = (!S.demo && S.char) ? S.char : (charById(save.selected) || CHARACTERS[0]);
       const flash = S.invuln > 0 && Math.floor(S.t / 80) % 2 === 0;
       if (!flash) {
-        GFX.drawCharacter(ctx, ch, px, groundY - S.py, 1, {
+        GFX.drawCharacter(ctx, ch, px, groundY - S.py, ds, {
           runPhase: S.runPhase,
           airborne: S.airborne,
           sliding: S.sliding > 0,
@@ -2224,6 +2249,7 @@
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
     $('hud').classList.toggle('visible', name === null);
     if (name === 'menu') AUDIO.playMusic('menu');
+    measureMenuPanel();
   }
 
   function updateHud(full) {
@@ -2330,6 +2356,7 @@
     $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
     $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
     $('btn-install').textContent = I18N.t('menu.install');
+    measureMenuPanel(); // texty mění šířku panelu, zvířátko v demu mu uhýbá
   }
 
   /* ---------- obchod ---------- */

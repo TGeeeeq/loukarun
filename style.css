@@ -852,3 +852,13 @@ a.btn { text-decoration: none; display: inline-block; }
   .over-card.small { display: flex; padding: 16px 22px; gap: 10px; }
   .over-card.small h2 { font-size: 1.25rem; }
 }
+
+/* opravdu malý telefon na šířku – panel menu se stáhne, aby vlevo
+   zbylo místo na vybrané zvířátko (schopnost je pořád vidět v obchodě) */
+@media (max-height: 560px) and (max-width: 540px) {
+  .menu-mid { gap: 10px; padding: 10px 12px; }
+  .menu-char-info { padding: 6px 12px; }
+  .menu-char-info .perk { display: none; }
+  .btn.big { font-size: 1.05rem; padding: 9px 24px; }
+  .btn { font-size: 0.85rem; padding: 7px 14px; }
+}
