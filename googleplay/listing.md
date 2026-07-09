@@ -1,6 +1,6 @@
 # Google Play – podklady pro záznam v obchodě
 
-Vyplněno pro první vydání (v1.0.0, versionCode 1). AAB: `android/app/build/outputs/bundle/release/app-release.aab`.
+Vyplněno pro první vydání (v1.0.0, versionCode 1). AAB: `app-release.aab` v této složce (zdroj: `android/app/build/outputs/bundle/release/`).
 
 ## Základní údaje
 
@@ -72,9 +72,9 @@ NO COMPROMISES
 
 ## Grafika
 
-- Ikona 512×512: `assets/icon-512.png` ✓
-- Hlavní grafika 1024×500: `promo/feature-graphic-1024x500.png` ✓
-- Snímky obrazovky: min. 2 na šířku z telefonu (menu, běh, koncert, noc…), 16:9, min. 1080 px
+- Ikona 512×512: `icon-512.png` ✓
+- Hlavní grafika 1024×500: `feature-graphic-1024x500.png` ✓
+- Snímky obrazovky: `screenshots/` — 7 kusů 1920×1080 (menu + všech 6 prostředí) ✓
 
 ## Dotazníky
 

@@ -86,7 +86,9 @@ pod správným názvem.
 ## 📱 Cesta do Google Play a App Store
 
 > **Podrobný postup krok za krokem (účty, buildy, obchody, checklist) je
-> v samostatném souboru [VYDANI_APLIKACE.md](VYDANI_APLIKACE.md).**
+> v samostatném souboru [VYDANI_APLIKACE.md](VYDANI_APLIKACE.md).
+> Hotové podklady pro Google Play (AAB, texty, grafika, screenshoty) jsou
+> ve složce [googleplay/](googleplay/).**
 
 Hra je napsaná jako webová aplikace právě proto, aby šla zabalit do nativní
 aplikace přes **[Capacitor](https://capacitorjs.com/)**:
