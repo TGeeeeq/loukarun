@@ -24,6 +24,15 @@
   const forcedLandscape = () => document.documentElement.classList.contains('force-landscape');
   // svislá souřadnice doteku v souřadnicích hry (v otočené hře ji nese clientX)
   const pointerGameY = (e) => (forcedLandscape() ? window.innerWidth - e.clientX : e.clientY);
+  // obdélník DOM prvku v souřadnicích hry – getBoundingClientRect vrací
+  // souřadnice obrazovky, takže v otočené hře se osy prohodí stejně jako u doteků
+  function gameRect(el) {
+    const r = el.getBoundingClientRect();
+    return forcedLandscape()
+      ? { left: r.top, top: window.innerWidth - r.right,
+          width: r.height, height: r.width, bottom: window.innerWidth - r.left }
+      : r;
+  }
 
   // levý okraj panelu menu (.menu-mid) – zvířátko v demu mu uhýbá,
   // aby na malých displejích nebylo schované za panelem
@@ -31,10 +40,8 @@
   function measureMenuPanel() {
     const menu = document.getElementById('screen-menu');
     const mid = menu && menu.querySelector('.menu-mid');
-    // getBoundingClientRect vrací souřadnice obrazovky – v otočené hře
-    // odpovídá hernímu levému okraji panelu jeho horní hrana
     menuPanelLeft = (mid && menu.classList.contains('visible'))
-      ? (forcedLandscape() ? mid.getBoundingClientRect().top : mid.getBoundingClientRect().left)
+      ? gameRect(mid).left
       : Infinity;
   }
 
@@ -1951,7 +1958,7 @@
         && S.tut.bubbleA > 0.1 && S.tut.scale < 0.8) {
       const hudEnergy = document.getElementById('hud-energy');
       if (hudEnergy) {
-        const r = hudEnergy.getBoundingClientRect();
+        const r = gameRect(hudEnergy);
         ctx.save();
         ctx.globalAlpha = Math.max(0, (1 - S.tut.scale) * (0.5 + 0.3 * Math.sin(S.t * 0.008)));
         ctx.strokeStyle = '#ffffff';
@@ -2189,7 +2196,7 @@
     // bublina nesmí zajet pod HUD – horní mez je spodní hrana ukazatelů
     const hudEl = document.getElementById('hud');
     const topSafe = (hudEl && hudEl.classList.contains('visible')
-      ? hudEl.getBoundingClientRect().bottom : 0) + 10;
+      ? gameRect(hudEl).bottom : 0) + 10;
     const by = Math.max(ay - h - 16, topSafe);
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     GFX.rr(ctx, bx + 3, by + 4, w, h, 18); ctx.fill();
