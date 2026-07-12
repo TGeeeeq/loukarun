@@ -1,13 +1,17 @@
 # Google Play — vše pro nahrání
 
-Kompletní balíček pro publikaci Louka Run na Google Play. Aktuální build: v1.0.2 (versionCode 3).
+Kompletní balíček pro publikaci Louka Run na Google Play.
+Aktuální kód hry: **v1.0.3 (versionCode 4)** — pozor, `app-release.aab` je ještě
+starší build v1.0.2; pro vydání v1.0.3 je potřeba AAB znovu sestavit a podepsat
+upload klíčem (viz „Nový build“ níže).
 
 ## Co je ve složce
 
 | Soubor | K čemu |
 |---|---|
-| `app-release.aab` | Podepsaný release bundle — tohle se nahrává do Play Console |
-| `loukarun-v1.0.2-test.apk` | Instalovatelný APK pro testování na telefonu (viz níže) |
+| `app-release.aab` | Podepsaný release bundle **v1.0.2** — tohle se nahrává do Play Console |
+| `loukarun-v1.0.3-test.apk` | Instalovatelný APK pro testování na telefonu (viz níže) |
+| `test-signing.keystore` | Testovací podpisový klíč (heslo+alias níže) — **nikdy nepoužívat pro Play!** |
 | `listing.md` | Texty záznamu v obchodě (CZ + EN popisy, dotazníky, distribuce) |
 | `icon-512.png` | Ikona aplikace 512×512 |
 | `feature-graphic-1024x500.png` | Hlavní grafika 1024×500 |
@@ -24,22 +28,23 @@ Kompletní balíček pro publikaci Louka Run na Google Play. Aktuální build: v
 
 ## Testovací APK na telefon
 
-`loukarun-v1.0.2-test.apk` je univerzální APK vygenerovaný bundletoolem přímo
-z `app-release.aab` — obsahově totožný s verzí na Google Play. Je ale podepsaný
-**testovacím klíčem**, takže:
+`loukarun-v1.0.3-test.apk` je release build podepsaný **testovacím klíčem**
+`test-signing.keystore` (heslo `loukarun`, alias `test`, heslo klíče `loukarun`),
+takže:
 
 - instaluje se ručně („instalace z neznámých zdrojů"), ne přes Play,
 - **nejde nainstalovat přes verzi staženou z Google Play** (jiný podpis) —
   tu je nutné nejdřív odinstalovat, a naopak,
+- přes starší testovací APK (stejný klíč) se nainstaluje normálně jako update,
 - nikam se nenahrává, slouží jen k testování.
 
-Nový testovací APK z aktuálního AAB:
+Nový testovací APK (po `gradlew assembleRelease` bez keystore.properties):
 
 ```bash
-java -jar bundletool.jar build-apks --bundle=googleplay/app-release.aab \
-  --output=out.apks --mode=universal \
-  --ks=test.keystore --ks-pass=pass:HESLO --ks-key-alias=test --key-pass=pass:HESLO
-unzip out.apks universal.apk
+BT=$ANDROID_HOME/build-tools/36.0.0
+$BT/zipalign -f -p 4 app-release-unsigned.apk aligned.apk
+$BT/apksigner sign --ks googleplay/test-signing.keystore --ks-pass pass:loukarun \
+  --ks-key-alias test --key-pass pass:loukarun --out loukarun-test.apk aligned.apk
 ```
 
 ## Nový build (další verze)
