@@ -116,6 +116,38 @@ const VARIANTS = [
       ${footer}`,
   },
   {
+    file: 'story-5-jsme-na-google-play.png', w: 1080, h: 1920, cls: 'story',
+    html: `
+      ${header}
+      <div class="spacer"></div>
+      <div class="avatar" style="width:280px;height:280px"><img src="${AVATAR}" alt=""></div>
+      <div class="bubble center no-tail" style="margin-top:44px">
+        <h1>Stalo se. Jsem na Google Play.</h1>
+        <p>Pustili tam osla. Oficiálně, se vším všudy a bez reklam. Google teď má mě — a já mám pocit, že jsem internet vyhrál.</p>
+        <span class="kdo">— Karel, osel a nově i aplikace</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="cta">Stáhni si mě → Google Play</div>
+      <div class="podcta">200 Kč, celé pro azyl. Seno se samo nekoupí.</div>
+      <div class="spacer"></div>
+      ${footer}`,
+  },
+  {
+    file: 'post-ctverec-4-jsme-na-google-play.png', w: 1080, h: 1080, cls: 'square',
+    html: `
+      ${header}
+      <div class="spacer"></div>
+      ${karelRow(
+        'Jsem na Google Play. Ano, vážně.',
+        'Historicky první osel v obchodě s aplikacemi.<br>Ověřeno: mnou.',
+        '— Karel, osel a nově i aplikace'
+      )}
+      <div class="spacer"></div>
+      <div class="cta">Stáhni si mě → Google Play 🥕</div>
+      <div class="spacer"></div>
+      ${footer}`,
+  },
+  {
     file: 'post-ctverec-1-hykam-tedy-jsem.png', w: 1080, h: 1080, cls: 'square',
     html: `
       ${header}

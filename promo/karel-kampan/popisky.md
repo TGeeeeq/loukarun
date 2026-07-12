@@ -156,6 +156,25 @@ Launch day přidej: `#googleplay #novahra #vydanihry`
 > Ve hře nám z pozadí mává parta lidí, co se o nás v azylu doopravdy stará.
 > Bez nich by nebyl azyl, hra, ani já. Ale neříkejte jim to, zpychli by. 💚
 
+## 9) story-5 + post-ctverec-4 / „UŽ JSME NA GOOGLE PLAY“
+
+**A — drzý Karel:**
+> Stalo se. Jsem na Google Play. Pustili tam osla — oficiálně, se vším všudy
+> a bez reklam. Google teď má mě a já mám pocit, že jsem internet vyhrál.
+> Stáhni si mě, než si to rozmyslí. 🥕
+
+**B — sebestředný Karel:**
+> Historicky první osel v obchodě s aplikacemi. Ověřeno: mnou. Newton měl
+> jablko, Google má mě. Dějiny si to přeberou.
+
+**C — kousavě dojemný:**
+> Z ohrady na Google Play. Když mě kdysi přivezli do azylu, nikdo by nevsadil
+> ani zvadlou mrkev. Teď si mě stáhneš do kapsy — a celých 200 Kč jde na seno
+> pro všech šest z nás. Děkuju, že běžíš se mnou. 💚
+
+**D — meme styl:**
+> Google Play: „aplikace schválena“. Já: *hýká vítězně*. Odkaz v biu. 🫏
+
 ---
 
 ## Launch-day popisek (hlavní post v den vydání na Google Play)
