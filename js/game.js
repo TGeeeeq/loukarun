@@ -12,21 +12,37 @@
   let W = 0, H = 0, DPR = 1, groundY = 0;
   let vignette = null; // cachovaný gradient vinětace
 
+  /* ---------- vynucená šířka (mobil na výšku) ----------
+     iPhone neumí screen.orientation.lock() a se zapnutým zámkem otočení
+     (Ovládací centrum) se displej sám neotočí vůbec – totéž platí
+     v in-app prohlížečích (Instagram, Facebook…). Hru proto na výšku
+     otočíme o 90° sami: CSS třída .force-landscape na <html> otočí
+     celé <body> (viz style.css) a tady se jen prohodí rozměry plátna
+     a souřadnice doteků. Jakmile hráč telefon opravdu otočí, třída
+     zmizí a hra běží v přirozené šířce. */
+  const portraitMq = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+  const forcedLandscape = () => document.documentElement.classList.contains('force-landscape');
+  // svislá souřadnice doteku v souřadnicích hry (v otočené hře ji nese clientX)
+  const pointerGameY = (e) => (forcedLandscape() ? window.innerWidth - e.clientX : e.clientY);
+
   // levý okraj panelu menu (.menu-mid) – zvířátko v demu mu uhýbá,
   // aby na malých displejích nebylo schované za panelem
   let menuPanelLeft = Infinity;
   function measureMenuPanel() {
     const menu = document.getElementById('screen-menu');
     const mid = menu && menu.querySelector('.menu-mid');
+    // getBoundingClientRect vrací souřadnice obrazovky – v otočené hře
+    // odpovídá hernímu levému okraji panelu jeho horní hrana
     menuPanelLeft = (mid && menu.classList.contains('visible'))
-      ? mid.getBoundingClientRect().left
+      ? (forcedLandscape() ? mid.getBoundingClientRect().top : mid.getBoundingClientRect().left)
       : Infinity;
   }
 
   function resize() {
+    document.documentElement.classList.toggle('force-landscape', portraitMq.matches);
     DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
+    W = forcedLandscape() ? window.innerHeight : window.innerWidth;
+    H = forcedLandscape() ? window.innerWidth : window.innerHeight;
     canvas.width = W * DPR;
     canvas.height = H * DPR;
     canvas.style.width = W + 'px';
@@ -37,6 +53,8 @@
     measureMenuPanel();
   }
   window.addEventListener('resize', resize);
+  if (portraitMq.addEventListener) portraitMq.addEventListener('change', resize);
+  else if (portraitMq.addListener) portraitMq.addListener(resize); // starší iOS Safari
   resize();
 
   /* ---------- uložený postup ---------- */
@@ -146,9 +164,6 @@
   const INTRO_END_AT = 7.0;       // kdy intro samo přejde do menu
   const INTRO_FADE = 1.2;         // délka závěrečného prolnutí
 
-  // na výšku drží intro pozici 0 – rozjede se, až hráč otočí telefon
-  const portraitMq = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
-
   /* ---------- AF signatura – filmová znělka autora ----------
      Logo se vynoří ze tmy, pod ním web, pak se vše prolne do
      intra hry. Jde přeskočit ťuknutím nebo klávesou. */
@@ -204,7 +219,6 @@
 
   function updateIntro(dt) {
     if (afActive) return;           // čeká, než doběhne AF znělka
-    if (portraitMq.matches) return; // čeká za výzvou „otoč telefon“
     intro.t += dt;
 
     for (const a of intro.actors) {
@@ -461,13 +475,13 @@
   let ptr = null;
   canvas.addEventListener('pointerdown', (e) => {
     if (S.mode !== 'run') return;
-    ptr = { y: e.clientY, t: performance.now(), acted: false };
+    ptr = { y: pointerGameY(e), t: performance.now(), acted: false };
     jump();
     ptr.acted = 'jump';
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!ptr || S.mode !== 'run') return;
-    if (e.clientY - ptr.y > 38 && ptr.acted !== 'slide') {
+    if (pointerGameY(e) - ptr.y > 38 && ptr.acted !== 'slide') {
       slide();
       ptr.acted = 'slide';
     }

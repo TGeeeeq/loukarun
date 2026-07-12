@@ -22,6 +22,48 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* Bezpečné okraje displeje (výřez, zaoblené rohy) a „herní“ vw/vh.
+   Při vynucené šířce (viz níže) je celá hra otočená o 90°, takže se
+   výřezy i osy viewportu musí otočit s ní – proto proměnné. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --gvw: 1vw; /* 1 % šířky hry */
+  --gvh: 1vh; /* 1 % výšky hry */
+}
+
+/* =========================================================
+   Vynucená šířka – mobil, kterému nejde otočit displej
+   (zámek otočení na iPhonu, in-app prohlížeče…): hru otočíme
+   o 90° sami. Třídu .force-landscape nasazuje js/game.js,
+   dokud je zařízení na výšku.
+   ========================================================= */
+html.force-landscape {
+  --safe-top: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-left, 0px);
+  --safe-left: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-bottom, 0px);
+  --gvw: 1vh;
+  --gvh: 1vw;
+}
+/* dvh/dvw počítá s dynamickými lištami Safari; u custom properties
+   nejde fallback udělat dvojí deklarací, proto @supports */
+@supports (width: 1dvh) {
+  html.force-landscape { --gvw: 1dvh; --gvh: 1dvw; }
+}
+html.force-landscape body {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vh;  width: 100dvh;  /* dvh: ať se hra nechová divně pod lištami Safari */
+  height: 100vw; height: 100dvw;
+  transform: rotate(90deg) translateY(-100%);
+  transform-origin: top left;
+}
+/* hra už je naležato – výzva „otoč telefon“ není potřeba */
+html.force-landscape #rotate-overlay { display: none; }
+
 html, body {
   height: 100%;
   overflow: hidden;
@@ -85,12 +127,12 @@ a.btn { text-decoration: none; display: inline-block; }
 /* ---------- HUD ---------- */
 #hud {
   position: fixed;
-  top: env(safe-area-inset-top, 0);
+  top: var(--safe-top);
   left: 0; right: 0;
   display: none;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 14px 16px;
+  padding: 14px max(16px, var(--safe-right)) 14px max(16px, var(--safe-left));
   pointer-events: none;
 }
 #hud.visible { display: flex; }
@@ -100,7 +142,7 @@ a.btn { text-decoration: none; display: inline-block; }
 #hud-energy { display: flex; align-items: center; gap: 8px; }
 .energy-icon { font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); }
 .energy-bar {
-  width: min(34vw, 220px); height: 20px;
+  width: min(calc(34 * var(--gvw)), 220px); height: 20px;
   background: rgba(255,255,255,0.5);
   border: 2px solid rgba(255,255,255,0.9);
   border-radius: 999px;
@@ -126,7 +168,7 @@ a.btn { text-decoration: none; display: inline-block; }
 #btn-tut-continue {
   position: fixed;
   left: 50%;
-  bottom: max(28px, env(safe-area-inset-bottom));
+  bottom: max(28px, var(--safe-bottom));
   transform: translateX(-50%);
   animation: contPulse 1.6s ease-in-out infinite;
 }
@@ -141,7 +183,7 @@ a.btn { text-decoration: none; display: inline-block; }
   display: none;
   flex-direction: column;
   align-items: center;
-  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  padding: max(20px, var(--safe-top)) 20px max(20px, var(--safe-bottom));
   overflow-y: auto;
 }
 .screen.visible { display: flex; }
@@ -159,8 +201,8 @@ a.btn { text-decoration: none; display: inline-block; }
 /* přepínač jazyka – viditelný v rohu úvodní obrazovky */
 .lang-switch {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
-  right: max(14px, env(safe-area-inset-right, 14px));
+  top: max(14px, var(--safe-top));
+  right: max(14px, var(--safe-right));
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -259,7 +301,7 @@ a.btn { text-decoration: none; display: inline-block; }
 #screen-shop {
   background: linear-gradient(180deg, #7cc4b8, #dff3e8);
   justify-content: center;
-  padding: max(12px, env(safe-area-inset-top)) 0 max(10px, env(safe-area-inset-bottom));
+  padding: max(12px, var(--safe-top)) 0 max(10px, var(--safe-bottom));
   overflow-y: auto;
 }
 .shop-head {
@@ -373,15 +415,17 @@ a.btn { text-decoration: none; display: inline-block; }
 .stat-fill.jump { background: linear-gradient(90deg, #8fc7e8, #4a9fd8); }
 .stat-fill.stamina { background: linear-gradient(90deg, #b0e89a, #7ac95e); }
 /* nižší displeje (mobil na šířku) – karty se zkrátí, ať se nikam nescrolluje svisle */
-@media (max-height: 560px) {
+/* pozn.: druhá podmínka = vynucená šířka (hra otočená o 90°) – herní
+   výška tam odpovídá šířce fyzického viewportu */
+@media (max-height: 560px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) {
   .shop-note { display: none; }
   .shop-head h2 { font-size: 1.2rem; }
-  .char-card { width: min(58vw, 208px); gap: 5px; }
+  .char-card { width: min(calc(58 * var(--gvw)), 208px); gap: 5px; }
   .char-card .tagline { display: none; }
   .portrait-wrap canvas { height: 88px; }
   #shop-grid { padding: 10px 28px 12px; }
 }
-@media (max-height: 420px) {
+@media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
   .stat-rows { display: none; }
   .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
   .portrait-wrap canvas { height: 72px; }
@@ -496,7 +540,7 @@ a.btn { text-decoration: none; display: inline-block; }
 /* toast */
 #toast {
   position: fixed;
-  bottom: max(30px, env(safe-area-inset-bottom));
+  bottom: max(30px, var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: rgba(40, 34, 26, 0.92);
@@ -508,14 +552,16 @@ a.btn { text-decoration: none; display: inline-block; }
   pointer-events: none;
   transition: opacity .25s, transform .25s;
   z-index: 30;
-  max-width: 90vw;
+  max-width: calc(90 * var(--gvw));
   text-align: center;
 }
 #toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* =========================================================
    Výzva k otočení telefonu (jen mobil na výšku)
-   – noční louka se světluškami a telefonem, který se sám otočí
+   – noční louka se světluškami a telefonem, který se sám otočí.
+   Normálně ji nahrazuje vynucená šířka (viz .force-landscape
+   nahoře); ukáže se jen jako záloha, když selže JavaScript.
    ========================================================= */
 #rotate-overlay {
   position: fixed; inset: 0;
@@ -524,7 +570,7 @@ a.btn { text-decoration: none; display: inline-block; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  padding: max(24px, var(--safe-top)) 24px max(24px, var(--safe-bottom));
   background:
     radial-gradient(95% 60% at 50% -12%, rgba(255, 224, 138, 0.16), rgba(255, 224, 138, 0) 62%),
     linear-gradient(180deg, #12332a 0%, #22563a 55%, #35804a 100%);
@@ -763,8 +809,8 @@ a.btn { text-decoration: none; display: inline-block; }
    Nízké displeje (telefon na šířku) – všechno se musí vejít
    na obrazovku bez rolování
    ========================================================= */
-@media (max-height: 560px) {
-  .screen { padding: max(8px, env(safe-area-inset-top)) 16px max(8px, env(safe-area-inset-bottom)); }
+@media (max-height: 560px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) {
+  .screen { padding: max(8px, var(--safe-top)) 16px max(8px, var(--safe-bottom)); }
 
   /* menu na šířku – vymazlená verze */
   #screen-menu {
@@ -772,17 +818,17 @@ a.btn { text-decoration: none; display: inline-block; }
       linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0) 34%),
       linear-gradient(0deg, rgba(0,0,0,0.22), rgba(0,0,0,0) 30%);
   }
-  .lang-switch { top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right, 10px)); }
+  .lang-switch { top: max(8px, var(--safe-top)); right: max(10px, var(--safe-right)); }
   .lang-btn { font-size: 0.74rem; padding: 5px 11px; }
 }
 
 /* na úzkém displeji na šířku zbydou z přepínače jen vlaječky, ať nekolidují s titulem */
-@media (max-height: 560px) and (max-width: 740px) {
+@media (max-height: 560px) and (max-width: 740px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) and (max-height: 740px) {
   .lang-label { display: none; }
   .lang-btn { font-size: 0.95rem; padding: 4px 10px; }
 }
 
-@media (max-height: 560px) {
+@media (max-height: 560px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) {
 
   .menu-top { margin-top: 0; }
   .game-title {
@@ -799,7 +845,7 @@ a.btn { text-decoration: none; display: inline-block; }
     flex-direction: row;
     align-items: stretch;
     align-self: flex-end;
-    margin-right: max(3vw, env(safe-area-inset-right, 0px));
+    margin-right: max(calc(3 * var(--gvw)), var(--safe-right));
     gap: 14px;
     background: rgba(0,0,0,0.18);
     border: 1px solid rgba(255,255,255,0.22);
@@ -812,7 +858,7 @@ a.btn { text-decoration: none; display: inline-block; }
     display: flex; flex-direction: column; justify-content: center;
     background: rgba(0,0,0,0.22);
     padding: 6px 18px; border-radius: 16px;
-    max-width: 46vw;
+    max-width: calc(46 * var(--gvw));
   }
   .menu-char-info .charname { font-size: 1.05rem; }
   .menu-char-info .perk { font-size: 0.76rem; }
@@ -838,7 +884,7 @@ a.btn { text-decoration: none; display: inline-block; }
       "btns  btns";
     align-items: center;
     gap: 6px 16px;
-    max-width: min(680px, 96vw);
+    max-width: min(680px, calc(96 * var(--gvw)));
     padding: 12px 20px;
   }
   .over-card h2 { grid-area: title; font-size: 1.25rem; }
@@ -855,7 +901,7 @@ a.btn { text-decoration: none; display: inline-block; }
 
 /* opravdu malý telefon na šířku – panel menu se stáhne, aby vlevo
    zbylo místo na vybrané zvířátko (schopnost je pořád vidět v obchodě) */
-@media (max-height: 560px) and (max-width: 540px) {
+@media (max-height: 560px) and (max-width: 540px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) and (max-height: 540px) {
   .menu-mid { gap: 10px; padding: 10px 12px; }
   .menu-char-info { padding: 6px 12px; }
   .menu-char-info .perk { display: none; }
