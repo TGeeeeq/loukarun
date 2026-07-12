@@ -504,38 +504,6 @@ a.btn { text-decoration: none; display: inline-block; }
 .ach-mark { color: #d89b26; font-weight: 800; font-size: 1.1rem; width: 18px; }
 
 /* ---------- vývojářské menu (skryté) ---------- */
-.over-card.dev-card {
-  max-width: 540px;
-  background: linear-gradient(180deg, #2b2f38, #20242c);
-  color: #dfe6ef;
-  gap: 14px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.dev-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-.dev-head h2 { color: #7fe0c0 !important; font-size: 1.4rem; margin: 0; }
-.dev-head .btn.round { background: #3a4150; box-shadow: 0 4px 0 #171b22; color: #dfe6ef; }
-#dev-body { display: flex; flex-direction: column; gap: 16px; width: 100%; }
-.dev-section { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; }
-.dev-section > h3 {
-  font-size: 0.8rem; text-transform: uppercase; letter-spacing: .08em;
-  color: #8a94a3; margin: 0; font-weight: 800;
-}
-.dev-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.dev-btn {
-  flex: 1 1 auto;
-  font-family: inherit; font-weight: 700; font-size: 0.9rem;
-  padding: 10px 14px; border: none; border-radius: 12px; cursor: pointer;
-  background: #3a4150; color: #dfe6ef;
-  box-shadow: 0 3px 0 #171b22;
-  transition: transform .05s, filter .1s;
-}
-.dev-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #171b22; }
-.dev-btn.on { background: linear-gradient(180deg, #7ee0a6, #4bc47e); color: #10301c; box-shadow: 0 3px 0 #2f7a4d; }
-.dev-btn.off { filter: none; }
-.dev-btn.danger { background: linear-gradient(180deg, #f0866a, #d6543a); color: #3a1208; box-shadow: 0 3px 0 #8f2f1c; }
-.dev-btn.wide { flex-basis: 100%; }
-.dev-note { font-size: 0.78rem; color: #8a94a3; margin: 0; }
 
 /* toast */
 #toast {

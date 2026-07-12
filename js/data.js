@@ -676,18 +676,6 @@ const DATA = (() => {
         { cs: 'Húúkám ti do kroku!', en: 'Hoo-ting you a running beat!' },
       ],
     },
-    // vtipné hlášky, které zvířátko zahlásí při otevření skrytého
-    // vývojářského menu (řekne je právě vybraná postava)
-    devMenu: [
-      { cs: 'Pssst! Tajná dvířka pro vývojáře. Nikomu ani muk!', en: 'Psst! A secret developer door. Not a word to anyone!' },
-      { cs: 'Tak jsme se prokousali až do zákulisí. Klasika.', en: 'Well, we nibbled our way backstage. Classic.' },
-      { cs: 'God Mode? Teď mě nechytí ani na svačinu!', en: 'God Mode? Now nobody catches me, not even for a snack!' },
-      { cs: 'Neomezeně mincí?! Kupuju celému azylu mrkve!', en: 'Unlimited coins?! I’m buying the whole sanctuary carrots!' },
-      { cs: 'Vývojářské menu odemčeno. Teď jsem tu šéfem já.', en: 'Developer menu unlocked. I’m the boss around here now.' },
-      { cs: 'Cheaty? Já tomu říkám „kreativní běhání“.', en: 'Cheats? I call it “creative running”.' },
-      { cs: 'Zmáčkls tajnou kombinaci. Čekal jsem tě.', en: 'You hit the secret combo. I’ve been expecting you.' },
-      { cs: 'Konečně někdo s klíčem od zákulisí! Pojď dál.', en: 'Finally, someone with the backstage key! Come on in.' },
-    ],
   };
 
   /* ---------- OBCHOD / EKONOMIKA ---------- */

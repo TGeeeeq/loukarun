@@ -63,4 +63,4 @@ Podepisování řeší `android/keystore.properties` → upload klíč `~/.andro
 
 ## Nové screenshoty
 
-Snímky se dají vygenerovat automaticky: hra běží na `python3 -m http.server`, Playwright otevře 1920×1080, přeskočí intro, spustí běh a přes dev menu (klávesa `` ` ``) warpuje mezi prostředími. Do localStorage (`loukarun_save_v1`) je potřeba předem vložit save s `tutorialDone: true` a vyplněným `seenObstacles`, jinak snímky kazí tutoriál a představovací bubliny překážek.
+Snímky se dají vygenerovat automaticky: hra běží na `python3 -m http.server`, Playwright otevře 1920×1080, přeskočí intro a spustí běh. Vývojářské menu (warp mezi prostředími) bylo ze hry odstraněno — do cílového prostředí se teď prostě doběhne (každé má 550 m), případně jde pro focení dočasně lokálně zmenšit `ENV_LEN_M` v js/game.js. Do localStorage (`loukarun_save_v1`) je potřeba předem vložit save s `tutorialDone: true` a vyplněným `seenObstacles`, jinak snímky kazí tutoriál a představovací bubliny překážek.
