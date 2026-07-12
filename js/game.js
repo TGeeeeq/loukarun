@@ -101,21 +101,6 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* úložiště nedostupné – postup zůstane aspoň v paměti do konce sezení */ }
   }
 
-  /* ---------- vývojářský (testovací) režim ----------
-     Skryté menu pro pořádné testování hry – přepínače se drží ve
-     vlastním záznamu, aby nešpinily normální uložený postup. */
-  const DEV_KEY = 'loukarun_dev_v1';
-  const DEV_COINS = 9999999;
-  const dev = loadDev();
-  function loadDev() {
-    const d = { god: false, infCoins: false, speed: 1, forceTut: false };
-    try { Object.assign(d, JSON.parse(localStorage.getItem(DEV_KEY)) || {}); } catch (e) { /* nevadí */ }
-    return d;
-  }
-  function persistDev() { try { localStorage.setItem(DEV_KEY, JSON.stringify(dev)); } catch (e) { /* nevadí */ } }
-
-  if (dev.infCoins) save.coins = DEV_COINS;
-
   AUDIO.setSfx(save.sfx !== false);
   AUDIO.setMusic(save.music !== false);
 
@@ -156,7 +141,6 @@
     speedAnchorX: 0,        // odkud se měří rozjezd rychlosti (reset po výhře v koncertu)
     shake: 0,
     demo: true,             // atrakt mód za menu
-    devReturn: null,        // kam se vrátit po zavření vývojářského menu
   };
 
   const PX_PER_M = 42;
@@ -482,13 +466,10 @@
     if (e.repeat) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); uiOrJump(); }
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); slide(); }
-    if (e.code === 'Escape' || e.code === 'KeyP') { if (isDevOpen()) closeDev(); else togglePause(); }
-    // skrytá klávesa pro vývojářské menu (` / ~ vlevo nahoře)
-    if (e.code === 'Backquote') { e.preventDefault(); if (isDevOpen()) closeDev(); else openDev(); }
+    if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
   });
 
   function uiOrJump() {
-    if (isDevOpen()) return; // vývojářské menu je otevřené – klávesy neřídí hru
     if (S.mode === 'intro') { skipIntro(); return; }
     if (S.mode === 'menu') startRun();
     else if (S.mode === 'over') { /* tlačítka řeší DOM */ }
@@ -572,7 +553,7 @@
     S.lastEnvId = null; // ať hned naskočí hudba prvního prostředí
     resetWorld(false);
     // první běh = Karlova škola běhu (?tutorial=1 ji vynutí kdykoli znovu)
-    S.tut = (FORCE_TUT || dev.forceTut || !save.tutorialDone) ? makeTutorial() : null;
+    S.tut = (FORCE_TUT || !save.tutorialDone) ? makeTutorial() : null;
     if (S.tut) { S.nextObstacleX = Infinity; S.nextPickupX = Infinity; }
     S.mode = 'run';
     showScreen(null);
@@ -1528,7 +1509,7 @@
     // tlačítko Pokračovat svítí přesně po dobu zastavené lekce
     syncContinueBtn();
 
-    const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * (running ? dev.speed : 1) * worldSpeedScale();
+    const spd = (S.demo ? S.baseSpeed * 0.8 : S.speed) * worldSpeedScale();
 
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
     // rozjezd se měří od kotvy speedAnchorX (po výhře v koncertu se resetuje = běží zas pomalu)
@@ -1613,21 +1594,16 @@
       const distRampCap = 2 + Math.min(1, 0.2 * Math.max(0, difficultyLevel() - 2));
       const distRamp = Math.min(distRampCap, distM / ECONOMY.drainRampDist);
       const ramp = 1 + speedFactor * 0.45 + distRamp;
-      // God Mode (vývojářský režim): energie nikdy neubývá, běh se nedá ukončit
-      if (dev.god) {
-        S.energy = 100;
-      } else {
-        // ve škole běhu ubývá energie poloviční rychlostí a nikdy neklesne
-        // pod rezervu – lekce není test výdrže a nedá se při ní umřít
-        S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt * (S.tut ? 0.5 : 1);
-        if (S.tut) S.energy = Math.max(S.energy, 15);
-        if (S.energy <= 25 && !S.saidLowEnergy) {
-          S.saidLowEnergy = true;
-          sayBubble(randomQuote(EVENTS.lowEnergy));
-        }
-        if (S.energy > 35) S.saidLowEnergy = false;
-        if (S.energy <= 0) { S.energy = 0; endRun(); return; }
+      // ve škole běhu ubývá energie poloviční rychlostí a nikdy neklesne
+      // pod rezervu – lekce není test výdrže a nedá se při ní umřít
+      S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt * (S.tut ? 0.5 : 1);
+      if (S.tut) S.energy = Math.max(S.energy, 15);
+      if (S.energy <= 25 && !S.saidLowEnergy) {
+        S.saidLowEnergy = true;
+        sayBubble(randomQuote(EVENTS.lowEnergy));
       }
+      if (S.energy > 35) S.saidLowEnergy = false;
+      if (S.energy <= 0) { S.energy = 0; endRun(); return; }
 
       collide(dt);
       quotes(dt);
@@ -1728,8 +1704,7 @@
       }
     }
 
-    // God Mode: zvířátko projde vším bez úhony
-    if (S.invuln > 0 || dev.god) return;
+    if (S.invuln > 0) return;
     for (const o of S.obstacles) {
       if (o.broken) continue;
       const sx = o.x - S.worldX + px;
@@ -2334,7 +2309,7 @@
      HUD & OBRAZOVKY (DOM)
      ========================================================= */
   const $ = (id) => document.getElementById(id);
-  const screens = ['menu', 'shop', 'over', 'pause', 'dev', 'ach'];
+  const screens = ['menu', 'shop', 'over', 'pause', 'ach'];
 
   function showScreen(name) {
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
@@ -2636,7 +2611,6 @@
     }
     if (save.coins >= ch.unlock.price) {
       save.coins -= ch.unlock.price;
-      if (dev.infCoins) save.coins = DEV_COINS; // vývojářský režim: peněženka zůstává plná
       save.unlocked.push(ch.id);
       save.selected = ch.id;
       persist();
@@ -2717,179 +2691,7 @@
   I18N.onChange(() => {
     initMenu();
     if ($('screen-shop').classList.contains('visible')) buildShop();
-    if ($('screen-dev').classList.contains('visible')) buildDevMenu();
   });
-
-  /* =========================================================
-     VÝVOJÁŘSKÉ (TESTOVACÍ) MENU – skryté
-     Otevře se 5× ťuknutím na titul hry (v menu) nebo na nadpis
-     pauzy (během běhu), na počítači klávesou `. Právě vybrané
-     zvířátko u toho zahlásí vtipnou hlášku.
-     ========================================================= */
-  const L = (cs, en) => (I18N.lang === 'en' ? en : cs);
-
-  function isDevOpen() { return $('screen-dev').classList.contains('visible'); }
-
-  function sayDevQuote() {
-    const ch = charById(save.selected) || CHARACTERS[0];
-    const q = randomQuote(EVENTS.devMenu);
-    const o = I18N.lang === 'en' ? '“' : '„';
-    const c = I18N.lang === 'en' ? '”' : '“';
-    toast('🔧 ' + I18N.pick(ch.name) + ': ' + o + q + c);
-    AUDIO.play('quote');
-  }
-
-  function openDev() {
-    if (isDevOpen()) return;
-    S.devReturn = S.mode === 'run' ? 'run' : (S.mode === 'over' ? 'over' : 'menu');
-    if (S.mode === 'run') S.mode = 'paused';
-    buildDevMenu();
-    $('screen-dev').classList.add('visible');
-    $('hud').classList.remove('visible');
-    sayDevQuote();
-    AUDIO.play('click');
-  }
-
-  function closeDev() {
-    const back = S.devReturn || 'menu';
-    S.devReturn = null;
-    $('screen-dev').classList.remove('visible');
-    if (back === 'run') { S.mode = 'run'; showScreen(null); }
-    else if (back === 'over') { S.mode = 'over'; showScreen('over'); }
-    else { S.mode = 'menu'; S.demo = true; showScreen('menu'); }
-    AUDIO.play('click');
-  }
-
-  // přeskočí svět na začátek zvoleného prostředí (a doplní okolí)
-  function applyWarp(targetM) {
-    S.worldX = Math.max(0, targetM) * PX_PER_M;
-    S.obstacles = []; S.pickups = []; S.decor = []; S.particles = []; S.floaters = [];
-    S.flyers = [];
-    S.nextObstacleX = S.worldX + 500;
-    S.nextPickupX = S.worldX + 350;
-    S.nextDecorX = S.worldX;
-    S.nextFlyerX = S.worldX + 400;
-    S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0;
-    S.stumble = 0; S.invuln = 0;
-    S.lastMilestone = Math.floor(S.worldX / PX_PER_M / 500) * 500;
-    S.lastSpecial = Math.floor(S.worldX / PX_PER_M / 2500) * 2500;
-    S.special = null; S.speedAnchorX = S.worldX;
-    S.lastEnvId = null; // ať naskočí hudba nového prostředí
-    updateHud(true);
-  }
-
-  function devWarp(idx) {
-    const targetM = idx * ENV_LEN_M + 60; // kousek do prostředí
-    if (S.devReturn === 'run') {
-      applyWarp(targetM);
-      closeDev();
-    } else {
-      // spustit rovnou testovací běh na daném prostředí (bez tutoriálu)
-      S.devReturn = null;
-      $('screen-dev').classList.remove('visible');
-      startRun();
-      S.tut = null;
-      applyWarp(targetM);
-      toast(L('Test: ', 'Test: ') + I18N.pick(ENVS[idx % ENVS.length].name));
-    }
-  }
-
-  function buildDevMenu() {
-    $('dev-title').textContent = '🔧 ' + L('Vývojářské menu', 'Developer menu');
-    $('btn-dev-close').setAttribute('aria-label', L('Zavřít', 'Close'));
-    const body = $('dev-body');
-    body.innerHTML = '';
-
-    const section = (title) => {
-      const s = document.createElement('div');
-      s.className = 'dev-section';
-      const h = document.createElement('h3');
-      h.textContent = title;
-      s.appendChild(h);
-      const row = document.createElement('div');
-      row.className = 'dev-row';
-      s.appendChild(row);
-      body.appendChild(s);
-      return row;
-    };
-    const btn = (row, label, onClick, opts = {}) => {
-      const b = document.createElement('button');
-      b.className = 'dev-btn' + (opts.on ? ' on' : '') + (opts.danger ? ' danger' : '') + (opts.wide ? ' wide' : '');
-      b.textContent = label;
-      b.addEventListener('click', () => { AUDIO.play('click'); onClick(); });
-      row.appendChild(b);
-      return b;
-    };
-    const state = (on) => on ? L('ZAP', 'ON') : L('VYP', 'OFF');
-
-    // --- Přepínače ---
-    const cheats = section(L('Cheaty', 'Cheats'));
-    btn(cheats, '🛡 God Mode: ' + state(dev.god), () => {
-      dev.god = !dev.god; persistDev(); buildDevMenu();
-    }, { on: dev.god });
-    btn(cheats, '🪙 ' + L('Nekonečno mincí', 'Unlimited coins') + ': ' + state(dev.infCoins), () => {
-      dev.infCoins = !dev.infCoins;
-      if (dev.infCoins) save.coins = DEV_COINS;
-      persistDev(); persist(); initMenu(); buildDevMenu();
-      if ($('screen-shop').classList.contains('visible')) buildShop();
-    }, { on: dev.infCoins });
-    btn(cheats, '🎓 ' + L('Vynutit tutoriál', 'Force tutorial') + ': ' + state(dev.forceTut), () => {
-      dev.forceTut = !dev.forceTut; persistDev(); buildDevMenu();
-    }, { on: dev.forceTut });
-
-    // --- Tempo hry ---
-    const speedRow = section(L('Tempo hry', 'Game speed'));
-    [0.5, 1, 2, 3].forEach((mult) => {
-      btn(speedRow, mult + '×', () => { dev.speed = mult; persistDev(); buildDevMenu(); }, { on: dev.speed === mult });
-    });
-
-    // --- Zvířátka ---
-    const animals = section(L('Zvířátka', 'Animals'));
-    const allOwned = CHARACTERS.every((c) => save.unlocked.includes(c.id));
-    btn(animals, '🐾 ' + (allOwned ? L('Všechna odemčena ✓', 'All unlocked ✓') : L('Odemknout všechna zvířátka', 'Unlock all animals')), () => {
-      for (const c of CHARACTERS) if (!save.unlocked.includes(c.id)) save.unlocked.push(c.id);
-      persist(); initMenu(); buildDevMenu();
-      if ($('screen-shop').classList.contains('visible')) buildShop();
-      toast(L('Všechna zvířátka odemčena! 🐾', 'All animals unlocked! 🐾'));
-    }, { wide: true, on: allOwned });
-
-    // --- Přeskočit do prostředí ---
-    const warp = section(S.devReturn === 'run'
-      ? L('Přeskočit do prostředí', 'Warp to environment')
-      : L('Spustit test v prostředí', 'Test run in environment'));
-    ENVS.forEach((env, i) => {
-      btn(warp, I18N.pick(env.name), () => devWarp(i));
-    });
-
-    // --- Nebezpečná zóna ---
-    const danger = section(L('Nebezpečná zóna', 'Danger zone'));
-    btn(danger, '🗑 ' + L('Vynulovat postup', 'Reset progress'), () => {
-      if (!window.confirm(L('Opravdu smazat veškerý postup (mince, odemčená zvířátka, rekord)?',
-        'Really wipe all progress (coins, unlocked animals, best distance)?'))) return;
-      try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nevadí */ }
-      try { localStorage.removeItem(DEV_KEY); } catch (e) { /* nevadí */ }
-      location.reload();
-    }, { danger: true, wide: true });
-
-    const note = document.createElement('p');
-    note.className = 'dev-note';
-    note.textContent = L('Tip: na počítači otevřeš/zavřeš toto menu klávesou `.',
-      'Tip: on desktop toggle this menu with the ` key.');
-    body.appendChild(note);
-  }
-
-  $('btn-dev-close').addEventListener('click', closeDev);
-
-  // skrytý spouštěč: 5 rychlých ťuknutí na určený prvek
-  let devTaps = 0, devTapTimer = null;
-  function devTapTrigger() {
-    devTaps++;
-    clearTimeout(devTapTimer);
-    devTapTimer = setTimeout(() => { devTaps = 0; }, 1500);
-    if (devTaps >= 5) { devTaps = 0; openDev(); }
-  }
-  $('game-title').addEventListener('click', devTapTrigger);
-  $('pause-title').addEventListener('click', devTapTrigger);
 
   /* =========================================================
      SMYČKA
