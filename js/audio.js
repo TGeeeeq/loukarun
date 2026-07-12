@@ -69,10 +69,32 @@ const AUDIO = (() => {
   }
 
   // jednorázový zvukový soubor (např. Karlův smích) – respektuje vypnutí
-  // zvuků, přehrávače se cachují a přehrání se dá kdykoli spustit od začátku
+  // zvuků, přehrávače se cachují a přehrání se dá kdykoli spustit od začátku.
+  // V aplikaci (Capacitor) hrají vzorky přes WebAudio: <audio> element má na
+  // Androidu při zátěži herní smyčky latenci a umí zaškobrtnout; dekódované
+  // vzorky (pár vteřin) mixuje audio vlákno bez ohledu na hlavní vlákno.
   const samples = {};
+  const sampleBufs = {};
   function sample(src, vol = 1) {
     if (!enabled) return;
+    if (WA && ensureCtx()) {
+      if (!sampleBufs[src]) {
+        sampleBufs[src] = fetch(src)
+          .then((r) => r.arrayBuffer())
+          .then((ab) => ctx.decodeAudioData(ab))
+          .catch(() => { delete sampleBufs[src]; return null; });
+      }
+      sampleBufs[src].then((buf) => {
+        if (!buf || !enabled) return;
+        const s = ctx.createBufferSource();
+        s.buffer = buf;
+        const g = ctx.createGain();
+        g.gain.value = vol;
+        s.connect(g); g.connect(ctx.destination);
+        s.start();
+      });
+      return;
+    }
     let el = samples[src];
     if (!el) { el = samples[src] = new Audio(src); el.preload = 'auto'; }
     el.volume = vol;
@@ -126,13 +148,24 @@ const AUDIO = (() => {
   let active = 0;
   let currentTrack = null;
 
-  /* ---- Capacitor (Android app): hudba přes WebAudio ----
+  /* ---- Capacitor (Android app): hudba během běhu přes WebAudio ----
      HTMLAudio se v Android WebView při zátěži herní smyčky zadrhává, i když
      hraje z blobu v paměti. WebAudio mixuje předem dekódovanou skladbu
      v audio vlákně, které zásek hlavního vlákna nezastaví. Web zůstává
-     u <audio> – tam hudba jede plynule ze service worker cache. */
+     u <audio> – tam hudba jede plynule ze service worker cache.
+
+     POZOR na paměť: dekódovaná skladba je surové PCM. Krátké běhové smyčky
+     (~45 s) zaberou ~16 MB, ale menu.mp3 má několik minut → přes 80 MB.
+     Držet ji dekódovanou (a k tomu dekódovat další) posílalo WebView na
+     slabších telefonech do OOM pádu přesně při startu běhu. Proto menu
+     hraje i v aplikaci streamovaně přes <audio> (menu nemá herní smyčku,
+     zádrhel tam nehrozí) a WebAudio se používá jen pro krátké běhové
+     skladby – v paměti je vždy nanejvýš jedna. */
   const WA = window.Capacitor ? { buffers: {}, active: null, watch: null } : null;
   let waSeq = 0; // pořadí požadavků – ať pozdě dodekódovaná stopa nepřebije novější
+
+  // menu/intro sdílí dlouhý soubor – ten v aplikaci nikdy nedekódujeme
+  const useWA = (src) => !!WA && src !== MUSIC_FILES.menu;
 
   function waBuffer(src) {
     if (!WA.buffers[src]) {
@@ -166,9 +199,9 @@ const AUDIO = (() => {
     node.connect(gain); gain.connect(ctx.destination);
     node.start(t);
     WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
-    // dekódovaná skladba zabírá desítky MB – v cache drž jen hrající a menu
+    // dekódovaná skladba zabírá desítky MB – v cache drž jen tu hrající
     for (const k in WA.buffers) {
-      if (k !== src && k !== MUSIC_FILES.menu) delete WA.buffers[k];
+      if (k !== src) delete WA.buffers[k];
     }
   }
 
@@ -195,7 +228,10 @@ const AUDIO = (() => {
   // v pozadí aplikace hudbu utne; návrat dořeší visibilitychange → unlock()
   if (WA) {
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && ctx) ctx.suspend();
+      if (!document.hidden) return;
+      if (ctx) ctx.suspend();
+      // menu hraje přes ⟨audio⟩ – to je potřeba v pozadí zastavit taky
+      if (players) for (const el of players) el.pause();
     });
   }
 
@@ -266,28 +302,33 @@ const AUDIO = (() => {
     if (!musicEnabled) return;
     const src = MUSIC_FILES[key];
     if (!src) { stopMusic(); return; }
-    if (WA) {
-      const firstStart = !currentTrack;
-      currentTrack = src;
-      waPlay(src, firstStart ? 0.6 : TRACK_FADE);
-      return;
-    }
-    ensurePlayers();
+    const firstStart = !currentTrack;
     if (currentTrack === src) {
+      // stejná skladba – jen pojistka, že opravdu hraje (návrat z pozadí apod.)
+      if (useWA(src)) { if (!WA.active) waPlay(src, 0.6); return; }
+      ensurePlayers();
       const el = players[active];
       el._target = MUSIC_VOL;
       if (el.paused) el.play().catch(() => {});
       return;
     }
-    const firstStart = !currentTrack;
     currentTrack = src;
-    // úplně první spuštění jen krátce naběhne, jinak plné prolnutí
-    crossTo(src, firstStart ? 0.6 : TRACK_FADE);
+    if (useWA(src)) {
+      // menu (⟨audio⟩) doznívá, běhová skladba najíždí ve WebAudio
+      if (players) { for (const el of players) { el._target = 0; el._fade = TRACK_FADE; } }
+      waPlay(src, firstStart ? 0.6 : TRACK_FADE);
+    } else {
+      // návrat do menu: WebAudio doznívá, menu jede streamovaně přes ⟨audio⟩
+      if (WA) { waSeq++; if (ctx) waStop(TRACK_FADE); }
+      ensurePlayers();
+      // úplně první spuštění jen krátce naběhne, jinak plné prolnutí
+      crossTo(src, firstStart ? 0.6 : TRACK_FADE);
+    }
   }
 
   function stopMusic() {
     currentTrack = null;
-    if (WA) { waSeq++; if (ctx) waStop(0.2); return; }
+    if (WA) { waSeq++; if (ctx) waStop(0.2); }
     if (!players) return;
     for (const el of players) { el.pause(); el._target = 0; setVol(el, 0); }
   }
@@ -301,13 +342,13 @@ const AUDIO = (() => {
 
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
-    ensureCtx(); // probudí WebAudio (efekty vždy, v Capacitoru i hudba)
-    if (!musicEnabled || !lastKey) return;
-    if (WA) {
-      if (!WA.active && currentTrack) waPlay(currentTrack, 0.6);
+    ensureCtx(); // probudí WebAudio (efekty vždy, v Capacitoru i běhová hudba)
+    if (!musicEnabled || !lastKey || !currentTrack) return;
+    if (useWA(currentTrack)) {
+      if (!WA.active) waPlay(currentTrack, 0.6);
       return;
     }
-    if (players && currentTrack && players[active].paused) {
+    if (players && players[active].paused) {
       players[active].play().catch(() => {});
     }
   }

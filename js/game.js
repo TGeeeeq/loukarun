@@ -45,9 +45,25 @@
       : Infinity;
   }
 
+  /* ---------- automatická kvalita ----------
+     Na slabším telefonu se po pár vteřinách trhaného běhu sníží rozlišení
+     plátna (DPR) – GPU má rázem o třetinu až polovinu méně pixelů a hra
+     zůstane plynulá. Kvalita se jen snižuje, nikdy nevrací zpět, ať obraz
+     uprostřed běhu neproblikává; příští spuštění začne zase načisto. */
+  const DPR_STEPS = [2, 1.5, 1.15];
+  let dprStep = 0;
+  let slowT = 0;
+  function autoQuality(rawDt) {
+    if (S.mode !== 'run' || dprStep >= DPR_STEPS.length - 1) return;
+    // pod ~42 fps se střádá „pomalý čas“, svižné snímky ho zase umazávají
+    if (rawDt > 0.024) slowT += rawDt;
+    else slowT = Math.max(0, slowT - rawDt * 0.5);
+    if (slowT > 2) { dprStep++; slowT = 0; resize(); }
+  }
+
   function resize() {
     document.documentElement.classList.toggle('force-landscape', portraitMq.matches);
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = Math.min(window.devicePixelRatio || 1, DPR_STEPS[dprStep]);
     W = forcedLandscape() ? window.innerHeight : window.innerWidth;
     H = forcedLandscape() ? window.innerWidth : window.innerHeight;
     canvas.width = W * DPR;
@@ -637,9 +653,11 @@
       }
     }
 
-    // dál v běhu občas dvojitá pozemní překážka (skok–skok);
-    // šance nabíhá pozvolna, ať se obtížnost nezlomí naráz
-    const doubleChance = 0.12 + 0.10 * Math.min(1, Math.max(0, (distM - 800) / 800));
+    // dál v běhu občas dvojitá pozemní překážka (skok–skok); šance nabíhá
+    // pozvolna a s každým stupněm obtížnosti (koncertem) dál roste
+    const lvl = difficultyLevel();
+    const doubleChance = Math.min(0.5,
+      0.12 + 0.10 * Math.min(1, Math.max(0, (distM - 800) / 800)) + 0.04 * lvl);
     if (distM > 800 && !o.flying && Math.random() < doubleChance) {
       const groundPool = pool.filter(p => !p.flying);
       const ob2 = groundPool[Math.floor(Math.random() * groundPool.length)];
@@ -650,13 +668,24 @@
       S.obstacles.push(o2);
       resolvePickupConflicts(o2);
       S.nextObstacleX = o.x + 340 + 140;
+      // od 2. stupně (5 km) se ke dvojici občas přidá i třetí do trojkombinace
+      if (lvl >= 2 && Math.random() < Math.min(0.35, 0.12 * (lvl - 1))) {
+        const ob3 = groundPool[Math.floor(Math.random() * groundPool.length)];
+        const o3 = { ...ob3, x: o2.x + 340 + Math.random() * 140, y: 0, broken: false };
+        const v3 = BIRD_VARIANTS[o3.id];
+        if (v3) o3.v = v3[Math.floor(Math.random() * v3.length)];
+        maybeFlagIntro(o3);
+        S.obstacles.push(o3);
+        resolvePickupConflicts(o3);
+        S.nextObstacleX = o2.x + 340 + 140;
+      }
     }
     resolvePickupConflicts(o);
 
     // mezera podle rychlosti – s ujetou vzdáleností se zmenšuje,
     // prvních pár set metrů je naopak vzdušnějších. Rozestupy držíme
-    // vzdušnější, ať zbývá víc času na reakci a hra není jen samé skákání.
-    const tighten = Math.max(0.72, 1 - distM / 4000);
+    // vzdušnější, ať zbývá čas na reakci; vyšší stupně je dál stahují.
+    const tighten = Math.max(Math.max(0.55, 0.72 - 0.03 * lvl), 1 - distM / 4000);
     const easyGap = 1 + 0.45 * Math.max(0, 1 - distM / 800);
     const reaction = S.speed * (1.25 + Math.random() * 0.95) * tighten * easyGap;
     S.nextObstacleX += Math.max(470, reaction);
@@ -681,10 +710,11 @@
     const x0 = S.nextPickupX;
     const distM = S.worldX / PX_PER_M;
     // S ujetou vzdáleností ubývá energie čím dál rychleji (viz ECONOMY.drainRampDist
-    // a stupňující se tempo po 5 km). Aby po 5 km nezačalo mrkví „docházet“, roste
-    // úměrně i jejich přísun: fuel jde od 0 na startu k 1 od 5 km výš a přelévá
-    // pravděpodobnosti i množství ve prospěch mrkví a zlatých mrkví.
-    const fuel = Math.min(1, distM / 5000);
+    // a stupňující se tempo). Přísun mrkví s tím zprvu drží krok: fuel jde od 0
+    // na startu k 1 u 5 km. Od 3. stupně obtížnosti (7,5 km) ale zase pomalu
+    // řídne – pozdní kilometry jsou o hospodaření s energií a někde má běh
+    // i dobrému hráči skončit.
+    const fuel = Math.max(0.35, Math.min(1, distM / 5000) - 0.10 * Math.max(0, difficultyLevel() - 2));
     const roll = Math.random();
     let width = 0;
 
@@ -903,10 +933,11 @@
      Místo duhových schodů nastoupí pódium: svět zmrzne, právě běžící zvířátko
      zazpívá publiku. Jezdec přejíždí časovací lištu a hráč ťuká, když je ve
      zlaté zóně – trefená nota = zvířátko spustí svůj hlas. Trefí-li dost not,
-     koncert je vyprodaný (výhra): po prvním se rychlost vrací na základní, po
-     každém dalším zůstává +5 % základu navíc (viz resolveSpecial). Při propadáku
-     se jen zkrátí nastřádané zrychlení na polovinu. Každý další koncert je navíc
-     svižnější a má užší zónu (speedupPerConcert / shrinkPerConcert). */
+     koncert je vyprodaný (výhra): zvířátko chytí dech a část nastřádaného
+     zrychlení setřese – ale s každým dalším koncertem čím dál menší
+     (viz resolveSpecial). Při propadáku zůstává tempo skoro celé. Každý další
+     koncert je navíc svižnější a má užší zónu (speedupPerConcert /
+     shrinkPerConcert). */
   const CONCERT = {
     total: 4,                 // kolik not koncert má (kratší = přehlednější)
     threshold: 3,             // kolik trefit = vyprodáno (výhra)
@@ -917,8 +948,8 @@
     zoneHalf: 0.14,           // půlšířka zelené zóny v 1. koncertu (0..1) – první nota je nejširší
     zoneHalfMin: 0.055,       // užší už zóna nebude, ať to jde vždycky trefit
     shrinkPerNote: 0.024,     // každá další nota zónu zúží (postupné ztížení v rámci koncertu)
-    shrinkPerConcert: 0.008,  // každý další koncert (5/7,5/10 km…) začíná s užší zónou
-    speedupPerConcert: 0.085, // a puntík mu jede svižněji (o tolik kratší beatDur)
+    shrinkPerConcert: 0.012,  // každý další koncert (5/7,5/10 km…) začíná s užší zónou
+    speedupPerConcert: 0.10,  // a puntík mu jede svižněji (o tolik kratší beatDur)
   };
 
   // zelená zóna se postupně zmenšuje: každou další notou a každým dalším koncertem
@@ -1036,15 +1067,33 @@
       if (SP.beatT >= SP.beatDur) registerBeat(false);
     } else if (SP.phase === 'done') {
       SP.resultT -= dt;
-      if (SP.resultT <= 0) S.special = null;
+      if (SP.resultT <= 0) {
+        S.special = null;
+        // koncert skončil = louka přituhla (nový stupeň obtížnosti) –
+        // ohlásí se cedulí ve stylu milníků, ať hráč ví, že přitvrzení je záměr.
+        // Zameškaný milník (2500 m je i násobek 500) by ceduli hned přepsal,
+        // proto se dožene tady – koncertní cedule ho nahrazuje.
+        S.lastMilestone = Math.floor((S.worldX / PX_PER_M) / 500) * 500;
+        S.milestone = {
+          label: { cs: '⚡ Louka zrychluje!', en: '⚡ The meadow speeds up!' },
+          t: 0, dur: 2.6, quote: randomQuote(EVENTS.speedUp),
+        };
+      }
     }
   }
 
-  // aktuální strmost rychlostní rampy (px/s za metr) – každých 5 km přitvrdí;
+  // STUPEŇ OBTÍŽNOSTI – po každém Zvířecím koncertu (2,5 km) louka přituhne.
+  // Jedno číslo řídí všechno: strmost rychlosti, hustotu překážek, přísun
+  // mrkví, spotřebu energie i bolestivost nárazů. Cíl: dobrý hráč doběhne
+  // ~8 km (3 koncerty), pak už louka vyhrává.
+  function difficultyLevel() {
+    return Math.min(8, Math.floor((S.worldX / PX_PER_M) / 2500));
+  }
+
+  // aktuální strmost rychlostní rampy (px/s za metr) – roste se stupněm;
   // jedno místo pravdy pro update smyčku i přepočty kotvy po koncertu
   function rampRateNow() {
-    const tier = Math.min(4, Math.floor((S.worldX / PX_PER_M) / 5000));
-    return 0.15 + tier * 0.05;
+    return 0.15 + difficultyLevel() * 0.05;
   }
 
   function resolveSpecial(win) {
@@ -1063,10 +1112,10 @@
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const extra = Math.max(0, S.speed - base); // nastřádané zrychlení nad základ
     if (win) {
-      // vyprodáno – zvířátko chytí dech; první koncert vrací rychlost úplně na
-      // základ, každý další už nechává +5 % základu navíc (kumulativně), ať se
-      // běh nedá natahovat donekonečna
-      const residual = base * 0.05 * (SP.concertIdx || 0);
+      // vyprodáno – zvířátko chytí dech, ale každý další koncert ho vrací míň:
+      // po 1. zůstane čtvrtina nastřádaného zrychlení, pak 45 %, 65 %… až 80 %.
+      // Od ~3. koncertu se tempo už nedá úplně setřást (cíl: doběhnout ~8 km)
+      const residual = extra * Math.min(0.25 + 0.20 * (SP.concertIdx || 0), 0.80);
       S.speedAnchorX = S.worldX - (residual / rampRateNow()) * PX_PER_M;
       S.energy = 100;
       S.ramLeft = S.stats?.ram || 0; // Yakulovi se doplní i náboje beranidla
@@ -1074,8 +1123,8 @@
       SP.bubble = pickOne(EVENTS.concertWin);
       AUDIO.play('golden');
     } else {
-      // propadák – rychlost se nevynuluje, jen se nastřádané zrychlení zkrátí na půl
-      const keep = extra * 0.5;
+      // propadák – nastřádané zrychlení skoro celé zůstává, s dalšími koncerty víc
+      const keep = extra * Math.min(0.60 + 0.10 * (SP.concertIdx || 0), 0.95);
       S.speedAnchorX = S.worldX - (keep / rampRateNow()) * PX_PER_M;
       SP.bubble = pickOne(EVENTS.concertMiss);
       AUDIO.play('laugh');
@@ -1375,13 +1424,21 @@
     return { env: ENVS[idx], nextEnv: ENVS[next], blend: t, idx };
   }
 
+  // paleta se míchá jen když se opravdu změní (mimo 70m přechod je konstantní) –
+  // míchání 9 barev × 2 volání za snímek zbytečně krmilo garbage collector
+  let palCacheKey = '';
+  let palCacheVal = null;
   function blendedPalette() {
     const { env, nextEnv, blend } = currentEnv();
+    const q = Math.round(blend * 64) / 64; // 64 kroků přechodu oko nerozezná od plynulého
+    const key = env.id + nextEnv.id + q;
+    if (key === palCacheKey) return palCacheVal;
     const keys = ['skyTop', 'skyBottom', 'hillFar', 'hillNear', 'ground', 'groundDark', 'path', 'sun', 'clouds'];
     const pal = {};
-    for (const k of keys) pal[k] = GFX.lerpColor(env[k], nextEnv[k], blend);
-    pal.nightAmt = GFX.lerp(env.night ? 1 : 0, nextEnv.night ? 1 : 0, blend);
-    pal.particles = blend < 0.5 ? env.particles : nextEnv.particles;
+    for (const k of keys) pal[k] = GFX.lerpColor(env[k], nextEnv[k], q);
+    pal.nightAmt = GFX.lerp(env.night ? 1 : 0, nextEnv.night ? 1 : 0, q);
+    pal.particles = q < 0.5 ? env.particles : nextEnv.particles;
+    palCacheKey = key; palCacheVal = pal;
     return pal;
   }
 
@@ -1430,6 +1487,16 @@
      ========================================================= */
   let ambientTimer = 0;
 
+  // úklid pole na místě – .filter() každý snímek vytvářel nová pole
+  // (7 polí × 60 snímků/s) a garbage collector pak uměl škubnout obrazem
+  function compact(arr, keep) {
+    let w = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (keep(arr[i])) arr[w++] = arr[i];
+    }
+    arr.length = w;
+  }
+
   function update(dt) {
     S.t += dt * 1000;
     // třes musí odeznít i na obrazovkách mimo běh, jinak se menu klepe donekonečna
@@ -1466,10 +1533,9 @@
     // zrychlování – pozvolné, ať má hráč šanci doběhnout opravdu daleko;
     // rozjezd se měří od kotvy speedAnchorX (po výhře v koncertu se resetuje = běží zas pomalu)
     if (running) {
-      // s přibývající vzdáleností se běh stupňuje: každých 5 km (5/10/15 km…)
-      // přitvrdí – strmější náběh rychlosti i vyšší strop, ať je konec běhu výzva
-      const tier = Math.min(4, Math.floor((S.worldX / PX_PER_M) / 5000)); // 0,1,2,3,4 (od 20 km výš stejné)
-      const speedCap = 620 + tier * 90;       // vyšší strop, ať je pořád co zrychlovat
+      // s každým stupněm obtížnosti (koncert, 2,5 km) je náběh rychlosti
+      // strmější (rampRateNow) a strop vyšší, ať je pořád co zrychlovat
+      const speedCap = 620 + difficultyLevel() * 60;
       S.speed = Math.min(S.baseSpeed * S.stats.speed + ((S.worldX - S.speedAnchorX) / PX_PER_M) * rampRateNow(), speedCap);
       // pódium koncertu nejdřív klidně vjede do záběru (approach), pak svět zmrzne
       if (S.special && S.special.phase === 'approach') {
@@ -1506,7 +1572,7 @@
     // spawn
     while (S.nextDecorX < S.worldX + W / FAR_PARALLAX + 500) spawnDecor();
     while (S.nextFlyerX < S.worldX + W + 700) spawnFlyer();
-    S.flyers = S.flyers.filter(f => f.cx > S.worldX - 700);
+    compact(S.flyers, f => f.cx > S.worldX - 700);
     updateFlyers(dt, running);
     if (running && !S.special) {
       while (S.nextObstacleX < S.worldX + W + 300) spawnObstacle();
@@ -1525,9 +1591,9 @@
 
     // úklid za obrazovkou
     const cut = S.worldX - 300;
-    S.obstacles = S.obstacles.filter(o => o.x > cut);
-    S.pickups = S.pickups.filter(p => p.x > cut && !p.taken);
-    S.decor = S.decor.filter(d => d.x > cut - 1300); // pomalejší parallax = déle na obrazovce
+    compact(S.obstacles, o => o.x > cut);
+    compact(S.pickups, p => p.x > cut && !p.taken);
+    compact(S.decor, d => d.x > cut - 1300); // pomalejší parallax = déle na obrazovce
 
     // hudba podle prostředí
     if (running) {
@@ -1542,9 +1608,10 @@
       const speedFactor = Math.max(0, (S.speed - S.baseSpeed) / 400);
       // odčerpávání sílí s tempem i vzdáleností, ale člen za vzdálenost se
       // zastropuje – jinak by po 5 km energie padala tak rychle, že ji přísun
-      // mrkví nedožene. Se zastropovaným poklesem drží běh naživu dovednost
-      // (uhýbání a sbírání), ne nedostatek paliva.
-      const distRamp = Math.min(2, distM / ECONOMY.drainRampDist);
+      // mrkví nedožene. Strop se od 3. stupně obtížnosti pomalu zvedá (2 → 3),
+      // takže hluboko za 8. kilometrem výdrž prostě dojde.
+      const distRampCap = 2 + Math.min(1, 0.2 * Math.max(0, difficultyLevel() - 2));
+      const distRamp = Math.min(distRampCap, distM / ECONOMY.drainRampDist);
       const ramp = 1 + speedFactor * 0.45 + distRamp;
       // God Mode (vývojářský režim): energie nikdy neubývá, běh se nedá ukončit
       if (dev.god) {
@@ -1574,11 +1641,11 @@
       if (p.grav) p.vy += 500 * dt;
       p.life -= dt;
     }
-    S.particles = S.particles.filter(p => p.life > 0);
+    compact(S.particles, p => p.life > 0);
     for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
-    S.floaters = S.floaters.filter(f => f.life > 0);
+    compact(S.floaters, f => f.life > 0);
     for (const b of S.sideBubbles) b.t += dt;
-    S.sideBubbles = S.sideBubbles.filter(b => b.t < b.dur);
+    compact(S.sideBubbles, b => b.t < b.dur);
     if (S.milestone) { S.milestone.t += dt; if (S.milestone.t >= S.milestone.dur) S.milestone = null; }
 
     // ambientní částice prostředí
@@ -1699,9 +1766,9 @@
         burst(sx, groundY - 90, '#55524c', 18); // tmavá pírka rozprášeného hejna
         floater(randomQuote(EVENTS.flock), sx, groundY - 160, '#e5533a');
       }
-      // s ujetou vzdáleností přituhuje: každých 5 km bolí náraz do jakékoli
-      // překážky o 5 % víc (viz ECONOMY.hitRampDist/hitRampStep, bez stropu)
-      const hitRamp = 1 + ECONOMY.hitRampStep * Math.floor((S.worldX / PX_PER_M) / ECONOMY.hitRampDist);
+      // s každým stupněm obtížnosti (koncert, 2,5 km) bolí náraz do jakékoli
+      // překážky o 5 % víc (viz ECONOMY.hitRampStep)
+      const hitRamp = 1 + ECONOMY.hitRampStep * difficultyLevel();
       const penalty = Math.round((o.soft ? 8 : ECONOMY.hitPenalty) * (S.stats.hitFactor || 1) * hitRamp);
       // ve škole běhu drží energie rezervu – klopýtnutí nesmí běh ukončit
       S.energy = Math.max(S.tut ? 15 : 0, S.energy - penalty);
@@ -1828,11 +1895,14 @@
       GFX.ell(ctx, sx, groundY + 8, o.w / 2 + 8, 9);
       ctx.fill();
       // bez rozmazaného stínu – shadowBlur každý snímek znatelně škubal na mobilech,
-      // ostrý stín na zemi pod překážkou stačí
-      GFX.drawObstacle(ctx, {
-        ...o, x: sx,
-        y: o.flying ? groundY - o.clearance : groundY,
-      }, S.t);
+      // ostrý stín na zemi pod překážkou stačí.
+      // Souřadnice se do objektu vloží jen na dobu kreslení – kopie objektu
+      // pro každou překážku každý snímek zbytečně krmila garbage collector.
+      const wx = o.x;
+      o.x = sx;
+      o.y = o.flying ? groundY - o.clearance : groundY;
+      GFX.drawObstacle(ctx, o, S.t);
+      o.x = wx;
     }
 
     if (S.mode === 'intro') {
@@ -1996,7 +2066,7 @@
     const scale = 0.82 + eob * 0.18;
     const rise = (1 - outP) * -16; // ke konci lehce vypluje vzhůru
 
-    const label = '🏅 ' + ms.m + ' m';
+    const label = ms.label ? I18N.pick(ms.label) : '🏅 ' + ms.m + ' m';
     const cheer = I18N.pick(ms.quote);
 
     ctx.save();
@@ -2273,16 +2343,39 @@
     measureMenuPanel();
   }
 
+  // do DOM se zapisuje jen při změně zobrazené hodnoty – zápis stylu/textu
+  // každý snímek nutil prohlížeč přepočítávat rozložení i bez viditelné změny
+  const hudLast = { energy: -1, low: null, dist: -1, coins: -1, clover: -1 };
   function updateHud(full) {
-    $('hud-energy-fill').style.width = Math.max(0, S.energy) + '%';
-    $('hud-energy-fill').classList.toggle('low', S.energy < 25);
-    $('hud-dist').textContent = Math.floor(S.worldX / PX_PER_M) + ' m';
-    $('hud-coins').textContent = runCoins();
-    const clover = $('hud-clover');
-    if (S.cloverT > 0) {
-      clover.style.display = 'flex';
-      clover.textContent = `🍀 ×${ECONOMY.cloverCoinValue} · ${Math.ceil(S.cloverT)} s`;
-    } else clover.style.display = 'none';
+    const energy = Math.round(Math.max(0, S.energy) * 2) / 2; // po půl procentu stačí
+    if (energy !== hudLast.energy) {
+      hudLast.energy = energy;
+      $('hud-energy-fill').style.width = energy + '%';
+    }
+    const low = S.energy < 25;
+    if (low !== hudLast.low) {
+      hudLast.low = low;
+      $('hud-energy-fill').classList.toggle('low', low);
+    }
+    const dist = Math.floor(S.worldX / PX_PER_M);
+    if (dist !== hudLast.dist) {
+      hudLast.dist = dist;
+      $('hud-dist').textContent = dist + ' m';
+    }
+    const coins = runCoins();
+    if (coins !== hudLast.coins) {
+      hudLast.coins = coins;
+      $('hud-coins').textContent = coins;
+    }
+    const cloverS = S.cloverT > 0 ? Math.ceil(S.cloverT) : 0;
+    if (cloverS !== hudLast.clover) {
+      hudLast.clover = cloverS;
+      const clover = $('hud-clover');
+      if (cloverS > 0) {
+        clover.style.display = 'flex';
+        clover.textContent = `🍀 ×${ECONOMY.cloverCoinValue} · ${cloverS} s`;
+      } else clover.style.display = 'none';
+    }
     if (full) {
       const ram = $('hud-ram');
       if (S.stats && S.stats.ram) {
@@ -2310,6 +2403,7 @@
     { id: 'm2000', icon: '🥈', title: { cs: 'Dvoukilometrový frajer', en: 'Two-kilometer hotshot' }, check: (s) => (s.best || 0) >= 2000 },
     { id: 'm3000', icon: '🥇', title: { cs: 'Trojka jako řemen', en: 'Rock-solid three-K' }, check: (s) => (s.best || 0) >= 3000 },
     { id: 'm5000', icon: '🏆', title: { cs: 'Šampion louky – 5 kiláků!', en: 'Meadow champion – 5 K!' }, check: (s) => (s.best || 0) >= 5000 },
+    { id: 'm8000', icon: '👑', title: { cs: 'Legenda louky – 8 kiláků!', en: 'Meadow legend – 8 K!' }, check: (s) => (s.best || 0) >= 8000 },
     { id: 'friend', icon: '🐾', title: { cs: 'Našel sis parťáka do běhu', en: 'You found a running buddy' }, check: (s) => (s.unlocked || []).length >= 2 },
     { id: 'runs10', icon: '🔁', title: { cs: 'Deset rozběhů, nula lenosti', en: 'Ten runs, zero laziness' }, check: (s) => (s.runs || 0) >= 10 },
   ];
@@ -2802,8 +2896,10 @@
      ========================================================= */
   let last = performance.now();
   function frame(now) {
-    const dt = Math.max(0, Math.min((now - last) / 1000, 0.05));
+    const rawDt = Math.max(0, (now - last) / 1000);
+    const dt = Math.min(rawDt, 0.05);
     last = now;
+    autoQuality(rawDt);
     update(dt);
     render();
     requestAnimationFrame(frame);

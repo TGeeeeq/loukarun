@@ -1767,6 +1767,8 @@ const GFX = (() => {
      POSTAVY – parametrický čtyřnožec
      pose: { runPhase, jumpT, sliding, stumble, squash }
      ========================================================= */
+  const bodyGradCache = new Map(); // gradienty těl postav (pár kusů, viz níže)
+
   function drawCharacter(ctx, ch, x, y, scale, pose, t) {
     const c = ch.colors;
     const p = pose || {};
@@ -1839,9 +1841,16 @@ const GFX = (() => {
     ctx.restore();
 
     // --- tělo (s jemným stínováním pro objem) ---
-    const bodyGrad = ctx.createLinearGradient(0, bodyY - bodyRY - 2, 0, bodyY + bodyRY + 2);
-    bodyGrad.addColorStop(0, shade(c.body, 0.07));
-    bodyGrad.addColorStop(1, shade(c.body, -0.07));
+    // gradient je pro danou postavu pořád stejný – cachuje se, ať se
+    // nevytváří každý snímek (v intru běhá celé stádo najednou)
+    const gradKey = c.body + '|' + bodyY + '|' + bodyRY;
+    let bodyGrad = bodyGradCache.get(gradKey);
+    if (!bodyGrad) {
+      bodyGrad = ctx.createLinearGradient(0, bodyY - bodyRY - 2, 0, bodyY + bodyRY + 2);
+      bodyGrad.addColorStop(0, shade(c.body, 0.07));
+      bodyGrad.addColorStop(1, shade(c.body, -0.07));
+      bodyGradCache.set(gradKey, bodyGrad);
+    }
     if (species === 'ovce') { // vlněné obláčky po obvodu
       for (let i = 0; i < 10; i++) {
         const a = i / 10 * Math.PI * 2;
