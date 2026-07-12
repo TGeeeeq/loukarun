@@ -7,6 +7,7 @@ Kompletní balíček pro publikaci Louka Run na Google Play. Aktuální build: v
 | Soubor | K čemu |
 |---|---|
 | `app-release.aab` | Podepsaný release bundle — tohle se nahrává do Play Console |
+| `loukarun-v1.0.2-test.apk` | Instalovatelný APK pro testování na telefonu (viz níže) |
 | `listing.md` | Texty záznamu v obchodě (CZ + EN popisy, dotazníky, distribuce) |
 | `icon-512.png` | Ikona aplikace 512×512 |
 | `feature-graphic-1024x500.png` | Hlavní grafika 1024×500 |
@@ -20,6 +21,26 @@ Kompletní balíček pro publikaci Louka Run na Google Play. Aktuální build: v
 4. **Cena a distribuce** — 200 Kč, země dle `listing.md`.
 5. **Nahrát AAB** — Release → Production → Create new release → nahrát `app-release.aab`. Při prvním nahrání potvrdit **Play App Signing**.
 6. Odeslat ke kontrole.
+
+## Testovací APK na telefon
+
+`loukarun-v1.0.2-test.apk` je univerzální APK vygenerovaný bundletoolem přímo
+z `app-release.aab` — obsahově totožný s verzí na Google Play. Je ale podepsaný
+**testovacím klíčem**, takže:
+
+- instaluje se ručně („instalace z neznámých zdrojů"), ne přes Play,
+- **nejde nainstalovat přes verzi staženou z Google Play** (jiný podpis) —
+  tu je nutné nejdřív odinstalovat, a naopak,
+- nikam se nenahrává, slouží jen k testování.
+
+Nový testovací APK z aktuálního AAB:
+
+```bash
+java -jar bundletool.jar build-apks --bundle=googleplay/app-release.aab \
+  --output=out.apks --mode=universal \
+  --ks=test.keystore --ks-pass=pass:HESLO --ks-key-alias=test --key-pass=pass:HESLO
+unzip out.apks universal.apk
+```
 
 ## Nový build (další verze)
 
