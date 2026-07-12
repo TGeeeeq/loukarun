@@ -68,7 +68,7 @@ const DATA = (() => {
         cs: 'Energická ovčí kamarádka, která skáče jako na pružině.',
         en: 'An energetic sheep friend who jumps like she’s on springs.',
       },
-      unlock: { type: 'coins', price: 250 },
+      unlock: { type: 'coins', price: 800 },
       perk: {
         cs: 'Perk: VLNĚNÝ POLŠTÁŘ – náraz ubere jen půlku energie a skáče o kousek výš.',
         en: 'Perk: WOOLLY CUSHION – takes only half the energy from a hit and jumps a little higher.',
@@ -116,7 +116,7 @@ const DATA = (() => {
         cs: 'Mazlivá kravička, která nejvíc ze všeho miluje běhání po louce.',
         en: 'A cuddly cow who loves nothing more than running across the meadow.',
       },
-      unlock: { type: 'coins', price: 500 },
+      unlock: { type: 'coins', price: 2000 },
       perk: {
         cs: 'Perk: ŠŤASTNÁ KOPYTA – sbírá o polovinu víc mincí a zlaté mrkve jí dají dvakrát tolik energie.',
         en: 'Perk: LUCKY HOOVES – collects 50% more coins and golden carrots give her twice the energy.',
@@ -164,7 +164,7 @@ const DATA = (() => {
         cs: 'Prasátko, které si nejvíc užívá drbání na bříšku.',
         en: 'A piglet who enjoys belly rubs more than anything.',
       },
-      unlock: { type: 'coins', price: 900 },
+      unlock: { type: 'coins', price: 4500 },
       perk: {
         cs: 'Perk: RYPÁČEK-MAGNET – přitahuje mrkve a mince z dálky.',
         en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
@@ -212,7 +212,7 @@ const DATA = (() => {
         cs: 'Rozverný mladík, který právě zjišťuje, k čemu má rohy.',
         en: 'A playful youngster still figuring out what his horns are for.',
       },
-      unlock: { type: 'coins', price: 1500 },
+      unlock: { type: 'coins', price: 9000 },
       perk: {
         cs: 'Perk: BERANIDLO – 5× za běh prorazí překážku bez ztráty energie.',
         en: 'Perk: BATTERING RAM – smashes through 5 obstacles per run without losing energy.',
@@ -260,7 +260,7 @@ const DATA = (() => {
         cs: 'Klidná a tichá duše, věrná parťačka Avaly.',
         en: 'A calm and quiet soul, Avala’s faithful companion.',
       },
-      unlock: { type: 'coins', price: 2500 },
+      unlock: { type: 'coins', price: 15000 },
       perk: {
         cs: 'Perk: KLID V DUŠI – energie ubývá o čtvrtinu pomaleji.',
         en: 'Perk: INNER PEACE – energy drains a quarter slower.',
