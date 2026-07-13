@@ -2371,7 +2371,11 @@
   /* ---------- odznaky (achievementy) ----------
      Jednoduchá sbírka, ať má hráč pro co běhat. Splnění se pozná
      z uloženého postupu (rekord, počet běhů, parta, škola běhu),
-     takže nic dalšího se nemusí hlídat za běhu. */
+     takže nic dalšího se nemusí hlídat za běhu.
+
+     Pozn.: nové milníky 12/16/20 km přidány zatím jen do webu (sw.js v24→v25).
+     Android/Play verzi je potřeba přebuildit na počítači podle RELEASE.md
+     (zvednout versionCode/versionName v android/app/build.gradle + bundleRelease). */
   const ACHIEVEMENTS = [
     { id: 'tutorial', icon: '🎓', title: { cs: 'Karlova škola s vyznamenáním', en: 'Karel’s school, straight A’s' }, check: (s) => !!s.tutorialDone },
     { id: 'm1000', icon: '🥉', title: { cs: 'První kilák v kopytech', en: 'First kilometer under the hooves' }, check: (s) => (s.best || 0) >= 1000 },
@@ -2379,6 +2383,9 @@
     { id: 'm3000', icon: '🥇', title: { cs: 'Trojka jako řemen', en: 'Rock-solid three-K' }, check: (s) => (s.best || 0) >= 3000 },
     { id: 'm5000', icon: '🏆', title: { cs: 'Šampion louky – 5 kiláků!', en: 'Meadow champion – 5 K!' }, check: (s) => (s.best || 0) >= 5000 },
     { id: 'm8000', icon: '👑', title: { cs: 'Legenda louky – 8 kiláků!', en: 'Meadow legend – 8 K!' }, check: (s) => (s.best || 0) >= 8000 },
+    { id: 'm12000', icon: '🌟', title: { cs: 'Tucet kiláků v kopytech!', en: 'A full dozen K under the hooves!' }, check: (s) => (s.best || 0) >= 12000 },
+    { id: 'm16000', icon: '🔥', title: { cs: 'Šestnáctka – kopyta v jednom ohni!', en: 'Sixteen K – hooves on fire!' }, check: (s) => (s.best || 0) >= 16000 },
+    { id: 'm20000', icon: '🦄', title: { cs: 'Dvacítka – bájný běžec louky!', en: 'Twenty K – the meadow’s living legend!' }, check: (s) => (s.best || 0) >= 20000 },
     { id: 'friend', icon: '🐾', title: { cs: 'Našel sis parťáka do běhu', en: 'You found a running buddy' }, check: (s) => (s.unlocked || []).length >= 2 },
     { id: 'runs10', icon: '🔁', title: { cs: 'Deset rozběhů, nula lenosti', en: 'Ten runs, zero laziness' }, check: (s) => (s.runs || 0) >= 10 },
   ];
