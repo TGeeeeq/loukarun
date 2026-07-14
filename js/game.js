@@ -6,6 +6,10 @@
 (() => {
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
+  /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
+  const GAME_VERSION = '1.0.4';
+  { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
+
   /* ---------- canvas ---------- */
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');

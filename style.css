@@ -242,6 +242,14 @@ a.btn { text-decoration: none; display: inline-block; }
   line-height: 0.95;
 }
 .game-title span { color: #ffe08a; text-shadow: 0 4px 0 #d89b26, 0 8px 0 rgba(0,0,0,0.15), 0 14px 30px rgba(0,0,0,0.3); }
+.game-version {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.55);
+}
 .subtitle {
   margin-top: 12px;
   font-weight: 700;
