@@ -2,12 +2,8 @@
 
 ## ⏳ Čeká na vydání
 
-- **Nové achievementy 12 / 16 / 20 km** (🌟🔥🦄) přidány do webové vrstvy
-  (`js/game.js`, cache `sw.js` zvednuta na `loukarun-v25`). **Web je hotový.**
-- **Android / Google Play verze ještě NEobsahuje** tyto změny – je potřeba ji
-  přebuildit na počítači podle postupu níže: zvednout `versionCode`/`versionName`
-  v `android/app/build.gradle`, `bash build-app.sh`, `npx cap sync android`,
-  `./gradlew bundleRelease` a nahrát nový AAB do Play Console.
+- Nic — AAB v1.0.4 (versionCode 5, achievementy 12/16/20 km) je sestavený
+  v `googleplay/app-release.aab`; zbývá jen nahrát do Play Console.
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
