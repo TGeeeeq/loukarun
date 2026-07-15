@@ -2,8 +2,8 @@
 
 ## ⏳ Čeká na vydání
 
-- Nic — AAB v1.0.4 (versionCode 5, achievementy 12/16/20 km) je sestavený
-  v `googleplay/app-release.aab`; zbývá jen nahrát do Play Console.
+- Nic — v1.0.4 (versionCode 5, achievementy 12/16/20 km + R8 minifikace)
+  je nahraná v Play Console. Ve vývoji je v1.0.5 (versionCode 6).
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
