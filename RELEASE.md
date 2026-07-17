@@ -2,8 +2,9 @@
 
 ## ⏳ Čeká na vydání
 
-- Nic — v1.0.4 (versionCode 5, achievementy 12/16/20 km + R8 minifikace)
-  je nahraná v Play Console. Ve vývoji je v1.0.5 (versionCode 6).
+- v1.0.5 (versionCode 6) — AAB přestavěn a podepsán, čeká jen na nahrání
+  do Play Console (Production → Create new release). Předchozí v1.0.4
+  (versionCode 5) je v produkci.
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
