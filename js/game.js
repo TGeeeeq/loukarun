@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.0.5';
+  const GAME_VERSION = '1.0.6';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -1458,11 +1458,6 @@
     S.floaters.push({ txt, x, y, life: 1, color });
   }
 
-  function sayBubble(text) {
-    S.bubble = text;
-    S.bubbleT = 3.0; // kratší zobrazení, ať hláška méně překáží
-    AUDIO.play('quote');
-  }
   // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
   function pickOne(list) { return list[Math.floor(Math.random() * list.length)]; }
   function randomQuote(list) { return I18N.pick(pickOne(list)); }
@@ -1602,11 +1597,6 @@
       // pod rezervu – lekce není test výdrže a nedá se při ní umřít
       S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt * (S.tut ? 0.5 : 1);
       if (S.tut) S.energy = Math.max(S.energy, 15);
-      if (S.energy <= 25 && !S.saidLowEnergy) {
-        S.saidLowEnergy = true;
-        sayBubble(randomQuote(EVENTS.lowEnergy));
-      }
-      if (S.energy > 35) S.saidLowEnergy = false;
       if (S.energy <= 0) { S.energy = 0; endRun(); return; }
 
       collide(dt);
@@ -1691,13 +1681,11 @@
           S.energy = Math.min(100, S.energy + gGain);
           floater(I18N.t('fl.golden', { n: gGain }), sx, sy - 24, '#ffce3a');
           burst(sx, sy, '#ffd24a', 22);
-          sayBubble(randomQuote(EVENTS.goldenCarrot));
           AUDIO.play('golden');
         } else if (p.kind === 'clover') {
           S.cloverT = ECONOMY.cloverDuration;
           floater(I18N.t('fl.clover', { n: ECONOMY.cloverCoinValue }), sx, sy - 24, '#8ee87a');
           burst(sx, sy, '#6fce58', 18);
-          sayBubble(randomQuote(EVENTS.clover));
           AUDIO.play('clover');
         } else {
           const val = S.cloverT > 0 ? ECONOMY.cloverCoinValue : 1;
@@ -1755,7 +1743,6 @@
       S.invuln = 1.1;
       S.shake = 0.8;
       floater('-' + penalty + ' ⚡', px, pyTop - 20, '#e5533a');
-      sayBubble(randomQuote(S.char.hitQuotes));
       AUDIO.play('hit');
       if (S.energy <= 0) { endRun(); return; }
     }
@@ -1765,12 +1752,7 @@
   function quotes(dt) {
     // během školy běhu mluví Karel jen lekce – náhodné hlášky počkají;
     // totéž platí, dokud běžec představuje novinku na trase
-    if (S.tut || S.enc || S.special) { S.nextQuoteAt = Math.max(S.nextQuoteAt, 2); return; }
-    S.nextQuoteAt -= dt;
-    if (S.nextQuoteAt <= 0 && S.bubbleT <= 0) {
-      sayBubble(randomQuote(S.char.quotes));
-      S.nextQuoteAt = 16 + Math.random() * 10;
-    }
+    if (S.tut || S.enc || S.special) return;
     const dist = Math.floor(S.worldX / PX_PER_M);
     if (dist - S.lastMilestone >= 500) {
       S.lastMilestone = Math.floor(dist / 500) * 500;
@@ -2707,11 +2689,47 @@
   /* =========================================================
      SMYČKA
      ========================================================= */
+  /* ---------- výkonnostní overlay (?perf=1) ----------
+     Diagnostika na reálném zařízení: FPS, průměr/špička frame-time, počet
+     dlouhých snímků (>50 ms = pravděpodobně GC/zádrhel) a aktuální DPR krok
+     (ukáže, jestli autoQuality snížil rozlišení). Ve výchozím stavu vypnutý –
+     když neběží, nestojí vůbec nic. */
+  const PERF = (() => {
+    if (!new URLSearchParams(location.search).has('perf')) return null;
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99999;'
+      + 'font:12px/1.35 monospace;color:#0f0;background:rgba(0,0,0,.62);'
+      + 'padding:5px 8px;border-radius:6px;white-space:pre;pointer-events:none;'
+      + 'text-shadow:0 1px 1px #000';
+    document.body.appendChild(el);
+    const N = 90;                 // okno ~1,5 s při 60 fps
+    const times = new Float32Array(N);
+    let idx = 0, filled = 0, longFrames = 0, sinceDraw = 0;
+    return {
+      record(rawMs) {
+        times[idx] = rawMs;
+        idx = (idx + 1) % N;
+        if (filled < N) filled++;
+        if (rawMs > 50) longFrames++;
+        if (++sinceDraw < 15) return; // překreslit ~4×/s, ať overlay sám nežere
+        sinceDraw = 0;
+        let sum = 0, max = 0;
+        for (let i = 0; i < filled; i++) { const v = times[i]; sum += v; if (v > max) max = v; }
+        const avg = sum / filled;
+        el.textContent =
+          `FPS ${Math.round(1000 / avg)}  avg ${avg.toFixed(1)}ms\n`
+          + `max ${max.toFixed(1)}ms  dlouhé>50ms ${longFrames}\n`
+          + `DPR ${DPR.toFixed(2)} (krok ${dprStep})`;
+      },
+    };
+  })();
+
   let last = performance.now();
   function frame(now) {
     const rawDt = Math.max(0, (now - last) / 1000);
     const dt = Math.min(rawDt, 0.05);
     last = now;
+    if (PERF) PERF.record(rawDt * 1000);
     autoQuality(rawDt);
     update(dt);
     render();

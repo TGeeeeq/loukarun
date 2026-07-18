@@ -51,15 +51,28 @@ const AUDIO = (() => {
     osc.start(t0); osc.stop(t0 + dur + 0.05);
   }
 
+  // bílý šum se dřív generoval (alokace bufferu + Math.random smyčka) při
+  // každém volání – a land()/hit() padnou při každém dopadu, přesně v herně
+  // citlivý okamžik. Šum je nerozeznatelný, tak ho pro danou délku vyrobíme
+  // jednou a dál jen recyklujeme hotový buffer.
+  const noiseBufs = new Map();
+  function noiseBuffer(dur) {
+    let buf = noiseBufs.get(dur);
+    if (!buf) {
+      const len = Math.floor(ctx.sampleRate * dur);
+      buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      noiseBufs.set(dur, buf);
+    }
+    return buf;
+  }
+
   function noise(dur, vol = 0.4, delay = 0) {
     if (!enabled || !ensureCtx()) return;
     const t0 = ctx.currentTime + delay;
-    const len = Math.floor(ctx.sampleRate * dur);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
     const src = ctx.createBufferSource();
-    src.buffer = buf;
+    src.buffer = noiseBuffer(dur);
     const g = ctx.createGain();
     g.gain.value = vol;
     const f = ctx.createBiquadFilter();
@@ -133,6 +146,25 @@ const AUDIO = (() => {
     kveta:  'voice-kveta',   // kráva – bučí
   };
   function voice(id) { sample('assets/sfx/' + (VOICE_FILES[id] || 'voice-karel') + '.mp3', 0.9); }
+
+  // hlasy a Karlův smích/hýkání se dřív dekódovaly líně až při 1. přehrání –
+  // uprostřed běhu to uměl být první zádrhel. V aplikaci (WA) je v klidu po
+  // unlocku předehřejeme do sampleBufs, ať jsou dekódované předem. Na webu
+  // jede sample() přes <audio preload="auto">, takže tam warm není potřeba.
+  let warmed = false;
+  function warmSamples() {
+    if (warmed || !WA || !ensureCtx()) return;
+    warmed = true;
+    const list = ['assets/sfx/karel-smich.mp3', 'assets/sfx/karel-hykani.mp3'];
+    for (const id in VOICE_FILES) list.push('assets/sfx/' + VOICE_FILES[id] + '.mp3');
+    for (const src of list) {
+      if (sampleBufs[src]) continue;
+      sampleBufs[src] = fetch(src)
+        .then((r) => r.arrayBuffer())
+        .then((ab) => ctx.decodeAudioData(ab))
+        .catch(() => { delete sampleBufs[src]; return null; });
+    }
+  }
 
   /* ---- hudba: dva přehrávače a plynulé prolínání (jen mp3) ----
      Změna skladby (nové prostředí) se prolne přes TRACK_FADE a stejně
@@ -343,6 +375,7 @@ const AUDIO = (() => {
   // autoplay politika: po prvním doteku/klávese rozjedeme čekající hudbu
   function unlock() {
     ensureCtx(); // probudí WebAudio (efekty vždy, v Capacitoru i běhová hudba)
+    warmSamples(); // v aplikaci předehřej hlasy/smích, ať 1. přehrání neseká
     if (!musicEnabled || !lastKey || !currentTrack) return;
     if (useWA(currentTrack)) {
       if (!WA.active) waPlay(currentTrack, 0.6);

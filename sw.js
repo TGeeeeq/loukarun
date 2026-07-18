@@ -5,7 +5,7 @@
    cache se automaticky smaže.
    ========================================================= */
 
-const CACHE = 'loukarun-v26';
+const CACHE = 'loukarun-v27';
 
 const CORE = [
   './',

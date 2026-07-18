@@ -2,9 +2,13 @@
 
 ## ⏳ Čeká na vydání
 
-- v1.0.5 (versionCode 6) — AAB přestavěn a podepsán, čeká jen na nahrání
+- v1.0.6 (versionCode 7) — AAB přestavěn a podepsán, čeká jen na nahrání
   do Play Console (Production → Create new release). Předchozí v1.0.4
-  (versionCode 5) je v produkci.
+  (versionCode 5) je v produkci; v1.0.5 (vc6) se do Play nikdy nenahrálo.
+  Změny v 1.0.6: odstraněny náhodné hlášky zvířátek za běhu (zůstal jen
+  Karlův tutoriál), přidány kulisy do pozadí (krtek, ježek, čáp na hnízdě,
+  světlušky), audio optimalizace (cache noise bufferů, předehřátí hlasů),
+  a diagnostický FPS overlay (?perf=1).
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
