@@ -1,0 +1,124 @@
+/* =========================================================
+   Kampaň SENO A SLÁMA – rozšíření základní promo šablony.
+   Základ (pozadí, bublina, CTA, velikosti) přebírá ze šablony
+   kampaně „Karel převzal účet“.
+   ========================================================= */
+@import url("../../karel-kampan/sablona/styl.css");
+
+/* teplejší, „senová“ obloha */
+body.seno {
+  background: linear-gradient(180deg, #7cc7ef 0%, #a9dcf5 40%, #ffe9b6 100%);
+}
+body.seno .hill { background: #b6dfa6; }
+body.seno .hill.h2 { background: #86c96e; }
+
+/* dlaždice s čísly kampaně */
+.fakty {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+.fakt {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 24px 12px;
+  box-shadow: 0 12px 26px rgba(31, 72, 41, 0.22);
+}
+.fakt b {
+  display: block;
+  font-weight: 800;
+  color: #3c7a33;
+  line-height: 1.05;
+}
+.fakt span {
+  display: block;
+  font-weight: 700;
+  color: #6b5138;
+  margin-top: 6px;
+}
+
+/* očíslované kroky „jak přispět“ */
+.kroky {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+.krok {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  background: #ffffff;
+  border-radius: 26px;
+  padding: 22px 28px;
+  text-align: left;
+  box-shadow: 0 12px 26px rgba(31, 72, 41, 0.22);
+}
+.krok .cislo {
+  flex: none;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffe08a, #ffc94a);
+  color: #4a3220;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 5px 0 #d89b26;
+}
+.krok p {
+  font-weight: 700;
+  color: #4a3220;
+  line-height: 1.25;
+}
+.krok p em {
+  font-style: normal;
+  font-weight: 800;
+  color: #3c7a33;
+}
+
+/* velké číslo (např. cíl sbírky) */
+.velke-cislo {
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 0.95;
+  text-shadow: 0 6px 0 rgba(58, 104, 47, 0.45), 0 12px 24px rgba(31, 72, 41, 0.35);
+}
+
+/* pruh s e-mailem / drobným sdělením */
+.mail {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 16px 34px;
+  font-weight: 800;
+  color: #3c7a33;
+  box-shadow: 0 8px 20px rgba(31, 72, 41, 0.2);
+}
+
+/* ---------- velikosti ---------- */
+body.seno.story .wordmark { font-size: 112px; }
+
+body.story .fakt b { font-size: 56px; }
+body.story .fakt span { font-size: 28px; }
+body.story .krok .cislo { width: 88px; height: 88px; font-size: 46px; }
+body.story .krok p { font-size: 38px; }
+body.story .velke-cislo { font-size: 122px; white-space: nowrap; }
+body.story .mail { font-size: 34px; }
+body.story .fakty, body.story .kroky { margin-top: 48px; }
+
+body.square .fakt b { font-size: 44px; }
+body.square .fakt span { font-size: 22px; }
+body.square .krok .cislo { width: 64px; height: 64px; font-size: 34px; }
+body.square .krok p { font-size: 28px; }
+body.square .velke-cislo { font-size: 130px; }
+body.square .mail { font-size: 25px; }
+body.square .fakty, body.square .kroky { margin-top: 32px; }
+
+body.portrait .fakt b { font-size: 50px; }
+body.portrait .fakt span { font-size: 24px; }
+body.portrait .krok .cislo { width: 72px; height: 72px; font-size: 38px; }
+body.portrait .krok p { font-size: 31px; }
+body.portrait .velke-cislo { font-size: 150px; }
+body.portrait .mail { font-size: 27px; }
+body.portrait .fakty, body.portrait .kroky { margin-top: 36px; }
