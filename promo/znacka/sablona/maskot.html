@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Louka Run – maskoti (výřezy postav)</title>
+<style>
+  html, body { margin: 0; background: transparent; }
+  #plátno { display: block; }
+</style>
+</head>
+<body>
+<canvas id="plátno" width="900" height="900"></canvas>
+
+<script src="../../../js/i18n.js"></script>
+<script src="../../../js/data.js"></script>
+<script src="../../../js/gfx.js"></script>
+<script>
+/* Postavu kreslí přímo herní GFX.drawCharacter – maskot v propagaci
+   je tak úplně stejný jako ve hře, žádná ruční kopie. */
+window.kresliMaskota = function (id, pose) {
+  const cv = document.getElementById('plátno');
+  const ctx = cv.getContext('2d');
+  const ch = DATA.CHARACTERS.find(c => c.id === id);
+  if (!ch) throw new Error('neznámá postava: ' + id);
+
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  // postava se kreslí od kopýtek nahoru; scale 6 dá zhruba 600 px vysokého maskota
+  GFX.drawCharacter(ctx, ch, cv.width / 2, cv.height * 0.86, 6, pose || {}, 0);
+
+  // vrátíme obalový obdélník neprůhledných pixelů (jen pro kontrolu v logu)
+  const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+  let x0 = cv.width, y0 = cv.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < cv.height; y++) {
+    for (let x = 0; x < cv.width; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 8) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  return { w: x1 - x0, h: y1 - y0, x0, y0 };
+};
+</script>
+</body>
+</html>

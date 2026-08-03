@@ -10,3 +10,6 @@ keystore.properties
 tools/godot
 tools/gut-src/
 RUN/
+
+# Pracovní složka propagačního videa (klipy, karty, mezistřihy)
+.promo-work/

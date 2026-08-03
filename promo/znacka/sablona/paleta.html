@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Louka Run – paleta značky</title>
+<link rel="stylesheet" href="../tokeny.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--lr-font);
+    background: var(--lr-paper);
+    color: var(--lr-ink);
+    padding: 64px 72px 76px;
+  }
+  h1 { font-size: 62px; font-weight: 800; line-height: 1; }
+  .pod { font-size: 26px; color: var(--lr-ink-soft); margin: 10px 0 46px; }
+  h2 {
+    font-size: 26px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--lr-green-deep); margin: 42px 0 20px;
+  }
+  .rada { display: grid; grid-template-columns: repeat(5, 1fr); gap: 22px; }
+  .vzorek { border-radius: 26px; overflow: hidden; box-shadow: var(--lr-stin-karta); background: #fff; }
+  .vzorek .plocha { height: 132px; }
+  .vzorek .popis { padding: 14px 18px 18px; }
+  .vzorek .nazev { font-weight: 800; font-size: 22px; line-height: 1.15; }
+  .vzorek .hex { font-size: 19px; color: var(--lr-ink-soft); letter-spacing: .04em; }
+  .pismo { display: flex; align-items: baseline; gap: 34px; flex-wrap: wrap; }
+  .pismo div { line-height: 1.05; }
+  .w800 { font-weight: 800; font-size: 74px; }
+  .w700 { font-weight: 700; font-size: 46px; }
+  .w400 { font-weight: 400; font-size: 34px; }
+  .ukazky { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+  .ukazky .lr-wordmark { font-size: 62px; background: var(--lr-grad-sky); padding: 22px 34px; border-radius: 26px; }
+</style>
+</head>
+<body>
+  <h1>Louka&nbsp;Run — paleta značky</h1>
+  <p class="pod">Barvy vytažené z herní grafiky a z loga azylu Nech mě růst.</p>
+
+  <h2>Obloha a louka</h2>
+  <div class="rada" id="r1"></div>
+
+  <h2>Energie a odměny</h2>
+  <div class="rada" id="r2"></div>
+
+  <h2>Azyl, podklady, text</h2>
+  <div class="rada" id="r3"></div>
+
+  <h2>Písmo — Baloo 2</h2>
+  <div class="pismo">
+    <div class="w800">Skoč!&nbsp;800</div>
+    <div class="w700">Mrkev je palivo&nbsp;700</div>
+    <div class="w400">Každý běh končí příběhem&nbsp;400</div>
+  </div>
+
+  <h2>Nápis</h2>
+  <div class="ukazky">
+    <div class="lr-wordmark">LOUKA<span>RUN</span></div>
+    <span class="lr-badge">Hra azylu Nech mě růst</span>
+  </div>
+
+<script>
+const SKUPINY = {
+  r1: [
+    ['Obloha', '--lr-sky'], ['Obloha sytá', '--lr-sky-deep'], ['Obloha světlá', '--lr-sky-light'],
+    ['Tráva', '--lr-green'], ['Tráva tmavá', '--lr-green-dark'],
+  ],
+  r2: [
+    ['Mrkev', '--lr-carrot'], ['Mrkev tmavá', '--lr-carrot-dark'], ['Zlatá', '--lr-gold'],
+    ['Zlatá světlá', '--lr-gold-light'], ['Les', '--lr-forest'],
+  ],
+  r3: [
+    ['Okr azylu', '--lr-ochre'], ['Okr světlý', '--lr-ochre-light'], ['Smetanová', '--lr-cream'],
+    ['Papír', '--lr-paper'], ['Text', '--lr-ink'],
+  ],
+};
+const cs = getComputedStyle(document.documentElement);
+for (const [id, barvy] of Object.entries(SKUPINY)) {
+  document.getElementById(id).innerHTML = barvy.map(([nazev, prom]) => {
+    const hex = cs.getPropertyValue(prom).trim();
+    return `<div class="vzorek">
+      <div class="plocha" style="background:${hex}"></div>
+      <div class="popis"><div class="nazev">${nazev}</div><div class="hex">${hex.toUpperCase()}</div></div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
