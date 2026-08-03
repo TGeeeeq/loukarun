@@ -1,0 +1,97 @@
+/* =========================================================
+   LOUKA RUN – design tokeny značky
+   Jediný zdroj pravdy pro barvy, písmo a stíny propagace.
+   Barvy jsou vytažené přímo z herní grafiky (js/data.js,
+   js/gfx.js) a z loga azylu Nech mě růst.
+
+   Použití v šabloně:  @import url("../../znacka/tokeny.css");
+   ========================================================= */
+
+@font-face {
+  font-family: "Baloo 2";
+  font-style: normal;
+  font-weight: 400 800;
+  src: url("../../assets/fonts/baloo2-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Baloo 2";
+  font-style: normal;
+  font-weight: 400 800;
+  src: url("../../assets/fonts/baloo2-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* ---------- obloha ---------- */
+  --lr-sky:            #8ed4f7;  /* základní modrá hry i splash screenu */
+  --lr-sky-deep:       #6cc3f2;
+  --lr-sky-light:      #cdeafd;
+
+  /* ---------- louka ---------- */
+  --lr-green:          #5aa84f;  /* tráva – hlavní zelená značky */
+  --lr-green-dark:     #3a682f;  /* obtahy písma, tmavé plochy */
+  --lr-green-deep:     #2c4f24;  /* text na světlém, nejtmavší tón */
+  --lr-green-soft:     #a8d8a0;  /* vzdálené kopce */
+  --lr-forest:         #3f7a4a;  /* prostředí les */
+
+  /* ---------- energie a odměny ---------- */
+  --lr-carrot:         #ff9d3a;  /* mrkev = energie */
+  --lr-carrot-dark:    #e8791c;
+  --lr-gold:           #ffc23c;  /* mince, zlatá mrkev */
+  --lr-gold-light:     #ffe08a;
+
+  /* ---------- azyl Nech mě růst ---------- */
+  --lr-ochre:          #b78547;  /* okr z loga azylu – pojí hru s azylem */
+  --lr-ochre-light:    #d6d2c7;
+
+  /* ---------- podklady a text ---------- */
+  --lr-cream:          #fff6e4;
+  --lr-paper:          #f7efe0;
+  --lr-ink:            #4a3220;  /* hlavní text */
+  --lr-ink-soft:       #6b5138;
+
+  /* ---------- přechody ---------- */
+  --lr-grad-sky:    linear-gradient(180deg, #6cc3f2 0%, #8ed4f7 45%, #cdeafd 100%);
+  --lr-grad-gold:   linear-gradient(180deg, #ffe08a 0%, #ffc23c 55%, #f0a01e 100%);
+  --lr-grad-noc:    linear-gradient(180deg, #1b2a52 0%, #33406e 60%, #5c5f8a 100%);
+
+  /* ---------- stíny ---------- */
+  --lr-stin-karta:  0 16px 36px rgba(31, 72, 41, 0.25);
+  --lr-stin-text:   0 6px 0 rgba(58, 104, 47, 0.45), 0 12px 24px rgba(31, 72, 41, 0.35);
+
+  /* ---------- tvarosloví ---------- */
+  --lr-radius:      34px;   /* karty a bubliny */
+  --lr-radius-pill: 999px;  /* štítky a tlačítka */
+  --lr-font: "Baloo 2", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------- základní třídy značky ---------- */
+.lr-wordmark {
+  font-family: var(--lr-font);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: var(--lr-stin-text);
+}
+.lr-wordmark span { color: var(--lr-gold-light); }
+
+.lr-badge {
+  display: inline-block;
+  font-family: var(--lr-font);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lr-cream);
+  background: var(--lr-green-dark);
+  border-radius: var(--lr-radius-pill);
+  padding: 0.5em 1.35em;
+}
+
+.lr-karta {
+  background: #ffffff;
+  border-radius: var(--lr-radius);
+  box-shadow: var(--lr-stin-karta);
+  color: var(--lr-ink);
+}
