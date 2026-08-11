@@ -102,30 +102,44 @@ function popisek(w, h, text, svisle) {
 }
 
 function konec(w, h, svisle) {
-  const logoW = svisle ? w * 0.9 : w * 0.52;
-  const velke = svisle ? w * 0.062 : w * 0.036;
-  const male = svisle ? w * 0.042 : w * 0.026;
+  // svislý formát unese velké logo, na širokém se musí vejít i pod ně tři bloky
+  const logoW = svisle ? w * 0.86 : w * 0.34;
+  const velke = svisle ? w * 0.058 : w * 0.030;
+  const male = svisle ? w * 0.040 : w * 0.023;
+  const drobne = svisle ? w * 0.031 : w * 0.018;
   return `${HLAVA}
   ${obloha(h)}
   ${kopce(h)}
   <div style="position:absolute;inset:0;display:flex;flex-direction:column;
-       align-items:center;justify-content:center;gap:${h * 0.03}px;
-       padding-bottom:${h * 0.06}px">
+       align-items:center;justify-content:center;gap:${h * (svisle ? 0.024 : 0.028)}px;
+       padding-bottom:${h * 0.04}px">
     <img src="${LOGO}" style="width:${logoW}px">
     <div style="font-size:${velke}px;font-weight:800;color:var(--lr-green-deep);text-align:center;
          line-height:1.2">Hraj a nakrm opravdové zvíře.</div>
+    <!-- cena v obchodě: kolik hra stojí a kolik z toho dostane azyl -->
     <div style="display:flex;align-items:center;gap:${w * 0.02}px;
          background:#fff;border-radius:${svisle ? 40 : 32}px;
-         padding:${h * 0.022}px ${w * 0.032}px;box-shadow:var(--lr-stin-karta)">
-      <img src="${LOGO_AZYL}" style="height:${h * (svisle ? 0.085 : 0.13)}px">
+         padding:${h * 0.020}px ${w * 0.030}px;box-shadow:var(--lr-stin-karta)">
+      <img src="${LOGO_AZYL}" style="height:${h * (svisle ? 0.080 : 0.125)}px">
       <div style="font-size:${male}px;font-weight:700;color:var(--lr-ink);line-height:1.25">
-        Na Google Play za 200 Kč<br><span style="color:var(--lr-green-deep);font-weight:800">
-        celá částka jde azylu</span>
+        Na Google Play za <span style="font-weight:800">269 Kč</span>
+        <br><span style="color:var(--lr-green-deep);font-weight:800">
+        z toho 149 Kč jde azylu</span>
       </div>
+    </div>
+    <!-- druhá cesta ke hře: příspěvek nad 200 Kč → webová verze -->
+    <div style="max-width:${svisle ? w * 0.86 : w * 0.54}px;text-align:center;
+         font-size:${drobne}px;font-weight:700;line-height:1.36;color:var(--lr-ink);
+         background:rgba(255,246,228,.9);border:${svisle ? 4 : 3}px solid rgba(44,79,36,.18);
+         border-radius:${svisle ? 30 : 24}px;padding:${h * 0.016}px ${w * 0.026}px">
+      Za příspěvek vyšší než <span style="font-weight:800">200 Kč</span>
+      si o hru můžete požádat<br>
+      <span style="color:var(--lr-green-deep);font-weight:800">ve webové verzi</span>,
+      která jde hrát na každém zařízení.
     </div>
     <div style="font-size:${male}px;font-weight:800;letter-spacing:.04em;
          color:var(--lr-cream);background:var(--lr-green-dark);
-         border-radius:var(--lr-radius-pill);padding:${h * 0.016}px ${w * 0.03}px">
+         border-radius:var(--lr-radius-pill);padding:${h * 0.015}px ${w * 0.03}px">
       nechmerust.org/loukarun 🥕</div>
   </div>`;
 }

@@ -5,8 +5,8 @@ nahrané ze hry běžící v prohlížeči, žádná animace „jak by to mohlo 
 
 | Soubor | Formát | Délka | Kam s tím |
 |--------|--------|-------|-----------|
-| `loukarun-promo-16x9.mp4` | 1920×1080, 30 fps | 48 s | YouTube, Google Play, web, prezentace |
-| `loukarun-promo-9x16.mp4` | 1080×1920, 30 fps | 48 s | Reels, Stories, TikTok, YouTube Shorts |
+| `loukarun-promo-16x9.mp4` | 1920×1080, 30 fps | 50 s | YouTube, Google Play, web, prezentace |
+| `loukarun-promo-9x16.mp4` | 1080×1920, 30 fps | 50 s | Reels, Stories, TikTok, YouTube Shorts |
 
 Hudba: `assets/music/menu.mp3` — vlastní znělka hry.
 
@@ -24,7 +24,7 @@ Hudba: `assets/music/menu.mp3` — vlastní znělka hry.
 | 0:31–0:35 | západ | „Šest zvířátek, každé se svým trikem“ |
 | 0:35–0:40 | noc | „Každý běh končí vtipným příběhem“ |
 | 0:40–0:43 | menu | výběr postavy |
-| 0:43–0:48 | konec | CTA: Google Play za 200 Kč, celá částka azylu, nechmerust.org/loukarun |
+| 0:43–0:50 | konec | CTA: Google Play za 269 Kč (149 Kč azylu), webová verze za příspěvek nad 200 Kč, nechmerust.org/loukarun |
 
 Přesné hodnoty jsou v poli `SCENAR` v `sablona/sestav-video.py` — to je
 scénář i střihový soupis v jednom.
@@ -75,6 +75,13 @@ Po změně textů pusť znovu krok 2 a 3; herní záběry se přetáčet nemusí
 
 ## Poznámka k faktům v CTA
 
-Závěrečná karta tvrdí: **Google Play, 200 Kč, celá částka jde azylu,
-nechmerust.org/loukarun**. Kdyby se cena nebo způsob prodeje změnil,
-uprav `konec()` — jinak bude video slibovat něco, co neplatí.
+Závěrečná karta tvrdí:
+
+- **Google Play, 269 Kč**, z toho **149 Kč jde azylu**
+- za **příspěvek vyšší než 200 Kč** si jde o hru požádat ve **webové verzi**,
+  která běží na každém zařízení
+- **nechmerust.org/loukarun**
+
+Kdyby se cena, rozdělení částky nebo způsob prodeje změnil, uprav `konec()`
+v `natoc-karty.js` — jinak bude video slibovat něco, co neplatí. Cena musí
+sedět s `googleplay/listing.md`.

@@ -73,8 +73,8 @@ SCENAR = [
     dict(zdroj='noc',     od=5.0,  delka=5.0, popisek=6, nazev='noc'),
     # nabídka postav
     dict(zdroj='menu',    od=4.2,  delka=3.2, popisek=None, nazev='menu'),
-    # závěrečná karta s CTA
-    dict(zdroj='karta:konec', od=0, delka=5.0, popisek=None, nazev='konec'),
+    # závěrečná karta s CTA – delší, aby se stihla přečíst i cena a webová verze
+    dict(zdroj='karta:konec', od=0, delka=6.5, popisek=None, nazev='konec'),
 ]
 
 # jemné prolnutí popisku dovnitř a ven
