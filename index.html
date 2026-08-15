@@ -73,6 +73,11 @@
       </div>
     </div>
     <div class="menu-bottom">
+      <!-- DENNÍ MISE – tři úkoly na den, obsah generuje js/game.js -->
+      <div id="daily-panel" class="daily-panel">
+        <div class="daily-title" data-i18n="daily.title">📅 Denní mise</div>
+        <div id="daily-list"></div>
+      </div>
       <div class="menu-stats">
         <div class="hud-chip">🏆 <span id="menu-best">0 m</span></div>
         <div class="hud-chip">🪙 <span id="menu-coins">0</span></div>
@@ -122,10 +127,12 @@
         <div class="stat"><span class="stat-label" data-i18n="over.carrots">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
         <div class="stat"><span class="stat-label" data-i18n="over.coins">Mince</span><span class="stat-val gold" id="over-coins">+0 🪙</span></div>
         <div class="stat"><span class="stat-label" data-i18n="over.best">Rekord</span><span class="stat-val" id="over-best">0 m</span></div>
+        <div class="stat"><span class="stat-label" data-i18n="over.combo">Nejdelší řetěz</span><span class="stat-val" id="over-combo">0</span></div>
       </div>
       <div class="over-buttons">
         <button id="btn-again" class="btn big" data-i18n="over.again">🐾 Běžet znovu</button>
         <div class="row">
+          <button id="btn-share" class="btn" data-i18n="over.share">📤 Pochlubit se</button>
           <button id="btn-over-shop" class="btn" data-i18n="over.animals">🛍 Zvířátka</button>
           <button id="btn-over-menu" class="btn" data-i18n="over.menu">🏠 Menu</button>
         </div>
@@ -196,6 +203,7 @@
   <script src="js/data.js"></script>
   <script src="js/gfx.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/platform.js"></script>
   <script src="js/game.js"></script>
   <script>
     // PWA: hra jde nainstalovat na plochu a funguje offline

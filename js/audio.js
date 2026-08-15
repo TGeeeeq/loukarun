@@ -136,6 +136,105 @@ const AUDIO = (() => {
 
   function play(name) { if (SFX[name]) SFX[name](); }
 
+  /* ---- řetěz sběrů: stoupající pentatonika ----
+     Pentatonická stupnice nemá půltónové střety, takže ať padne kterýkoli
+     tón kdykoli, nikdy se nepohádá s hudbou pod ním. Řetěz tak zní jako
+     melodie, která se s každým dalším kouskem šplhá výš. */
+  const PENTA = [0, 2, 4, 7, 9]; // C D E G A
+  function comboTone(step) {
+    const i = Math.max(0, step);
+    const semi = PENTA[i % PENTA.length] + 12 * Math.floor(i / PENTA.length);
+    // po dvou oktávách už by to pískalo – dál se drží nahoře
+    const f = 523.25 * Math.pow(2, Math.min(semi, 26) / 12);
+    tone(f, 0.11, 'triangle', 0.45);
+  }
+
+  /* ---- kroky podle povrchu ----
+     Krátký tlumený šum s filtrem podle prostředí: tráva šustí, dřevo dutě
+     klepe, polní cesta chrastí kamínky. Drží se hodně potichu – má to být
+     cítit, ne slyšet. */
+  const STEP_FILTER = { louka: 1400, sad: 1400, les: 900, vesnice: 2600, zapad: 1500, noc: 1100 };
+  function step(envId, vol = 1) {
+    if (!enabled || !ensureCtx()) return;
+    const t0 = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(0.05);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = STEP_FILTER[envId] || 1400;
+    f.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.value = 0.055 * vol;
+    src.connect(f); f.connect(g); g.connect(sfxGain);
+    src.start(t0);
+  }
+
+  /* ---- vrstva rychlosti ----
+     Nad hudbou jede tichý vzduchový šum, jehož hlasitost i barva rostou
+     s rychlostí běhu. Záměrně je to šum, ne perkuse: hotové skladby mají
+     každá své tempo, které neznáme, a nesynchronní bubny by se s nimi
+     praly. Šum nemá tón ani rytmus, takže sedne na cokoli a hráč přesto
+     slyší, že se rozjíždí. */
+  let wind = null;
+  let windTarget = 0;
+  function ensureWind() {
+    if (wind || !ensureCtx()) return;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(2); // dvě vteřiny šumu ve smyčce ucho nerozezná
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 500;
+    f.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    src.connect(f); f.connect(g); g.connect(ctx.destination);
+    src.start();
+    wind = { src, f, g };
+  }
+
+  // v = 0 (stojí) … 1 (naplno) – volá se z herní smyčky
+  function setIntensity(v) {
+    windTarget = Math.max(0, Math.min(1, v));
+    if (!enabled) { if (wind) wind.g.gain.value = 0; return; }
+    ensureWind();
+    if (!wind) return;
+    const t = ctx.currentTime;
+    const g = 0.05 * windTarget * duckNow;
+    wind.g.gain.cancelScheduledValues(t);
+    wind.g.gain.linearRampToValueAtTime(g, t + 0.25);
+    wind.f.frequency.cancelScheduledValues(t);
+    wind.f.frequency.linearRampToValueAtTime(420 + 900 * windTarget, t + 0.25);
+  }
+
+  /* ---- ztlumení při pauze ----
+     Web hraje hudbu přes ⟨audio⟩ a Android přes WebAudio; filtr by šel
+     jen na jedné z nich, a hra by pak na každé platformě zněla jinak.
+     Proto se místo filtru obě cesty stejně ztiší – parita je přednější. */
+  const DUCK_LEVEL = 0.32;
+  const DUCK_TIME = 0.25;
+  let duckNow = 1;
+  function duck(on) {
+    const to = on ? DUCK_LEVEL : 1;
+    if (to === duckNow) return;
+    duckNow = to;
+    if (sfxGain && ctx) {
+      const t = ctx.currentTime;
+      sfxGain.gain.cancelScheduledValues(t);
+      sfxGain.gain.setValueAtTime(sfxGain.gain.value, t);
+      sfxGain.gain.linearRampToValueAtTime(0.35 * duckNow, t + DUCK_TIME);
+    }
+    if (WA && WA.active && ctx) {
+      const t = ctx.currentTime;
+      const g = WA.active.gain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + DUCK_TIME);
+    }
+    if (players) for (const el of players) el.volume = el._vol * duckNow;
+    setIntensity(windTarget);
+  }
+
   // hlas zvířátka při Zvířecím koncertu – každá postava má svůj soubor.
   const VOICE_FILES = {
     karel:  'voice-karel',   // osel – hýká
@@ -227,7 +326,7 @@ const AUDIO = (() => {
     node.loop = true; // pojistka: kdyby prolnutí smyčky nestihlo, hraje dál postaru
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(MUSIC_VOL, t + fade);
+    gain.gain.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + fade);
     node.connect(gain); gain.connect(ctx.destination);
     node.start(t);
     WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
@@ -274,7 +373,7 @@ const AUDIO = (() => {
   // odcházející stopa se spolehlivě zastaví i tam a nehraje přes novou.
   function setVol(el, v) {
     el._vol = v;
-    el.volume = v;
+    el.volume = v * duckNow; // ztlumení při pauze se přičítá až tady, ať prolínání zůstane netknuté
   }
 
   function makePlayer() {
@@ -365,7 +464,10 @@ const AUDIO = (() => {
     for (const el of players) { el.pause(); el._target = 0; setVol(el, 0); }
   }
 
-  function setSfx(on) { enabled = on; }
+  function setSfx(on) {
+    enabled = on;
+    if (wind) wind.g.gain.value = on ? 0.05 * windTarget * duckNow : 0;
+  }
   function setMusic(on) {
     musicEnabled = on;
     if (!on) stopMusic();
@@ -400,5 +502,5 @@ const AUDIO = (() => {
   }, 400);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
 
-  return { play, voice, playMusic, stopMusic, setSfx, setMusic, ensureCtx };
+  return { play, voice, playMusic, stopMusic, setSfx, setMusic, ensureCtx, comboTone, step, setIntensity, duck };
 })();

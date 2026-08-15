@@ -298,6 +298,55 @@ a.btn { text-decoration: none; display: inline-block; }
 
 .menu-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .menu-stats, .menu-settings { display: flex; gap: 10px; }
+
+/* denní mise – tři úkoly na den nad statistikami v menu */
+.daily-panel {
+  background: rgba(255,255,255,0.9);
+  border-radius: 16px;
+  padding: 6px 12px 7px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.16);
+  max-width: min(440px, 92vw);
+  width: 100%;
+}
+.daily-title {
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.02em;
+  color: #7a6242; text-align: center; margin-bottom: 5px;
+}
+.daily-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 3px 2px;
+  font-size: 0.82rem; font-weight: 700; color: #5a4a38;
+  text-align: left;
+}
+.daily-row + .daily-row { border-top: 1px solid rgba(0,0,0,0.07); }
+.daily-row.done .daily-text { color: #3f7a2c; }
+.daily-text { flex: 1; }
+.daily-text::before { content: '○ '; opacity: 0.5; }
+.daily-row.done .daily-text::before { content: '✓ '; opacity: 1; }
+.daily-claim { flex-shrink: 0; }
+.daily-alldone {
+  font-size: 0.82rem; font-weight: 700; color: #3f7a2c;
+  text-align: center; margin: 2px 0;
+}
+
+/* deníček z azylu na kartě zvířátka v obchodě */
+.diary {
+  margin-top: 8px; padding: 8px 10px;
+  background: rgba(0,0,0,0.045);
+  border-radius: 12px;
+  text-align: left;
+}
+.diary-title {
+  font-size: 0.74rem; font-weight: 800; color: #7a6242;
+  margin-bottom: 4px;
+}
+.diary-entry {
+  font-size: 0.74rem; line-height: 1.3; color: #5a4a38;
+  margin: 0;
+  /* karta má pevnou výšku – delší zápisek se ořízne po čtyřech řádcích */
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.diary-entry.locked { opacity: 0.5; font-style: italic; }
 .controls-hint {
   font-size: 0.78rem; font-weight: 600;
   color: rgba(255,255,255,0.9);
@@ -398,6 +447,10 @@ a.btn { text-decoration: none; display: inline-block; }
     linear-gradient(180deg, #bfe4f7, #ddf2cf);
   display: flex; justify-content: center; align-items: flex-end;
   overflow: hidden;
+  /* portrét se nikdy nesmí smrsknout kvůli textu pod ním – karta má
+     pevnou výšku (grid je stretch), takže bez tohohle by deníček
+     zvířátko na malém displeji zmáčkl na pár pixelů */
+  flex-shrink: 0;
 }
 .portrait-wrap canvas { height: 118px; width: auto; display: block; }
 .card-badge {
@@ -432,11 +485,15 @@ a.btn { text-decoration: none; display: inline-block; }
   .char-card .tagline { display: none; }
   .portrait-wrap canvas { height: 88px; }
   #shop-grid { padding: 10px 28px 12px; }
+  .diary { margin-top: 5px; padding: 6px 8px; }
+  .diary-title { font-size: 0.68rem; margin-bottom: 3px; }
+  .diary-entry { font-size: 0.68rem; -webkit-line-clamp: 3; }
 }
 @media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
   .stat-rows { display: none; }
   .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
   .portrait-wrap canvas { height: 72px; }
+  .diary-entry { -webkit-line-clamp: 2; }
 }
 /* pozvánková karta na konci karuselu – ať zve poznat zvířata naživo */
 .cta-card {
@@ -847,6 +904,11 @@ a.btn { text-decoration: none; display: inline-block; }
   .hud-chip { padding: 4px 12px; font-size: 0.85rem; }
   .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .controls-hint { width: 100%; font-size: 0.68rem; opacity: 0.9; }
+  /* na nízkém displeji je menu na šířku – mise se vejdou vedle statistik */
+  .daily-panel { width: auto; max-width: calc(52 * var(--gvw)); padding: 6px 10px 7px; }
+  .daily-title { font-size: 0.7rem; margin-bottom: 3px; }
+  .daily-row { font-size: 0.72rem; padding: 2px 0; gap: 6px; }
+  .daily-alldone { font-size: 0.72rem; }
 
   /* karta po doběhnutí – přeskládaná na šířku */
   #screen-over { padding: 8px 12px; }
