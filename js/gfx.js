@@ -135,6 +135,44 @@ const GFX = (() => {
     // bližší kopce
     hillLayer(ctx, W, pal.hillNear, camX * 0.35, groundY, 70, 0.003, 500);
   }
+  /* Sluneční paprsky (god-rays)
+     Měkké světelné klíny od slunce k zemi. Kreslí se režimem 'lighter',
+     takže se jen přisvětlují – nikdy nezaclání a nezhorší čitelnost
+     překážek. Vykreslují se po kopcích a před zemí, aby vypadaly jako
+     světlo prodírající se scénou, ne jako nálepka přes celý obraz.
+     amt 0 = nic, 1 = plná síla (západ slunce; v lese jen náznak). */
+  function drawGodRays(ctx, W, H, pal, groundY, t, amt) {
+    if (amt <= 0.01) return;
+    const sx = W * 0.78, sy = H * 0.04;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(sx, sy);
+    for (let i = 0; i < 4; i++) {
+      // klíny se velmi pomalu rozevírají a zavírají, ať obraz „dýchá“
+      const base = -0.95 + i * 0.42 + Math.sin(t * 0.00013 + i) * 0.05;
+      const wide = 0.10 + 0.035 * Math.sin(t * 0.00021 + i * 2.1);
+      const len = H * 1.5;
+      const g = ctx.createLinearGradient(0, 0, Math.sin(base) * len, Math.cos(base) * len);
+      g.addColorStop(0, hexA(pal.sun, 0.16 * amt));
+      g.addColorStop(1, hexA(pal.sun, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.sin(base - wide) * len, Math.cos(base - wide) * len);
+      ctx.lineTo(Math.sin(base + wide) * len, Math.cos(base + wide) * len);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // #rrggbb → rgba() s danou průhledností
+  function hexA(hex, a) {
+    const h = (hex || '#ffffff').replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
   function hillLayer(ctx, W, color, off, groundY, amp, freq, seedBase) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -1920,6 +1958,11 @@ const GFX = (() => {
     const sliding = !!p.sliding;
     const airborne = !!p.airborne;
     const stumble = p.stumble || 0;
+    /* Druhotný pohyb: uši, ocas a vlna nejsou přibité k tělu – zaostávají
+       za ním. sway (−1 … 1) přichází z rozdílu mezi skutečnou svislou
+       rychlostí a jejím zpožděným sledovačem, takže při odrazu ucho
+       zůstane dole, při pádu vlaje nahoru a v klidu je nula. */
+    const sway = Math.max(-1, Math.min(1, p.sway || 0));
 
     ctx.save();
     ctx.translate(x, y);
@@ -1966,7 +2009,7 @@ const GFX = (() => {
     ctx.save();
     ctx.translate(slim ? -35 : -38, slim ? -42 : -36);
     const wag = Math.sin(t * 0.01) * 0.25;
-    ctx.rotate(0.5 + wag);
+    ctx.rotate(0.5 + wag + sway * 0.55); // ocas se opozdí za skokem i dopadem
     if (species === 'prase') {
       ctx.strokeStyle = c.body; ctx.lineWidth = 5; ctx.lineCap = 'round';
       ctx.beginPath();
@@ -2000,7 +2043,9 @@ const GFX = (() => {
         const a = i / 10 * Math.PI * 2;
         ctx.fillStyle = i % 2 ? shade(c.body, 0.04) : shade(c.body, -0.03);
         ctx.beginPath();
-        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 19, 13, 0, Math.PI * 2);
+        // vlna se při skoku a dopadu rozvlní – každý chomáč se opozdí trochu jinak
+        const lag = sway * 3.2 * Math.sin(a + run * 0.5);
+        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 19 + lag, 13, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -2125,7 +2170,7 @@ const GFX = (() => {
     }
 
     // uši / rohy
-    const earFlap = Math.sin(t * 0.008) * 0.12;
+    const earFlap = Math.sin(t * 0.008) * 0.12 + sway * 0.42;
     if (species === 'osel') {
       [-0.35, 0.25].forEach((rot, i) => {
         ctx.save();
@@ -2201,7 +2246,7 @@ const GFX = (() => {
 
   return {
     lerp, lerpColor, shade, hash, rr, ell,
-    drawSky, drawClouds, drawHills, drawGround,
+    drawSky, drawClouds, drawHills, drawGround, drawGodRays,
     drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter,
     PROPS,
   };

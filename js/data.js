@@ -691,6 +691,26 @@ const DATA = (() => {
     cloverDuration: 12,   // jak dlouho po sebrání čtyřlístku platí bonus (s)
     cloverCoinValue: 2,   // hodnota mince, dokud bonus běží
     concertCoins: 25,     // mince za vyprodaný Zvířecí koncert (každých 2,5 km)
+
+    /* ---------- řetěz sběrů (combo) ----------
+       Počítá se od prvního sebraného kousku, ale ukáže se až na pátém –
+       dvě náhodné mince po cestě nemají hráči nic blikat před očima.
+       Odměna se nevyplácí průběžně, ale jednorázově, až řetěz skončí:
+       mince po cestě mají pořád normální hodnotu a bonus přijde jako
+       jeden viditelný okamžik. Čtyřlístek se do bonusu nenásobí, aby se
+       oba bonusy nesčítaly do nesmyslných čísel.
+
+       bonus = floor(n * comboCoinRate * násobitel stupně)
+       n=5 → 2, n=14 → 7, n=20 → 15, n=30 → 30, n=50 → 50 mincí
+       (pro srovnání: celý Zvířecí koncert dává 25) */
+    comboMin: 5,          // pod tímhle se řetěz vůbec nezobrazí ani neplatí
+    comboWindow: 1.6,     // kolik sekund je mezi sběry, než řetěz vyprší
+    comboCoinRate: 0.5,   // mincí za každý kousek v řetězu
+    comboTiers: [         // od kolika kousků platí jaký násobitel (vzestupně)
+      { at: 5, mul: 1.0, color: '#ffd24a', name: 'combo.tier1' },
+      { at: 15, mul: 1.5, color: '#ff9a3c', name: 'combo.tier2' },
+      { at: 30, mul: 2.0, color: '#ff6fc8', name: 'combo.tier3' },
+    ],
   };
 
   /* ---------- KARLOVA ŠKOLA BĚHU ----------

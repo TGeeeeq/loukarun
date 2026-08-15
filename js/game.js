@@ -52,17 +52,32 @@
   /* ---------- automatická kvalita ----------
      Na slabším telefonu se po pár vteřinách trhaného běhu sníží rozlišení
      plátna (DPR) – GPU má rázem o třetinu až polovinu méně pixelů a hra
-     zůstane plynulá. Kvalita se jen snižuje, nikdy nevrací zpět, ať obraz
-     uprostřed běhu neproblikává; příští spuštění začne zase načisto. */
+     zůstane plynulá.
+
+     Nově se kvalita umí i vrátit nahoru: jedno zaškobrtnutí (načtení
+     skladby, notifikace, přepnutí aplikace) jinak srazilo obraz na celý
+     zbytek běhu, i když telefon dávno zase stíhal. Návrat je záměrně
+     mnohem opatrnější než pokles – vyžaduje 10 vteřin nepřerušené
+     plynulosti a hlídá si, kolikrát už se na daném stupni propadlo, takže
+     na opravdu slabém telefonu se po druhém propadu přestane vracet
+     a obraz nepulzuje sem a tam. */
   const DPR_STEPS = [2, 1.5, 1.15];
   let dprStep = 0;
-  let slowT = 0;
+  let slowT = 0;      // nastřádaný „pomalý čas“ (s) – žene pokles kvality
+  let fastT = 0;      // nastřádaný plynulý čas (s) – žene návrat kvality
+  let dropCount = 0;  // kolikrát už kvalita spadla; po druhém pádu se nevrací
   function autoQuality(rawDt) {
-    if (S.mode !== 'run' || dprStep >= DPR_STEPS.length - 1) return;
+    if (S.mode !== 'run') return;
     // pod ~42 fps se střádá „pomalý čas“, svižné snímky ho zase umazávají
-    if (rawDt > 0.024) slowT += rawDt;
-    else slowT = Math.max(0, slowT - rawDt * 0.5);
-    if (slowT > 2) { dprStep++; slowT = 0; resize(); }
+    if (rawDt > 0.024) { slowT += rawDt; fastT = 0; }
+    else { slowT = Math.max(0, slowT - rawDt * 0.5); fastT += rawDt; }
+    if (slowT > 2 && dprStep < DPR_STEPS.length - 1) {
+      dprStep++; dropCount++; slowT = 0; fastT = 0; resize();
+      return;
+    }
+    if (fastT > 10 && dprStep > 0 && dropCount < 2) {
+      dprStep--; fastT = 0; resize();
+    }
   }
 
   function resize() {
@@ -86,10 +101,13 @@
 
   /* ---------- uložený postup ---------- */
   const SAVE_KEY = 'loukarun_save_v1';
+  // na Androidu se ještě před prvním čtením zkusí obnovit záloha z nativních
+  // Preferences (localStorage ve WebView umí vymazat kdejaká čistička)
+  STORE.recover(SAVE_KEY);
   const save = loadSave();
   function loadSave() {
     try {
-      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      const s = JSON.parse(STORE.getSync(SAVE_KEY));
       if (s && Array.isArray(s.unlocked)) {
         // hráči z dob před tutoriálem už hru znají – školu jim nevnucovat
         if (s.runs > 0 && s.tutorialDone === undefined) s.tutorialDone = true;
@@ -102,11 +120,13 @@
   // localStorage.setItem vyhodit výjimku – jinak by spadl konec běhu ještě
   // před přidělením odznaků (achievementů) a nezapsaly by se ani mince/rekord
   function persist() {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* úložiště nedostupné – postup zůstane aspoň v paměti do konce sezení */ }
+    try { STORE.set(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* úložiště nedostupné – postup zůstane aspoň v paměti do konce sezení */ }
   }
 
   AUDIO.setSfx(save.sfx !== false);
   AUDIO.setMusic(save.music !== false);
+  // vibrace patří ke zvukům – kdo si je vypne, chce mít úplný klid
+  PLATFORM.setHaptics(save.sfx !== false);
 
   /* ---------- stav hry ---------- */
   const S = {
@@ -122,14 +142,24 @@
     carrotsRun: 0,
     ramLeft: 0,
     cloverT: 0,             // zbývající čas bonusu čtyřlístku (s) – mince mají dvojnásobnou hodnotu
+    // řetěz sběrů – viz sekce COMBO
+    combo: 0,               // kolik věcí za sebou bez přerušení
+    comboT: 0,              // zbývá času do vypršení řetězu (s)
+    comboPop: 0,            // pružinový doskok čísla (1 → 0)
+    comboRing: 0,           // jak moc je prstenec vidět (0 → 1), plynulý náběh i zánik
+    comboBreak: 0,          // doběh praskliny po nárazu (s)
+    comboBest: 0,           // nejdelší řetěz běhu (do výsledků)
     // hráč
     py: 0, vy: 0, airborne: false, jumps: 0,
     sliding: 0,             // zbývající čas skluzu (s)
     jumpBuf: 0,             // zapamatované ťuknutí těsně před dopadem (s)
+    jumpImpulse: 0,         // síla probíhajícího odrazu – po puštění se stoupání zkrátí
+    swayFollow: 0,          // zpožděná svislá rychlost – žene druhotný pohyb uší a ocasu
     stumble: 0, invuln: 0, squash: 0,
     runPhase: 0, blink: 0,
     // svět
     obstacles: [], pickups: [], decor: [], particles: [], floaters: [],
+    fg: [], nextFgX: 0,     // tráva a kvítí v popředí – letí před běžcem
     flyers: [],             // zvířátka kroužící na obloze
     nextObstacleX: 900, nextPickupX: 600, nextDecorX: 200, nextFlyerX: 500,
     // hlášky
@@ -162,6 +192,10 @@
   // pozadí se posouvá pomaleji než pěšina – kulisy jsou déle na očích,
   // takže si hráč stihne přečíst cedule a všimnout si vtípků
   const FAR_PARALLAX = 0.45;
+  // …a naopak: tráva a kvítí u samé kamery se řítí RYCHLEJI než pěšina.
+  // Teprve tahle vrstva před běžcem dělá z plochých kulis hloubku – oko
+  // porovná pomalé kopce vzadu s letící trávou vpředu a scéna se „rozestoupí“.
+  const FG_PARALLAX = 1.35;
 
   function charById(id) { return CHARACTERS.find(c => c.id === id); }
 
@@ -255,11 +289,9 @@
       a.puffT -= dt;
       if (a.puffT <= 0 && a.py === 0 && a.x > -40 && a.x < W + 40) {
         a.puffT = 0.22 + Math.random() * 0.2;
-        S.particles.push({
-          x: a.x - 30 * a.scale, y: groundY - 3,
-          vx: -80 - Math.random() * 60, vy: -10 - Math.random() * 30,
-          r: 3 + Math.random() * 4, life: 0.4, c: '#e8dcc4', a: 0.6,
-        });
+        spawnParticle(a.x - 30 * a.scale, groundY - 3,
+          -80 - Math.random() * 60, -10 - Math.random() * 30,
+          3 + Math.random() * 4, 0.4, '#e8dcc4', 0.6);
       }
 
       // dokola, ať louka pořád žije
@@ -431,27 +463,42 @@
     const jumpPower = 880 * (S.stats?.jump || 1);
     if (!S.airborne) {
       S.vy = -jumpPower;
+      S.jumpImpulse = jumpPower;
       S.airborne = true;
       S.jumps = 1;
       S.squash = -0.6;
       puffs(6);
       AUDIO.play('jump');
+      PLATFORM.haptic('light');
     } else if (S.jumps === 1) {
       S.vy = -jumpPower * 0.68;
+      S.jumpImpulse = jumpPower * 0.68;
       S.jumps = 2;
       AUDIO.play('djump');
+      PLATFORM.haptic('light');
       // obláček pod nohama při dvojskoku
       for (let i = 0; i < 5; i++) {
-        S.particles.push({
-          x: playerX(), y: groundY - S.py - 6, vx: (Math.random() - 0.5) * 120,
-          vy: Math.random() * 60 + 20, r: 5 + Math.random() * 5, life: 0.5, c: '#ffffff', a: 0.8,
-        });
+        spawnParticle(playerX(), groundY - S.py - 6, (Math.random() - 0.5) * 120,
+          Math.random() * 60 + 20, 5 + Math.random() * 5, 0.5, '#ffffff', 0.8);
       }
     } else {
       // ťuknutí těsně před dopadem se zapamatuje a skočí se hned po doteku země,
       // takže žádný klik nepřijde vniveč
       S.jumpBuf = 0.16;
     }
+  }
+
+  /* Plovoucí skok: krátké ťuknutí = hop přes balík, podržení = plný oblouk.
+     Po puštění se stoupání zkrátí na 70 % odrazu – i ten nejkratší hop tak
+     má ~66 px, což bezpečně přeskočí nejvyšší překážku (58 px) i s tím
+     nejhůř skákajícím zvířátkem (jump 0,95). Nikdy se nezasahuje do pádu,
+     jen do stoupání, takže se hráč nemůže ťuknutím „přisát“ k zemi. */
+  const JUMP_CUT = 0.70;
+  function releaseJump() {
+    if (!S.jumpImpulse) return;
+    const cut = -S.jumpImpulse * JUMP_CUT;
+    if (S.vy < cut) S.vy = cut;
+    S.jumpImpulse = 0;
   }
 
   function slide() {
@@ -470,7 +517,13 @@
     if (e.repeat) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); uiOrJump(); }
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); slide(); }
-    if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+    if (e.code === 'KeyP') togglePause();
+    // Escape řeší PLATFORM.onBack – tam chodí i hardwarové Zpět na Androidu,
+    // ať se obě cesty chovají úplně stejně
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') releaseJump();
   });
 
   function uiOrJump() {
@@ -494,7 +547,10 @@
       ptr.acted = 'slide';
     }
   });
-  canvas.addEventListener('pointerup', () => { ptr = null; });
+  // puštění se hlídá na okně, ne na plátně: prst může sjet mimo canvas
+  // (nad HUD tlačítka) a pointerup by pak plátnu vůbec nedorazil
+  window.addEventListener('pointerup', () => { ptr = null; releaseJump(); });
+  window.addEventListener('pointercancel', () => { ptr = null; releaseJump(); });
 
   /* =========================================================
      PRŮBĚH HRY
@@ -516,13 +572,16 @@
 
   function resetWorld(demo) {
     S.worldX = 0;
-    S.obstacles = []; S.pickups = []; S.decor = []; S.particles = []; S.floaters = [];
+    S.obstacles = []; S.pickups = []; S.decor = []; S.floaters = [];
+    clearParticles(); // zásobník se nezahazuje, jen se uvolní všechny sloty
+    S.fg = []; S.nextFgX = 0;
     S.flyers = [];
     S.nextObstacleX = demo ? Infinity : 1600;
     S.nextPickupX = demo ? Infinity : 650;
     S.nextDecorX = 100;
     S.nextFlyerX = 400;
-    S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0;
+    S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0; S.jumpImpulse = 0; S.swayFollow = 0;
+    S.combo = 0; S.comboT = 0; S.comboPop = 0; S.comboRing = 0; S.comboBreak = 0; S.comboBest = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
     S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 10 + Math.random() * 8;
     S.tut = null;
@@ -575,6 +634,9 @@
   function runCoins() { return Math.round(S.coinsRun * (S.stats?.coinMult || 1)); }
 
   function endRun() {
+    // rozjetý řetěz se ještě vyplatí – nesmí propadnout jen proto, že
+    // došla energie zrovna uprostřed sbírání
+    endCombo();
     S.mode = 'over';
     S.shake = 0;
     S.tut = null; // pojistka – škola běhu končí s během (bez zápisu tutorialDone)
@@ -1377,14 +1439,14 @@
         f.trailT -= dt;
         if (f.trailT <= 0 && f.sx > -40 && f.sx < W + 40) {
           f.trailT = 0.09;
-          S.particles.push({ x: f.sx - f.flip * 14, y: f.sy + 2, vx: -20 * f.flip, vy: 8, r: 2, life: 0.9, a: 0.55, c: '#ffffff' });
+          spawnParticle(f.sx - f.flip * 14, f.sy + 2, -20 * f.flip, 8, 2, 0.9, '#ffffff', 0.55);
         }
       } else if (f.type === 'stork') {
         // čáp občas upustí pírko, které se snáší dolů
         f.dropT -= dt;
         if (f.dropT <= 0 && f.sx > 0 && f.sx < W) {
           f.dropT = 5 + Math.random() * 6;
-          S.particles.push({ x: f.sx, y: f.sy + 6, vx: -30, vy: 35, r: 3, life: 4, a: 0.85, sway: Math.random() * 6, c: '#f5f2ea' });
+          spawnParticle(f.sx, f.sy + 6, -30, 35, 3, 4, '#f5f2ea', 0.85, false, Math.random() * 6);
         }
       }
       // hlášky letců (ptáků) jsou vypnuté – na malém displeji zbytečně
@@ -1409,6 +1471,15 @@
     return { env: ENVS[idx], nextEnv: ENVS[next], blend: t, idx };
   }
 
+  /* Kolik má být vidět slunečních paprsků. Zlatá hodinka je jejich domov,
+     v lese jde jen o náznak světla mezi korunami; jinde nic. Přechod mezi
+     prostředími se plynule prolne, ať paprsky nenaskočí skokem. */
+  const RAY_AMT = { zapad: 1, les: 0.5 };
+  function godRayAmount() {
+    const { env, nextEnv, blend } = currentEnv();
+    return GFX.lerp(RAY_AMT[env.id] || 0, RAY_AMT[nextEnv.id] || 0, blend);
+  }
+
   // paleta se míchá jen když se opravdu změní (mimo 70m přechod je konstantní) –
   // míchání 9 barev × 2 volání za snímek zbytečně krmilo garbage collector
   let palCacheKey = '';
@@ -1430,15 +1501,108 @@
   /* =========================================================
      ČÁSTICE, BUBLINY, TEXTY
      ========================================================= */
+
+  /* Zásobník částic (object pool)
+     Pole s částicemi se sice uklízelo na místě (compact), ale samotné
+     částice se pořád vyráběly jako nové objekty – při každém dopadu,
+     výbuchu a okvětním lístku. Garbage collector to pak uklízel přesně
+     v okamžicích, kdy hráč skáče, a obraz uměl škubnout.
+
+     Teď je zásobník pevný: 320 částic se vyrobí jednou při startu a dál
+     se jen recyklují. Volná částice pozná podle life <= 0. Když dojdou
+     (opravdu velký výbuch), přepíše se nejstarší – lepší než alokovat.
+     Parametry se předávají jednotlivě, ne v objektu, aby při každém
+     zrození nevznikal aspoň ten popisný literál. */
+  const PARTICLE_POOL = 320;
+  let poolCursor = 0;
+  function initParticlePool() {
+    S.particles.length = 0;
+    for (let i = 0; i < PARTICLE_POOL; i++) {
+      S.particles.push({ x: 0, y: 0, vx: 0, vy: 0, r: 0, life: 0, c: '#fff', a: 1, grav: false, sway: 0, glow: false });
+    }
+  }
+
+  function spawnParticle(x, y, vx, vy, r, life, c, a, grav, sway, glow) {
+    let p = null;
+    for (let i = 0; i < PARTICLE_POOL; i++) {
+      const cand = S.particles[(poolCursor + i) % PARTICLE_POOL];
+      if (cand.life <= 0) { poolCursor = (poolCursor + i + 1) % PARTICLE_POOL; p = cand; break; }
+    }
+    if (!p) { p = S.particles[poolCursor]; poolCursor = (poolCursor + 1) % PARTICLE_POOL; }
+    p.x = x; p.y = y; p.vx = vx; p.vy = vy; p.r = r; p.life = life;
+    p.c = c; p.a = a === undefined ? 1 : a;
+    p.grav = !!grav; p.sway = sway || 0; p.glow = !!glow;
+    return p;
+  }
+
+  function clearParticles() { for (const p of S.particles) p.life = 0; }
+
+  /* ---------- popředí ----------
+     Trsy trávy a kvítí těsně u kamery. Kreslí se AŽ ZA hráčem, takže mu
+     na okamžik přeběhnou přes kopýtka – přesně to dělá dojem, že běží
+     loukou, a ne po nakreslené kulise. Na nejslabším stupni kvality
+     (dprStep 2) se vrstva vypne úplně; je to čistá ozdoba. */
+  function spawnFg() {
+    const kind = Math.random();
+    S.fg.push({
+      x: S.nextFgX,
+      kind: kind < 0.62 ? 'grass' : (kind < 0.88 ? 'flower' : 'stone'),
+      s: 0.8 + Math.random() * 0.7,
+      lean: (Math.random() - 0.5) * 0.5,
+      hue: Math.floor(Math.random() * 3),
+    });
+    S.nextFgX += 70 + Math.random() * 170;
+  }
+
+  const FG_FLOWERS = ['#ffffff', '#ffe08a', '#ff9fc4'];
+  function drawForeground(px) {
+    if (dprStep >= 2 || !S.fg.length) return;
+    const pal = blendedPalette();
+    const dark = GFX.lerpColor(pal.groundDark, '#000000', 0.25);
+    ctx.save();
+    ctx.globalAlpha = 0.62;
+    for (const d of S.fg) {
+      const sx = (d.x - S.worldX) * FG_PARALLAX + px;
+      if (sx < -80 || sx > W + 80) continue;
+      // popředí sedí níž než pěšina a nejvyšší stébla dosáhnou hráči ke
+      // kopýtkům – právě to přeběhnutí přes nohy dělá dojem běhu loukou.
+      // Výš už ne: tráva přes překážky by hru zhoršila, ne vylepšila.
+      const by = groundY + 46 * d.s;
+      const h = 34 * d.s;
+      if (d.kind === 'stone') {
+        ctx.fillStyle = dark;
+        GFX.ell(ctx, sx, by, 11 * d.s, 6 * d.s);
+        ctx.fill();
+        continue;
+      }
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = 3.2 * d.s;
+      ctx.lineCap = 'round';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(sx + i * 6 * d.s, by);
+        ctx.quadraticCurveTo(sx + i * 8 * d.s + d.lean * 12, by - h * 0.6, sx + i * 9 * d.s + d.lean * 26, by - h);
+        ctx.stroke();
+      }
+      if (d.kind === 'flower') {
+        ctx.fillStyle = FG_FLOWERS[d.hue];
+        ctx.beginPath();
+        ctx.arc(sx + d.lean * 26, by - h - 2 * d.s, 4.5 * d.s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   function puffs(n) {
     for (let i = 0; i < n; i++) {
-      S.particles.push({
-        x: playerX() - 20 + Math.random() * 20,
-        y: groundY - 4 - Math.random() * 8,
-        vx: -60 - Math.random() * 90, vy: -20 - Math.random() * 50,
-        r: 4 + Math.random() * 6, life: 0.45 + Math.random() * 0.3,
-        c: '#e8dcc4', a: 0.7,
-      });
+      spawnParticle(
+        playerX() - 20 + Math.random() * 20,
+        groundY - 4 - Math.random() * 8,
+        -60 - Math.random() * 90, -20 - Math.random() * 50,
+        4 + Math.random() * 6, 0.45 + Math.random() * 0.3,
+        '#e8dcc4', 0.7,
+      );
     }
   }
 
@@ -1446,16 +1610,157 @@
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const v = 80 + Math.random() * 220;
-      S.particles.push({
-        x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120,
-        r: 3 + Math.random() * 5, life: 0.5 + Math.random() * 0.5,
-        c: color, a: 1, grav: true,
-      });
+      spawnParticle(x, y, Math.cos(a) * v, Math.sin(a) * v - 120,
+        3 + Math.random() * 5, 0.5 + Math.random() * 0.5, color, 1, true);
     }
   }
 
   function floater(txt, x, y, color) {
     S.floaters.push({ txt, x, y, life: 1, color });
+  }
+
+  /* =========================================================
+     ŘETĚZ SBĚRŮ (COMBO)
+
+     Sbírej mrkve, mince a čtyřlístky rychle za sebou. Řetěz se počítá od
+     prvního kousku, ale ukáže se až od pátého (ECONOMY.comboMin) – dvě
+     náhodné mince nemají hráči blikat před očima. Mince po cestě mají
+     pořád normální hodnotu; odměna přijde jednorázově, až řetěz skončí.
+     Náraz řetěz přetrhne a vyplatí jen půlku – trest, který bolí, ale
+     nesebere hráči celou snahu.
+
+     Prstenec i číslo se kreslí na plátno (ne do DOM): mění se každý
+     snímek a v DOM by se rozjížděly vůči zbytku obrazu.
+     ========================================================= */
+  const COMBO_X = () => W / 2;      // pod ukazatelem vzdálenosti nahoře uprostřed
+  const COMBO_Y = 104;
+  const COMBO_R = 26;
+
+  // index nejvyššího dosaženého stupně, nebo -1, když řetěz ještě neplatí
+  function comboTierIdx(n) {
+    const tiers = ECONOMY.comboTiers;
+    let idx = -1;
+    for (let i = 0; i < tiers.length; i++) if (n >= tiers[i].at) idx = i;
+    return idx;
+  }
+
+  function comboBonus(n, ratio = 1) {
+    const idx = comboTierIdx(n);
+    if (idx < 0) return 0;
+    return Math.floor(n * ECONOMY.comboCoinRate * ECONOMY.comboTiers[idx].mul * ratio);
+  }
+
+  // barva plynule přechází mezi stupni, ať se prstenec nepřebarvuje skokem
+  function comboColor(n) {
+    const tiers = ECONOMY.comboTiers;
+    const idx = Math.max(0, comboTierIdx(n));
+    const cur = tiers[idx];
+    const next = tiers[idx + 1];
+    if (!next) return cur.color;
+    const q = Math.min(1, Math.max(0, (n - cur.at) / (next.at - cur.at)));
+    return GFX.lerpColor(cur.color, next.color, q);
+  }
+
+  function bumpCombo() {
+    const before = comboTierIdx(S.combo);
+    S.combo++;
+    S.comboT = ECONOMY.comboWindow;
+    S.comboPop = 1;
+    S.comboBreak = 0;
+    if (S.combo > S.comboBest) S.comboBest = S.combo;
+    const after = comboTierIdx(S.combo);
+    if (after < 0) return;                 // pod pátým kouskem je řetěz neviditelný
+    AUDIO.comboTone(S.combo - ECONOMY.comboMin);
+    if (after > before) {                  // nový stupeň – krátká oslava
+      const tier = ECONOMY.comboTiers[after];
+      burst(COMBO_X(), COMBO_Y, tier.color, 16);
+      floater(I18N.t(tier.name), COMBO_X(), COMBO_Y + 64, tier.color);
+      PLATFORM.haptic('medium');
+    }
+  }
+
+  // ratio 1 = řetěz doběhl v klidu, 0.5 = přetržený nárazem
+  function cashCombo(ratio, broken) {
+    const n = S.combo;
+    S.combo = 0; S.comboT = 0;
+    if (comboTierIdx(n) < 0) return;       // krátký řetěz nic nevyplácí
+    const gain = comboBonus(n, ratio);
+    if (gain > 0) {
+      S.coinsRun += gain;
+      updateHud(true);
+    }
+    const col = broken ? '#e5533a' : comboColor(n);
+    floater(
+      broken ? I18N.t('combo.break') + '  +' + gain + ' 🪙' : I18N.t('combo.payout', { n, c: gain }),
+      COMBO_X(), COMBO_Y + 64, col,
+    );
+    burst(COMBO_X(), COMBO_Y, col, broken ? 10 : 22);
+    if (broken) return;                    // zvuk i vibrace nárazu už zazněly
+    AUDIO.play('golden');
+    PLATFORM.haptic('success');
+  }
+
+  function endCombo() { cashCombo(1, false); }
+  function breakCombo() {
+    if (comboTierIdx(S.combo) >= 0) S.comboBreak = 0.6;
+    cashCombo(0.5, true);
+  }
+
+  function updateCombo(dt) {
+    if (S.comboT > 0) {
+      S.comboT -= dt;
+      if (S.comboT <= 0) { S.comboT = 0; endCombo(); }
+    }
+    // doskok čísla a náběh/zánik prstence – stejné tlumení jako u squashe,
+    // takže se combo hýbe ve stejném rytmu jako zbytek hry
+    S.comboPop *= Math.pow(0.0015, dt);
+    S.comboBreak = Math.max(0, S.comboBreak - dt);
+    const want = comboTierIdx(S.combo) >= 0 ? 1 : 0;
+    S.comboRing += (want - S.comboRing) * Math.min(1, dt * 12);
+    if (S.comboRing < 0.004 && want === 0) S.comboRing = 0;
+  }
+
+  function drawCombo(c) {
+    if (S.comboRing <= 0 && S.comboBreak <= 0) return;
+    const n = S.combo;
+    const shown = S.comboRing;
+    const col = S.comboBreak > 0 ? '#e5533a' : comboColor(n || ECONOMY.comboMin);
+    const x = COMBO_X(), y = COMBO_Y;
+    // prasklý řetěz odlétá nahoru a mizí, dokončený se jen scvrkne
+    const pop = 1 + S.comboPop * 0.35;
+    const r = COMBO_R * (0.5 + shown * 0.5) * pop;
+
+    c.save();
+    c.globalAlpha = Math.max(shown, S.comboBreak / 0.6) * 0.95;
+    c.translate(x, y - (1 - shown) * 14);
+
+    if (dprStep < 2) {
+      // slabý telefon prstenec vynechá – zůstane jen čitelné číslo
+      c.beginPath();
+      c.arc(0, 0, r, 0, Math.PI * 2);
+      c.strokeStyle = 'rgba(0,0,0,0.28)';
+      c.lineWidth = 6;
+      c.stroke();
+      if (S.comboT > 0) {
+        const frac = S.comboT / ECONOMY.comboWindow;
+        c.beginPath();
+        c.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+        c.strokeStyle = col;
+        c.lineWidth = 5;
+        c.lineCap = 'round';
+        c.stroke();
+      }
+    }
+
+    c.font = `700 ${Math.round(20 * pop)}px "Baloo 2", system-ui, sans-serif`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.lineWidth = 4;
+    c.strokeStyle = 'rgba(0,0,0,0.45)';
+    c.strokeText(String(n || ''), 0, 1);
+    c.fillStyle = col;
+    c.fillText(String(n || ''), 0, 1);
+    c.restore();
   }
 
   // hlášky jsou dvojjazyčné objekty { cs, en } – vybere náhodnou v aktuálním jazyce
@@ -1466,6 +1771,8 @@
      UPDATE
      ========================================================= */
   let ambientTimer = 0;
+  const PETAL_COLORS = ['#ff8fb1', '#ffffff', '#ffe08a'];
+  const LEAF_COLORS = ['#e5a53a', '#c9762a', '#a8b83a'];
 
   // úklid pole na místě – .filter() každý snímek vytvářel nová pole
   // (7 polí × 60 snímků/s) a garbage collector pak uměl škubnout obrazem
@@ -1533,17 +1840,32 @@
       S.py -= S.vy * dt;
       if (S.py <= 0) {
         S.py = 0; S.vy = 0;
-        if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); }
-        S.airborne = false; S.jumps = 0;
+        if (S.airborne) { S.squash = 0.8; puffs(5); AUDIO.play('land'); PLATFORM.haptic('light'); }
+        S.airborne = false; S.jumps = 0; S.jumpImpulse = 0;
         if (S.jumpBuf > 0) { S.jumpBuf = 0; jump(); } // zapamatované ťuknutí
       }
     }
     S.jumpBuf = Math.max(0, S.jumpBuf - dt);
+    updateCombo(dt);
     S.sliding = Math.max(0, S.sliding - dt);
     S.stumble = Math.max(0, S.stumble - dt);
     S.invuln = Math.max(0, S.invuln - dt);
     S.squash *= Math.pow(0.0001, dt); // rychlé odeznění
+    // zpožděný sledovač svislé rychlosti – rozdíl proti skutečné rychlosti
+    // rozhýbe uši, ocas a vlnu (druhotný pohyb, viz GFX.drawCharacter)
+    S.swayFollow += (S.vy - S.swayFollow) * Math.min(1, dt * 9);
+    const phaseBefore = S.runPhase;
     S.runPhase += dt * (10 + spd * 0.012);
+
+    /* Kroky a vrstva rychlosti. Krok padne pokaždé, když běžecká fáze
+       překročí násobek π (tedy jednou za nohu) – takže rychlejší běh
+       automaticky dupe hustěji. Ve skluzu a ve vzduchu se nekrokuje. */
+    if (S.mode === 'run' && !S.airborne && S.sliding <= 0 && !lessonPaused()) {
+      if (Math.floor(phaseBefore / Math.PI) !== Math.floor(S.runPhase / Math.PI)) {
+        AUDIO.step(currentEnv().env.id, S.stumble > 0 ? 0.5 : 1);
+      }
+    }
+    AUDIO.setIntensity(S.mode === 'run' ? (spd - 320) / 380 : 0);
 
     // mrkání
     S.blink -= dt;
@@ -1551,6 +1873,9 @@
 
     // spawn
     while (S.nextDecorX < S.worldX + W / FAR_PARALLAX + 500) spawnDecor();
+    // popředí letí rychleji, takže se musí zakládat blíž a uklízet dřív
+    while (S.nextFgX < S.worldX + W / FG_PARALLAX + 200) spawnFg();
+    compact(S.fg, d => (d.x - S.worldX) * FG_PARALLAX > -300);
     while (S.nextFlyerX < S.worldX + W + 700) spawnFlyer();
     compact(S.flyers, f => f.cx > S.worldX - 700);
     updateFlyers(dt, running);
@@ -1605,37 +1930,34 @@
       updateHud(false);
     }
 
-    // částice
+    // částice – zásobník má pevnou délku, mrtvé sloty se jen přeskočí
     for (const p of S.particles) {
+      if (p.life <= 0) continue;
       p.x += p.vx * dt; p.y += p.vy * dt;
       if (p.grav) p.vy += 500 * dt;
       p.life -= dt;
     }
-    compact(S.particles, p => p.life > 0);
     for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
     compact(S.floaters, f => f.life > 0);
     for (const b of S.sideBubbles) b.t += dt;
     compact(S.sideBubbles, b => b.t < b.dur);
     if (S.milestone) { S.milestone.t += dt; if (S.milestone.t >= S.milestone.dur) S.milestone = null; }
 
-    // ambientní částice prostředí
+    // ambientní částice prostředí (barvy jako konstanty – pole v cyklu by se
+    // jinak vyrábělo čtyřikrát za vteřinu jen kvůli jednomu náhodnému odstínu)
     ambientTimer -= dt;
     if (ambientTimer <= 0) {
       ambientTimer = 0.25;
       const pal = blendedPalette();
       if (pal.particles === 'petals' || pal.particles === 'leaves') {
-        S.particles.push({
-          x: W + 20, y: Math.random() * groundY * 0.8,
-          vx: -spd * 0.35 - 30, vy: 30 + Math.random() * 40,
-          r: 4, life: 4, a: 0.8, sway: Math.random() * 6,
-          c: pal.particles === 'petals' ? ['#ff8fb1', '#fff', '#ffe08a'][Math.floor(Math.random() * 3)] : ['#e5a53a', '#c9762a', '#a8b83a'][Math.floor(Math.random() * 3)],
-        });
+        spawnParticle(W + 20, Math.random() * groundY * 0.8,
+          -spd * 0.35 - 30, 30 + Math.random() * 40, 4, 4,
+          pal.particles === 'petals' ? PETAL_COLORS[Math.floor(Math.random() * 3)] : LEAF_COLORS[Math.floor(Math.random() * 3)],
+          0.8, false, Math.random() * 6);
       } else if (pal.particles === 'fireflies') {
-        S.particles.push({
-          x: Math.random() * W, y: groundY - 30 - Math.random() * 200,
-          vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 30,
-          r: 2.5, life: 3, a: 0.9, c: '#ffe88a', glow: true,
-        });
+        spawnParticle(Math.random() * W, groundY - 30 - Math.random() * 200,
+          (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 30,
+          2.5, 3, '#ffe88a', 0.9, false, 0, true);
       }
     }
 
@@ -1668,6 +1990,8 @@
       const reach = magnetR ? 46 : 34;
       if (Math.abs(sx - px) < reach && sy > pyTop - reach && sy < pyBottom + 10) {
         p.taken = true;
+        bumpCombo();
+        PLATFORM.haptic('light');
         if (p.kind === 'carrot') {
           S.carrotsRun++;
           const gain = ECONOMY.carrotEnergy * (S.stats.carrotBonus || 1);
@@ -1744,6 +2068,8 @@
       S.shake = 0.8;
       floater('-' + penalty + ' ⚡', px, pyTop - 20, '#e5533a');
       AUDIO.play('hit');
+      PLATFORM.haptic('heavy');
+      breakCombo();  // náraz řetěz utne – a musí to být vidět i cítit
       if (S.energy <= 0) { endRun(); return; }
     }
   }
@@ -1806,6 +2132,8 @@
     GFX.drawSky(ctx, W, H, pal, S.t);
     GFX.drawClouds(ctx, W, H, pal, S.worldX, S.t);
     GFX.drawHills(ctx, W, H, pal, S.worldX, groundY);
+    // sluneční paprsky mezi kopci a zemí – při západu naplno, v lese jen náznak
+    if (dprStep < 2) GFX.drawGodRays(ctx, W, H, pal, groundY, S.t, godRayAmount());
     GFX.drawGround(ctx, W, H, pal, S.worldX, groundY);
 
     // letci kroužící na obloze
@@ -1889,9 +2217,13 @@
           stumble: S.stumble,
           squash: S.squash,
           blink: S.blink > 0,
+          sway: (S.vy - S.swayFollow) / 700,
         }, S.t);
       }
     }
+
+    // tráva a kvítí přeběhnou hráči přes kopýtka – vrstva hloubky
+    drawForeground(px);
 
     // zvýraznění novinky ve zpomaleném čase – oko hráče hned ví, kam koukat
     if (S.tut && S.tut.focus && !S.tut.focus.human && !S.tut.focus.taken && !S.tut.focus.broken && S.tut.scale < 0.8) {
@@ -1908,6 +2240,7 @@
 
     // částice
     for (const p of S.particles) {
+      if (p.life <= 0) continue;
       const pa = Math.min(1, p.life * 2) * (p.a || 1);
       ctx.fillStyle = p.c;
       const sway = p.sway ? Math.sin(S.t * 0.004 + p.sway) * 6 : 0;
@@ -1983,6 +2316,9 @@
     if (S.milestone && S.mode === 'run') drawMilestone();
 
     ctx.restore();
+
+    // řetěz sběrů – mimo třes, ať se počítadlo neklepe a jde přečíst
+    if (S.mode === 'run' || S.mode === 'paused') drawCombo(ctx);
 
     // Karlova lekce o HUD – pulzující rámeček kolem ukazatele mrkvové energie
     if (S.tut && S.tut.idx >= 0 && TUTORIAL.steps[S.tut.idx].hud
@@ -2297,11 +2633,30 @@
   const $ = (id) => document.getElementById(id);
   const screens = ['menu', 'shop', 'over', 'pause', 'ach'];
 
+  let curScreen = null; // co je zrovna vidět – potřebuje to tlačítko Zpět
   function showScreen(name) {
+    curScreen = name;
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
     $('hud').classList.toggle('visible', name === null);
     if (name === 'menu') AUDIO.playMusic('menu');
+    // na pauze se hudba i efekty ztiší – ať je slyšet, že hra čeká
+    AUDIO.duck(name === 'pause');
     measureMenuPanel();
+  }
+
+  /* ---------- tlačítko Zpět (Android) / Escape (web) ----------
+     Vrací true, když jsme událost spotřebovali. false znamená „jsme na
+     úvodní obrazovce“ – tam se aplikace na Androidu ukončí. */
+  function goBack() {
+    if (S.mode === 'intro') return true;   // během intra se nikam nechodí
+    if (S.mode === 'run') { togglePause(); return true; }
+    if (S.mode === 'paused') { togglePause(); return true; }
+    if (curScreen === 'shop' || curScreen === 'ach' || curScreen === 'over') {
+      S.mode = 'menu'; S.demo = true; resetWorld(true);
+      initMenu(); showScreen('menu'); AUDIO.play('click');
+      return true;
+    }
+    return false; // menu
   }
 
   // do DOM se zapisuje jen při změně zobrazené hodnoty – zápis stylu/textu
@@ -2643,13 +2998,17 @@
   $('btn-pause-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
   $('btn-sfx').addEventListener('click', () => {
     save.sfx = !(save.sfx !== false);
-    persist(); AUDIO.setSfx(save.sfx); initMenu();
+    persist(); AUDIO.setSfx(save.sfx); PLATFORM.setHaptics(save.sfx); initMenu();
   });
   $('btn-music').addEventListener('click', () => {
     save.music = !(save.music !== false);
     persist(); AUDIO.setMusic(save.music); initMenu();
     if (save.music) AUDIO.playMusic('menu');
   });
+
+  // hardwarové Zpět na Androidu i Escape v prohlížeči – bez tohohle by
+  // aplikace na Androidu skončila i uprostřed běhu
+  PLATFORM.onBack(goBack);
 
   /* ---------- instalace PWA ----------
      Chrome na Androidu žádnou nabídku sám od sebe neukazuje – appka musí
@@ -2738,6 +3097,7 @@
 
   // start: intro se zvířátky a logem azylu, za ním už běží demo svět
   I18N.apply(); // propíše uložený jazyk do celého UI
+  initParticlePool(); // pevný zásobník částic – vyrobí se jednou a dál se recykluje
   resetWorld(true);
   initMenu();
   initIntro();
