@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.0.6';
+  const GAME_VERSION = '1.0.7';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -140,6 +140,9 @@
     energy: 100,
     coinsRun: 0,
     carrotsRun: 0,
+    goldenRun: 0,           // zlaté mrkve za běh (denní mise)
+    cleanDist: 0,           // nejdelší úsek bez nárazu v px (denní mise)
+    cleanFrom: 0,           // odkud se ten úsek počítá
     ramLeft: 0,
     cloverT: 0,             // zbývající čas bonusu čtyřlístku (s) – mince mají dvojnásobnou hodnotu
     // řetěz sběrů – viz sekce COMBO
@@ -608,7 +611,8 @@
     S.char = charById(save.selected) || CHARACTERS[0];
     S.stats = S.char.stats;
     S.energy = ECONOMY.startEnergy;
-    S.coinsRun = 0; S.carrotsRun = 0;
+    S.coinsRun = 0; S.carrotsRun = 0; S.goldenRun = 0;
+    S.cleanDist = 0; S.cleanFrom = 0;
     S.cloverT = 0;
     S.ramLeft = S.stats.ram || 0;
     S.speed = S.baseSpeed * S.stats.speed;
@@ -647,6 +651,21 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
     if (isBest) save.best = dist;
+    // kolikátý běh s touhle postavou – odemyká deníčky z azylu
+    if (!save.charRuns) save.charRuns = {};
+    save.charRuns[S.char.id] = (save.charRuns[S.char.id] || 0) + 1;
+    // denní mise
+    S.cleanDist = Math.max(S.cleanDist, S.worldX - S.cleanFrom);
+    const daily = ensureDaily();
+    daily.runsToday = (daily.runsToday || 0) + 1;
+    checkDaily({
+      dist,
+      carrots: S.carrotsRun,
+      coins: runCoins(),
+      combo: S.comboBest,
+      golden: S.goldenRun,
+      clean: Math.floor(S.cleanDist / PX_PER_M),
+    });
     // příběhový konec – každé zvířátko střídá své příběhy popořadě,
     // takže tři doběhy za sebou vyprávějí tři různé konce
     if (!save.storyIdx) save.storyIdx = {};
@@ -661,6 +680,7 @@
     document.getElementById('over-carrots').textContent = S.carrotsRun;
     document.getElementById('over-coins').textContent = '+' + runCoins();
     document.getElementById('over-best').textContent = save.best + ' m';
+    document.getElementById('over-combo').textContent = S.comboBest;
     drawPortrait(document.getElementById('over-portrait'), S.char);
     showScreen('over');
     // nově splněné odznaky (rekord/počet běhů/…) oznámíme přes obrazovkou konce
@@ -2001,6 +2021,7 @@
           AUDIO.play('carrot');
         } else if (p.kind === 'golden') {
           S.carrotsRun++;
+          S.goldenRun++;
           const gGain = Math.round(ECONOMY.goldenCarrotEnergy * (S.stats.goldenBonus || 1));
           S.energy = Math.min(100, S.energy + gGain);
           floater(I18N.t('fl.golden', { n: gGain }), sx, sy - 24, '#ffce3a');
@@ -2070,6 +2091,9 @@
       AUDIO.play('hit');
       PLATFORM.haptic('heavy');
       breakCombo();  // náraz řetěz utne – a musí to být vidět i cítit
+      // konec čistého úseku – uložíme, jestli byl zatím nejdelší
+      S.cleanDist = Math.max(S.cleanDist, S.worldX - S.cleanFrom);
+      S.cleanFrom = S.worldX;
       if (S.energy <= 0) { endRun(); return; }
     }
   }
@@ -2781,6 +2805,191 @@
     }
   }
 
+  /* =========================================================
+     DENNÍ MISE
+
+     Tři úkoly na den. Losují se deterministicky z data, takže na všech
+     zařízeních (i po přeinstalaci) vyjdou stejné a nejde je „přetočit“
+     smazáním dat. Sledují čísla, která hra už stejně počítá – žádné nové
+     měření za běhu, jen jiný pohled na výsledek běhu.
+
+     Odměna se nepřipisuje sama: hráč si ji vyzvedne v menu. Je to jeden
+     klik navíc, ale dává důvod se do menu vrátit a mise si přečíst.
+     ========================================================= */
+  const DAILY_COUNT = 3;
+  const DAILY_REWARD = 30;
+  const QUESTS = [
+    { id: 'dist', targets: [800, 1200, 1800, 2500], val: (r) => r.dist },
+    { id: 'carrots', targets: [25, 40, 60], val: (r) => r.carrots },
+    { id: 'coins', targets: [30, 50, 80], val: (r) => r.coins },
+    { id: 'combo', targets: [8, 12, 18], val: (r) => r.combo },
+    { id: 'golden', targets: [1, 2, 3], val: (r) => r.golden },
+    { id: 'clean', targets: [400, 700, 1000], val: (r) => r.clean },
+    // jediná kumulativní mise – počítá běhy za celý dnešek, ne za jeden běh
+    { id: 'runs', targets: [2, 3, 4], val: (r, d) => d.runsToday || 0 },
+  ];
+
+  function dayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // FNV-1a – z data udělá stabilní číslo, ze kterého se pak losuje
+  function seedFrom(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function rngFrom(seed) {
+    let s = seed || 1;
+    return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  }
+
+  function ensureDaily() {
+    const day = dayKey();
+    if (save.daily && save.daily.day === day) return save.daily;
+    const rnd = rngFrom(seedFrom(day));
+    const pool = QUESTS.slice();
+    const picks = [];
+    for (let i = 0; i < DAILY_COUNT && pool.length; i++) {
+      const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+      picks.push({ id: q.id, target: q.targets[Math.floor(rnd() * q.targets.length)], done: false, claimed: false });
+    }
+    save.daily = { day, runsToday: 0, picks };
+    persist();
+    return save.daily;
+  }
+
+  // po doběhnutí zkontroluje mise; vrací true, když něco nově cvaklo
+  function checkDaily(runStats) {
+    const d = ensureDaily();
+    let changed = false;
+    for (const p of d.picks) {
+      if (p.done) continue;
+      const q = QUESTS.find(x => x.id === p.id);
+      if (q && q.val(runStats, d) >= p.target) { p.done = true; changed = true; }
+    }
+    if (changed) persist();
+    return changed;
+  }
+
+  function claimDaily(idx) {
+    const d = ensureDaily();
+    const p = d.picks[idx];
+    if (!p || !p.done || p.claimed) return;
+    p.claimed = true;
+    save.coins += DAILY_REWARD;
+    persist();
+    AUDIO.play('buy');
+    PLATFORM.haptic('success');
+    toast(I18N.t('toast.daily') + ' +' + DAILY_REWARD + ' 🪙');
+    initMenu();
+  }
+
+  function buildDaily() {
+    const d = ensureDaily();
+    const list = $('daily-list');
+    list.innerHTML = '';
+    const allClaimed = d.picks.every(p => p.claimed);
+    if (allClaimed) {
+      const p = document.createElement('p');
+      p.className = 'daily-alldone';
+      p.textContent = I18N.t('daily.allDone');
+      list.appendChild(p);
+      return;
+    }
+    d.picks.forEach((p, i) => {
+      if (p.claimed) return;
+      const row = document.createElement('div');
+      row.className = 'daily-row' + (p.done ? ' done' : '');
+      const txt = document.createElement('span');
+      txt.className = 'daily-text';
+      txt.textContent = I18N.t('q.' + p.id, { n: p.target });
+      row.appendChild(txt);
+      if (p.done) {
+        const b = document.createElement('button');
+        b.className = 'btn tiny daily-claim';
+        b.textContent = I18N.t('daily.claim', { n: DAILY_REWARD });
+        b.addEventListener('click', () => claimDaily(i));
+        row.appendChild(b);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  /* =========================================================
+     SDÍLECÍ KARTIČKA
+     Čtvercový obrázek s postavou, výsledkem a odkazem – něco, co jde
+     poslat kamarádovi nebo dát na sociální sítě. Kreslí se stejnými
+     funkcemi jako hra, takže nepotřebuje žádné nové obrázky.
+     ========================================================= */
+  const SHARE_URL = 'https://nechmerust.org';
+  function buildShareCard(dist, coins, chr, combo) {
+    const cv = document.createElement('canvas');
+    cv.width = 1080; cv.height = 1080;
+    const c = cv.getContext('2d');
+
+    // obloha a louka v barvách Zlaté hodinky – nejhezčí paleta ve hře
+    const sky = c.createLinearGradient(0, 0, 0, 1080);
+    sky.addColorStop(0, '#8fd0f0');
+    sky.addColorStop(0.55, '#ffd9a0');
+    sky.addColorStop(1, '#ffb672');
+    c.fillStyle = sky; c.fillRect(0, 0, 1080, 1080);
+    c.fillStyle = '#ffe9a8';
+    c.beginPath(); c.arc(890, 230, 110, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#7cbf5a';
+    c.beginPath();
+    c.moveTo(0, 760);
+    for (let x = 0; x <= 1080; x += 20) c.lineTo(x, 760 - 40 * Math.sin(x * 0.004));
+    c.lineTo(1080, 1080); c.lineTo(0, 1080); c.closePath(); c.fill();
+    c.fillStyle = '#6aad4c'; c.fillRect(0, 900, 1080, 180);
+
+    GFX.drawCharacter(c, chr, 300, 905, 2.6, { runPhase: 0.6 }, 400);
+
+    c.textAlign = 'center';
+    c.fillStyle = '#2e2a22';
+    c.font = '700 78px "Baloo 2", system-ui, sans-serif';
+    c.fillText('LOUKA RUN', 540, 150);
+    c.font = '700 190px "Baloo 2", system-ui, sans-serif';
+    c.fillStyle = '#ffffff';
+    c.lineWidth = 16; c.strokeStyle = 'rgba(0,0,0,0.28)';
+    c.strokeText(dist + ' m', 540, 470);
+    c.fillText(dist + ' m', 540, 470);
+    // mince se kreslí stejnou funkcí jako ve hře, ne emotikonem – emotikony
+    // vypadají na každém systému jinak a kartička má vypadat všude stejně
+    c.font = '700 60px "Baloo 2", system-ui, sans-serif';
+    c.fillStyle = '#3a3428';
+    const line = `${I18N.pick(chr.name)}  ·  ${coins}`;
+    const lw = c.measureText(line).width;
+    c.fillText(line, 540 - 26, 570);
+    // drawCoin kreslí v herním měřítku (~12 px) – na kartičce ji zvětšíme
+    c.save();
+    c.translate(540 + lw / 2 - 26 + 44, 552);
+    c.scale(2.6, 2.6);
+    GFX.drawCoin(c, 0, 0, 0);
+    c.restore();
+    if (combo > 0) {
+      c.font = '700 46px "Baloo 2", system-ui, sans-serif';
+      c.fillStyle = '#6a5a3a';
+      c.fillText(`${I18N.t('over.combo')}: ${combo}`, 540, 646);
+    }
+    c.font = '600 44px "Baloo 2", system-ui, sans-serif';
+    c.fillStyle = 'rgba(40,36,28,0.75)';
+    c.fillText(SHARE_URL.replace('https://', ''), 540, 1030);
+    return cv;
+  }
+
+  function shareRun() {
+    const dist = Math.floor(S.worldX / PX_PER_M);
+    const chr = S.char || charById(save.selected) || CHARACTERS[0];
+    const cv = buildShareCard(dist, runCoins(), chr, S.comboBest);
+    const text = I18N.t('share.text', { d: dist, name: I18N.pick(chr.name), url: SHARE_URL });
+    AUDIO.play('click');
+    cv.toBlob((blob) => {
+      PLATFORM.share({ title: I18N.t('share.title'), text, blob, filename: 'louka-run.png' });
+    }, 'image/png');
+  }
+
   /* ---------- menu ---------- */
   function initMenu() {
     syncAchievements();
@@ -2794,6 +3003,7 @@
     $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
     $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
     $('btn-install').textContent = I18N.t('menu.install');
+    buildDaily();
     measureMenuPanel(); // texty mění šířku panelu, zvířátko v demu mu uhýbá
   }
 
@@ -2875,6 +3085,37 @@
         rows.appendChild(row);
       });
       card.appendChild(rows);
+
+      /* Deníček z azylu – opravdové útržky ze života zvířátka. Odemyká se
+         běháním právě s ním, takže hráč má důvod prostřídat celou partu
+         a ne jen zůstat u nejrychlejšího. */
+      if (owned && ch.diary && ch.diary.length) {
+        const runsWith = (save.charRuns && save.charRuns[ch.id]) || 0;
+        const box = document.createElement('div');
+        box.className = 'diary';
+        const dTitle = document.createElement('div');
+        dTitle.className = 'diary-title';
+        dTitle.textContent = I18N.t('shop.diary');
+        box.appendChild(dTitle);
+        /* Ukazuje se vždy jen JEDEN zápisek – ten poslední odemčený, nebo
+           zámek s tím, kolik běhů ještě chybí. Karta v karuselu má pevnou
+           výšku (#shop-grid má overflow-y: hidden), takže celý deníček
+           najednou by přetlačil statistiky i tlačítko mimo záběr. Takhle
+           navíc každý nový zápisek dorazí jako samostatná odměna. */
+        const step = 3;                        // po kolika bězích přibývá zápisek
+        const have = Math.min(ch.diary.length, Math.floor(runsWith / step));
+        const p = document.createElement('p');
+        if (have > 0) {
+          p.className = 'diary-entry';
+          p.textContent = I18N.pick(ch.diary[have - 1]);
+          if (ch.diary.length > 1) dTitle.textContent += `  ${have}/${ch.diary.length}`;
+        } else {
+          p.className = 'diary-entry locked';
+          p.textContent = '🔒 ' + I18N.t('shop.diaryLocked', { n: step });
+        }
+        box.appendChild(p);
+        card.appendChild(box);
+      }
 
       const btn = document.createElement('button');
       btn.className = 'btn small';
@@ -2990,6 +3231,7 @@
   $('btn-ach').addEventListener('click', () => { buildAch(); showScreen('ach'); AUDIO.play('click'); });
   $('btn-ach-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-again').addEventListener('click', startRun);
+  $('btn-share').addEventListener('click', shareRun);
   $('btn-over-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
   $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
   $('btn-pause').addEventListener('click', togglePause);

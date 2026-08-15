@@ -25,6 +25,19 @@ const DATA = (() => {
         en: 'A balanced runner. The heart of the sanctuary.',
       },
       stats: { speed: 1.0, jump: 1.0, drain: 1.0 },
+      /* Deníček z azylu – krátké zápisky ošetřovatelů. Odemykají se po
+         3 a 6 bězích s touhle postavou (viz buildShop v js/game.js).
+         Je to hravé vyprávění v duchu hry, ne veterinární záznam. */
+      diary: [
+        {
+          cs: 'Zápisek první: Karel se naučil otevírat závoru u výběhu. Ne že by chtěl utéct — jenom chce, aby bylo jasné, kdo tu závoru ovládá.',
+          en: 'Entry one: Karel learned to open the paddock latch. Not that he wants to escape — he just wants it clear who is in charge of that latch.',
+        },
+        {
+          cs: 'Zápisek druhý: Když má někdo z party špatný den, Karel si k němu stoupne a mlčí. Umí to líp než my všichni dohromady.',
+          en: 'Entry two: When someone in the herd is having a bad day, Karel goes and stands beside them in silence. He does it better than all of us put together.',
+        },
+      ],
       // černý osel s bílým čumákem a světlými kroužky kolem očí
       colors: { body: '#45403c', belly: '#93887f', mane: '#211d1a', muzzle: '#efe7da', ear: '#45403c', earIn: '#b5a89a', eyeRing: '#c6bab0', hoof: '#26221e' },
       quotes: [
@@ -74,6 +87,16 @@ const DATA = (() => {
         en: 'Perk: WOOLLY CUSHION – takes only half the energy from a hit and jumps a little higher.',
       },
       stats: { speed: 1.0, jump: 1.10, drain: 1.0, hitFactor: 0.5 },
+      diary: [
+        {
+          cs: 'Zápisek první: Pogo si našel svůj kámen. Stojí na něm každé ráno a kouká do kraje, jako by kontroloval, jestli louka přes noc nikam neutekla.',
+          en: 'Entry one: Pogo has found his rock. He stands on it every morning and surveys the land, as if checking the meadow hasn’t wandered off overnight.',
+        },
+        {
+          cs: 'Zápisek druhý: Po stříhání vlny chodí tři dny uraženě. Čtvrtý den zjistí, že se mu líp skáče, a je zase king.',
+          en: 'Entry two: For three days after shearing he sulks. On the fourth he discovers he jumps better, and he is king again.',
+        },
+      ],
       // krémová vlna, hnědá tvářička a tmavé nožky
       colors: { body: '#f2ede2', belly: '#ffffff', mane: '#e2d8c6', muzzle: '#9a8268', ear: '#9a8268', earIn: '#c2a888', legs: '#8a7460', hoof: '#463c32' },
       quotes: [
@@ -122,6 +145,16 @@ const DATA = (() => {
         en: 'Perk: LUCKY HOOVES – collects 50% more coins and golden carrots give her twice the energy.',
       },
       stats: { speed: 1.06, jump: 1.0, drain: 1.0, coinMult: 1.5, goldenBonus: 2.0 },
+      diary: [
+        {
+          cs: 'Zápisek první: Avala pozná zvuk našeho auta o dvě zatáčky dřív než my. Než zaparkujeme, už stojí u vrat a tváří se, že tam byla náhodou.',
+          en: 'Entry one: Avala recognizes our car two bends before we arrive. By the time we park she is at the gate, pretending she just happened to be passing.',
+        },
+        {
+          cs: 'Zápisek druhý: Nejradši má, když si k ní někdo sedne do trávy a nic nechce. To si lehne vedle a přežvykuje do rytmu.',
+          en: 'Entry two: Her favourite thing is someone sitting down in the grass wanting nothing at all. Then she lies beside them and chews in rhythm.',
+        },
+      ],
       // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
       quotes: [
@@ -170,6 +203,16 @@ const DATA = (() => {
         en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
       },
       stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 105 },
+      diary: [
+        {
+          cs: 'Zápisek první: Flíček si vyryl v bahně důlek přesně na svoje tělo. Kdo si do něj lehne, musí ven. I když je to jiné prase.',
+          en: 'Entry one: Flíček has dug a mud hollow shaped exactly like himself. Anyone who lies in it has to leave. Even another pig.',
+        },
+        {
+          cs: 'Zápisek druhý: Nosem najde jablko pod deseti centimetry listí. Klíče od kůlny bohužel taky, takže je schováváme výš.',
+          en: 'Entry two: His nose finds an apple under four inches of leaves. Unfortunately it finds the shed keys too, so we keep those higher up now.',
+        },
+      ],
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
       colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
@@ -218,6 +261,16 @@ const DATA = (() => {
         en: 'Perk: BATTERING RAM – smashes through 5 obstacles per run without losing energy.',
       },
       stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 5 },
+      diary: [
+        {
+          cs: 'Zápisek první: Yakul se poprvé nechal podrbat mezi rohy. Trvalo to rok a půl a stálo to spoustu trpělivosti — jeho i naší.',
+          en: 'Entry one: Yakul let us scratch between his horns for the first time. It took a year and a half and a great deal of patience — his and ours.',
+        },
+        {
+          cs: 'Zápisek druhý: Když přijde bouřka, postaví se mezi ni a ostatní. Nikdo ho o to neprosil.',
+          en: 'Entry two: When a storm comes, he places himself between it and the others. Nobody asked him to.',
+        },
+      ],
       // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
       colors: { body: '#6b4830', belly: '#e6dac6', mane: '#4c3120', muzzle: '#e9dfcd', ear: '#6b4830', earIn: '#c2996f', horns: '#c7ad85', spots: '#cbb896', pattern: 'saddle', legs: '#5a3c28', hoof: '#31261e' },
       quotes: [
@@ -266,6 +319,16 @@ const DATA = (() => {
         en: 'Perk: INNER PEACE – energy drains a quarter slower.',
       },
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
+      diary: [
+        {
+          cs: 'Zápisek první: Květa dojde všude. Ne rychle — ale dojde. Zatímco ostatní odpočívají, ona je už o louku dál.',
+          en: 'Entry one: Květa gets everywhere. Not fast — but she gets there. While the others are still resting she is a meadow ahead.',
+        },
+        {
+          cs: 'Zápisek druhý: Nováčci se drží u ní. Ona nic nedělá, jen stojí a klidně žvýká, a i to úplně stačí.',
+          en: 'Entry two: Newcomers stay close to her. She does nothing, just stands and chews calmly, and somehow that is entirely enough.',
+        },
+      ],
       // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', noHorns: true, eyePatch: '#552a12', forelock: '#f7f2e6', hoof: '#3d3128' },
       quotes: [
