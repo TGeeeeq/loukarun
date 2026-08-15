@@ -50,46 +50,72 @@
     <button id="btn-tut-continue" class="btn big" data-i18n="tut.continue" hidden>▶ Pokračovat</button>
   </div>
 
-  <!-- HLAVNÍ MENU (dvojjazyčná úvodní obrazovka) -->
+  <!-- HLAVNÍ MENU
+       Rozvržení: značka vlevo nahoře, systémová lišta vpravo nahoře,
+       „deck“ (karta postavy + hlavní akce) vpravo, denní mise vlevo dole.
+       Levá polovina zůstává volná – běží v ní vybrané zvířátko na canvasu. -->
   <div id="screen-menu" class="screen">
-    <div class="lang-switch" role="group" aria-label="Jazyk / Language">
-      <button class="lang-btn active" data-lang="cs">🇨🇿<span class="lang-label"> Česky</span></button>
-      <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
-    </div>
-    <div class="menu-top">
+    <!-- ambientní pyl – čistě dekorace, žádný JS (vypíná se v .low-fx) -->
+    <div class="menu-fx" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+    <div class="menu-brand" style="--d:0s">
       <h1 class="game-title" id="game-title">LOUKA<span>RUN</span></h1>
-      <span class="game-version" id="game-version"></span>
       <p class="subtitle" data-i18n="menu.subtitle">Běhací hra na podporu azylu <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> 💚</p>
-      <p class="subtitle-alt" data-i18n-other="menu.subtitle">A runner game supporting the <a href="https://nechmerust.org" target="_blank" rel="noopener">Nech mě růst</a> animal sanctuary 💚</p>
     </div>
-    <div class="menu-mid">
-      <div class="menu-char-info">
-        <div class="charname" id="menu-charname">Osel Karel</div>
-        <div class="perk" id="menu-perk"></div>
-      </div>
-      <div class="menu-actions">
-        <button id="btn-play" class="btn big play" data-i18n="menu.play">▶ &nbsp;BĚŽET!</button>
-        <button id="btn-shop" class="btn" data-i18n="menu.shop">🐾 Zvířátka &amp; obchod</button>
+
+    <div class="menu-rail" style="--d:.06s">
+      <button id="btn-settings" class="btn round" aria-label="Nastavení" data-i18n-label="a11y.settings" aria-expanded="false">⚙</button>
+      <div class="lang-switch" role="group" aria-label="Jazyk / Language">
+        <button class="lang-btn active" data-lang="cs">🇨🇿<span class="lang-label"> Česky</span></button>
+        <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
       </div>
     </div>
-    <div class="menu-bottom">
-      <!-- DENNÍ MISE – tři úkoly na den, obsah generuje js/game.js -->
-      <div id="daily-panel" class="daily-panel">
-        <div class="daily-title" data-i18n="daily.title">📅 Denní mise</div>
-        <div id="daily-list"></div>
-      </div>
-      <div class="menu-stats">
+
+    <section class="menu-deck" style="--d:.12s" aria-label="Hlavní nabídka">
+      <div class="deck-chips">
         <div class="hud-chip">🏆 <span id="menu-best">0 m</span></div>
         <div class="hud-chip">🪙 <span id="menu-coins">0</span></div>
         <button id="btn-ach" class="hud-chip ach-chip" aria-label="Odznaky">🎖️ <span id="menu-ach">0/0</span></button>
       </div>
-      <div class="menu-settings">
-        <button id="btn-sfx" class="btn tiny">🔊 Zvuky</button>
-        <button id="btn-music" class="btn tiny">🎵 Hudba</button>
-        <button id="btn-install" class="btn tiny" hidden>📲 Instalovat</button>
-        <a class="btn tiny buy" href="https://nechmerust.org/jak-se-zapojit" target="_blank" rel="noopener" data-i18n="menu.donate">💚 Podpoř azyl</a>
+      <div class="deck-char">
+        <div class="charname" id="menu-charname">Osel Karel</div>
+        <div class="perk" id="menu-perk"></div>
+        <div class="stat-rows deck-stats" id="menu-stats"></div>
       </div>
-      <p class="controls-hint"><span data-i18n="menu.hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</span> &nbsp;·&nbsp; <a class="privacy-link" href="jak-testovat.html" data-i18n="menu.testers">📋 Návod pro testery</a> &nbsp;·&nbsp; <a class="privacy-link" href="soukromi.html" data-i18n="menu.privacy">🔒 Soukromí</a></p>
+      <div class="deck-actions">
+        <button id="btn-play" class="btn big play" data-i18n="menu.play">▶ &nbsp;BĚŽET!</button>
+        <button id="btn-shop" class="btn" data-i18n="menu.shop">🐾 Zvířátka &amp; obchod</button>
+      </div>
+    </section>
+
+    <!-- DENNÍ MISE – odznak se počtem splněných, obsah generuje js/game.js -->
+    <div class="menu-missions" style="--d:.2s">
+      <button id="btn-daily" class="hud-chip daily-chip" aria-label="Denní mise" data-i18n-label="a11y.daily" aria-expanded="false" aria-controls="daily-pop">📅 <span id="daily-badge">0/3</span></button>
+      <div id="daily-pop" class="daily-pop" hidden>
+        <div class="daily-title" data-i18n="daily.title">📅 Denní mise</div>
+        <div id="daily-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NASTAVENÍ – vysunuté z hlavní obrazovky, ať menu dýchá -->
+  <div id="screen-settings" class="screen">
+    <div class="over-card small settings-card">
+      <div class="ach-head">
+        <button id="btn-settings-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+        <h2 data-i18n="settings.title">⚙ Nastavení</h2>
+        <span class="settings-ver" id="game-version"></span>
+      </div>
+      <div class="settings-rows">
+        <button id="btn-sfx" class="btn">🔊 Zvuky</button>
+        <button id="btn-music" class="btn">🎵 Hudba</button>
+        <button id="btn-install" class="btn" hidden>📲 Instalovat</button>
+        <a class="btn buy" href="https://nechmerust.org/jak-se-zapojit" target="_blank" rel="noopener" data-i18n="menu.donate">💚 Podpoř azyl</a>
+      </div>
+      <p class="controls-hint" data-i18n="menu.hint">⌨️ Mezerník = skok (2× dvojskok) · šipka dolů = skluz &nbsp;|&nbsp; 📱 ťuknutí = skok · swipe dolů = skluz</p>
+      <p class="settings-links">
+        <a class="privacy-link" href="soukromi.html" data-i18n="menu.privacy">🔒 Soukromí</a>
+      </p>
     </div>
   </div>
 
