@@ -232,9 +232,97 @@
   <script src="js/platform.js"></script>
   <script src="js/game.js"></script>
   <script>
-    // PWA: hra jde nainstalovat na plochu a funguje offline
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    // HLÍDAČ SPUŠTĚNÍ
+    // Když se hra nerozběhne, nesmí po ní zůstat prázdné okno – po ťuknutí na
+    // ikonu na ploše to vypadá, že se aplikace vůbec nespustila, a hráč nemá
+    // co udělat. Hlídač zkusí dvě opravy a teprve pak ukáže čitelnou zprávu.
+    (function () {
+      var KEY_DIR = 'loukarun-zachrana';   // oprava chybějícího koncového lomítka
+      var KEY_LOAD = 'loukarun-znovu';     // tiché načtení znovu
+      var done = false;
+
+      function had(k) { try { return sessionStorage.getItem(k) === '1'; } catch (e) { return false; } }
+      function mark(k) { try { sessionStorage.setItem(k, '1'); } catch (e) { /* bez úložiště */ } }
+
+      function check() {
+        if (done) return;
+        done = true;
+
+        if (typeof GFX !== 'undefined') {
+          // Hra běží. Značky se musí zahodit – jinak by po jednom nepovedeném
+          // spuštění zůstaly nastavené a příští zádrhel by místo opravy rovnou
+          // skončil chybovou stránkou. Přesně tak vypadá „ikona se občas
+          // spustí až na několikáté ťuknutí“.
+          try { sessionStorage.removeItem(KEY_DIR); sessionStorage.removeItem(KEY_LOAD); } catch (e) { /* nic */ }
+          return;
+        }
+
+        // 1) CHYBÍ KONCOVÉ LOMÍTKO
+        // Ikona na ploše otevírá adresu z manifestu (start_url). Když tuhle
+        // adresu server přesměruje z „…/app/“ na „…/app“ (tak to dělá Vercel na
+        // nechmerust.org), přestane koncové lomítko platit a všechny relativní
+        // cesty (style.css, js/*.js) míří o úroveň výš – 404. Nové instalace
+        // startují přímo na „index.html“, ale ty už nainstalované mají starou
+        // adresu zapečenou (Android ji u WebAPK mění až při přerazítkování).
+        if (!/(\/|\.html?)$/i.test(location.pathname) && !had(KEY_DIR)) {
+          mark(KEY_DIR);
+          location.replace(location.pathname + '/index.html' + location.search + location.hash);
+          return;
+        }
+
+        // 2) SOUBORY SE NENAČETLY
+        // Pomalé mobilní připojení nebo service worker, který se právě probouzí.
+        // Jedno tiché načtení znovu – podruhé už jde všechno z offline cache.
+        if (!had(KEY_LOAD)) {
+          mark(KEY_LOAD);
+          location.reload();
+          return;
+        }
+
+        // 3) Ani to nepomohlo – radši čitelná zpráva než prázdné okno,
+        // ve kterém není vidět ani adresa.
+        document.body.innerHTML =
+          '<div style="font:16px/1.5 system-ui,sans-serif;color:#0d3b1e;background:#8ed4f7;' +
+          'min-height:100vh;display:flex;flex-direction:column;gap:12px;align-items:center;' +
+          'justify-content:center;text-align:center;padding:24px">' +
+          '<div style="font-size:44px">🥕</div>' +
+          '<strong style="font-size:20px">Hru se nepodařilo načíst</strong>' +
+          '<p style="margin:0;max-width:34ch">Zkus to prosím znovu – při prvním spuštění je potřeba ' +
+          'připojení k internetu. <br><em>Couldn’t load the game. Please try again online.</em></p>' +
+          '<button style="font:inherit;padding:10px 18px;border:0;border-radius:999px;' +
+          'background:#0d3b1e;color:#fff" onclick="location.reload()">Zkusit znovu / Retry</button>' +
+          '<code style="font-size:12px;opacity:.7;word-break:break-all">' + location.href + '</code>' +
+          '</div>';
+      }
+
+      window.addEventListener('load', check);
+      // „load“ nemusí nastat vůbec: když se některý soubor na mobilní síti
+      // zasekne, prohlížeč na něj čeká klidně minutu a hráč zatím kouká do
+      // prázdna. Hlídač proto běží i na čas.
+      setTimeout(check, 15000);
+    })();
+
+    // PWA: hra jde nainstalovat na plochu a funguje offline.
+    // V aplikaci z Google Play (Capacitor) service worker naopak nemá co dělat –
+    // soubory tam servíruje přímo aplikace a cache by po aktualizaci z obchodu
+    // jen držela starou verzi. Starou registraci z dřívějších verzí odhlásíme.
+    if ('serviceWorker' in navigator && !(window.PLATFORM && PLATFORM.native)) {
+      // updateViaCache: 'none' – samotný sw.js se nikdy nesmí brát z HTTP cache,
+      // jinak se nová verze nemusí několik hodin vůbec ohlásit.
+      // Volání update() navíc není zbytečné: podle specifikace register() na už
+      // existující registraci kontrolu aktualizace vůbec nespustí a prohlížeč
+      // si ji dělá po svém. Když se soubory berou z cache, byl by to jediný
+      // způsob, jak se k hráči dostane nová verze – tak si o ni řekneme sami.
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+          .catch(() => { /* anonymní okno, zakázané úložiště – hra jede dál */ });
+        // „ready“ se splní, až nějaký worker opravdu běží; registrace sama
+        // vrací objekt, který ještě aktivního workera mít nemusí, a kontrola
+        // aktualizace by se tiše přeskočila
+        navigator.serviceWorker.ready
+          .then((reg) => reg.update())
+          .catch(() => { /* offline – zkusí se při dalším spuštění */ });
+      });
       // po vydání nové verze se stránka jednou tiše obnoví, ať jede čerstvý
       // kód – ale jen dokud se hráč ničeho nedotkl a jen při aktualizaci
       // (ne při úplně první návštěvě)
@@ -246,6 +334,10 @@
         if (!hadController || interacted) return;
         location.reload();
       });
+    } else if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then((rs) => rs.forEach((r) => r.unregister()))
+        .catch(() => { /* nevadí */ });
     }
   </script>
 </body>
