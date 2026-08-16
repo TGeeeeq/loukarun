@@ -54,6 +54,18 @@ const DATA = (() => {
         { cs: 'Kdo to tam postavil?!', en: 'Who put that there?!' },
         { cs: 'Tak to jsem nevymyslel já.', en: 'Well, that wasn’t my idea.' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů. To nebyl neúspěch, to byl průzkum terénu.', en: '{d} m. That wasn’t a failure, that was recon.' },
+        chain: { cs: '{k}× po sobě bez zaváhání. A to prý jsem tvrdohlavý.', en: '{k} in a row without a wobble. And they call me stubborn.' },
+        rich: { cs: '{c} mincí. Kdo tvrdí, že osel neumí počítat, ať to zkusí taky.', en: '{c} coins. Anyone who says donkeys can’t count is welcome to try.' },
+        far: { cs: '{d} metrů! Íáá! A zítra otevřu závoru a dám ještě víc.', en: '{d} metres! Hee-haw! Tomorrow I’ll open the gate and go further.' },
+        plain: { cs: '{d} metrů a {c} mincí. Mrkev si zasloužím. A tamtu taky.', en: '{d} m and {c} coins. I deserve a carrot. And that one too.' },
+      },
       stories: [
         {
           cs: 'Karel doběhl až k ceduli „Vstup zakázán“. Chvíli si ji prohlížel… a pak ji celou okousal. Teď je tam cedule „Vst_p z_k_zán“ a nikdo neví, co znamená.',
@@ -112,6 +124,18 @@ const DATA = (() => {
         { cs: 'Naštěstí mám vlastní polstrování.', en: 'Good thing I bring my own padding.' },
         { cs: 'Odraz se ode mě, světe!', en: 'Bounce off me, world!' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů? To byl jenom zahřívací poskok.', en: '{d} m? That was just a warm-up hop.' },
+        chain: { cs: '{k}× za sebou! Pružina roku, prosím.', en: '{k} in a row! Springiest sheep of the year, please.' },
+        rich: { cs: '{c} mincí — a ani jedna se mi nezachytila ve vlně!', en: '{c} coins — and not one got tangled in my wool!' },
+        far: { cs: '{d} metrů odskákáno. Kdo chce dolů, ať mi nestojí v dopadu.', en: 'Bounced {d} m. If you want to land, don’t stand where I do.' },
+        plain: { cs: '{d} metrů, {c} mincí. Vlna nahoře, kopýtka dole, všechno sedí.', en: '{d} m, {c} coins. Wool up top, hooves below, all in order.' },
+      },
       stories: [
         {
           cs: 'Pogo doběhla na trampolínovou show. Porotci jí dali samé desítky, i když se jen snažila dostat přes plot za kamarádkami.',
@@ -170,6 +194,18 @@ const DATA = (() => {
         { cs: 'To mě jen tak nerozhodí. Skoro.', en: 'Takes more than that to rattle me. Almost.' },
         { cs: 'Příště to oběhnu. Možná.', en: 'Next time I’ll go around it. Maybe.' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů a hned zpátky k drbání. Priority mám jasné.', en: '{d} m and straight back for scratches. My priorities are clear.' },
+        chain: { cs: '{k}× bez chybičky. Bučím si to jako písničku.', en: '{k} in a row, flawless. I’m mooing it like a song.' },
+        rich: { cs: '{c} mincí! Ta louka je na mě prostě hodná.', en: '{c} coins! This meadow is just kind to me.' },
+        far: { cs: '{d} metrů — a to jsem se dvakrát stavila na mrkev.', en: '{d} m — and I stopped twice for a carrot.' },
+        plain: { cs: '{d} metrů a {c} mincí. Šťastná kopyta zase zabrala.', en: '{d} m and {c} coins. Lucky hooves came through again.' },
+      },
       stories: [
         {
           cs: 'Avala doběhla na vesnický maraton a omylem ho vyhrála. Pořadatelé jí předali pohár plný jetele. Slíbila, že příští rok přijde obhajovat.',
@@ -228,6 +264,18 @@ const DATA = (() => {
         { cs: 'To si vypiju… teda vyválím!', en: 'I’ll pay for that… with a mud roll!' },
         { cs: 'Naštěstí jsem dobře odpružený.', en: 'Luckily I come with built-in suspension.' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů. Cestou byla kaluž. Chápete.', en: '{d} m. There was a puddle on the way. You understand.' },
+        chain: { cs: '{k}× v řadě! A to jsem koukal hlavně po večeři.', en: '{k} in a row! And I was mostly looking out for dinner.' },
+        rich: { cs: '{c} mincí. Rypáček-magnet nikdy nespí. (Já ano, hned po jídle.)', en: '{c} coins. The snout magnet never sleeps. (I do, right after dinner.)' },
+        far: { cs: '{d} metrů bez jediné pauzy na blátíčko. To jsou dvě večeře.', en: '{d} m without a single mud break. That’s worth two dinners.' },
+        plain: { cs: '{d} metrů, {c} mincí a rypáček plný trávy. Dobrý den.', en: '{d} m, {c} coins and a snout full of grass. Good day.' },
+      },
       stories: [
         {
           cs: 'Flíček doběhl do lázní pro prasátka. Teda… do velké louže. Ale choval se tam jako v lázních a odmítal vylézt, dokud nedostal drbání na bříšku.',
@@ -286,6 +334,18 @@ const DATA = (() => {
         { cs: 'Zapomněl jsem nakl-ONIT hlavu!', en: 'Forgot to lower my he-e-ead!' },
         { cs: 'Tak tohle rohy nevyřešily.', en: 'Okay, horns did not solve that one.' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů. První překážka měla štěstí, že jsem si to rozmyslel.', en: '{d} m. That first obstacle got lucky — I changed my mind.' },
+        chain: { cs: '{k}× po sobě. Rohy mám na překážky, ale styl se počítá.', en: '{k} in a row. Horns are for obstacles, but style counts too.' },
+        rich: { cs: '{c} mincí. Kdo je mladý a má rohy, má i kapsy.', en: '{c} coins. Young with horns means pockets, apparently.' },
+        far: { cs: '{d} metrů! Beranidlo hlásí: připraveno na příště.', en: '{d} m! Battering ram reporting: ready for the next one.' },
+        plain: { cs: '{d} metrů a {c} mincí. Rohy zatím jenom jako dekorace.', en: '{d} m and {c} coins. Horns purely decorative so far.' },
+      },
       stories: [
         {
           cs: 'Yakul doběhl k obrovské dýni a konečně zjistil, k čemu má rohy: perfektně se s nimi kutálí dýně. Přikutálel ji do azylu a byla z ní hostina pro všechny.',
@@ -344,6 +404,18 @@ const DATA = (() => {
         { cs: 'Búú. No nic, běžíme dál.', en: 'Moo. Oh well, on we go.' },
         { cs: 'Klid, Květo. Klid.', en: 'Easy, Květa. Easy.' },
       ],
+      /* Hláška na kartičku ke sdílení – zvířátko komentuje výsledek běhu
+         svým stylem. Kategorie se vybírá podle statistik (viz shareQuip
+         v js/game.js): short = sotva se rozběhl, chain = dlouhý řetěz,
+         rich = hromada mincí, far = daleký běh, plain = všechno ostatní.
+         {d} = metry, {c} = mince, {k} = nejdelší řetěz. */
+      shareQuips: {
+        short: { cs: '{d} metrů. Nespěchám. Louka nikam neuteče.', en: '{d} m. No rush. The meadow isn’t going anywhere.' },
+        chain: { cs: '{k}× za sebou — a ani jednou jsem nezrychlila.', en: '{k} in a row — and I never sped up once.' },
+        rich: { cs: '{c} mincí. Pomalu, ale pořád. To je moje tempo.', en: '{c} coins. Slowly, but always. That’s my pace.' },
+        far: { cs: '{d} metrů. Říkala jsem, že dojdu. Nikdo mi nevěřil.', en: '{d} m. I said I’d get there. Nobody believed me.' },
+        plain: { cs: '{d} metrů, {c} mincí, klid v duši. Přesně jak to mám ráda.', en: '{d} m, {c} coins, inner peace. Exactly how I like it.' },
+      },
       stories: [
         {
           cs: 'Květa doběhla na louku, kde kvetly kopretiny. Sedla si mezi ně a hodinu se nehýbala. Včely ji prohlásily za největší květinu roku. Jmenuje se ostatně Květa.',

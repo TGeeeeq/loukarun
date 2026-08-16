@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.1.0';
+  const GAME_VERSION = '1.2.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -3098,70 +3098,333 @@
 
   /* =========================================================
      SDÍLECÍ KARTIČKA
-     Čtvercový obrázek s postavou, výsledkem a odkazem – něco, co jde
-     poslat kamarádovi nebo dát na sociální sítě. Kreslí se stejnými
-     funkcemi jako hra, takže nepotřebuje žádné nové obrázky.
+     Čtverec 1080×1080 pro sociální sítě. Kulisu kreslí přímo herní GFX
+     v paletě Zlaté hodinky, takže obrázek vypadá jako hra, ne jako
+     tabulka výsledků – a nepotřebuje k tomu jediný nový soubor.
+
+     Rozvržení má pevné zóny, aby si zvířátko a text nikdy nelezly do
+     cesty (dřív postavě trčely uši přes řádek se statistikami):
+
+       0–190     značka LOUKA RUN + podtitul
+       210–450   cedule s doběhnutou vzdáleností
+       470–556   tři žetony: mince, mrkve, řetěz
+       ~600–840  bublina s hláškou postavy, vždy vpravo (x 452–1024)
+       vlevo dole zvířátko (x ~90–430), úplně dole lišta s oběma verzemi
      ========================================================= */
   const SHARE_URL = 'https://nechmerust.org';
-  function buildShareCard(dist, coins, chr, combo) {
+  const SHARE_FONT = '"Baloo 2", system-ui, sans-serif';
+
+  /* Hláška, kterou zvířátko komentuje výsledek běhu. Kategorie se vybírá
+     podle toho, co je na běhu nejpozoruhodnější – takže rekordní řetěz
+     dostane jinou poznámku než sotva rozběhnutých dvě stě metrů. Kdyby
+     postava hlášky neměla, zaskočí za ni její běžná hláška ze hry. */
+  function shareQuip(chr, dist, coins, combo) {
+    const q = chr.shareQuips;
+    if (!q) return I18N.pick(chr.quotes[Math.floor(Math.random() * chr.quotes.length)]);
+    const key = dist < 250 ? 'short'
+      : combo >= 12 ? 'chain'
+      : coins >= 120 ? 'rich'
+      : dist >= 2000 ? 'far'
+      : 'plain';
+    return I18N.pick(q[key] || q.plain)
+      .replace(/\{d\}/g, dist)
+      .replace(/\{c\}/g, coins)
+      .replace(/\{k\}/g, combo);
+  }
+
+  // plátno neumí zalamovat text samo
+  function shareWrap(c, text, maxW) {
+    const lines = [];
+    let line = '';
+    for (const word of text.split(' ')) {
+      const next = line ? line + ' ' + word : word;
+      if (line && c.measureText(next).width > maxW) { lines.push(line); line = word; }
+      else line = next;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // skleněný žeton (statistiky i lišta dole)
+  function shareChip(c, x, y, w, h, dark) {
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.28)'; c.shadowBlur = 18; c.shadowOffsetY = 6;
+    c.fillStyle = dark ? 'rgba(28,20,10,0.42)' : 'rgba(255,253,245,0.92)';
+    GFX.rr(c, x, y, w, h, h / 2); c.fill();
+    c.restore();
+    c.strokeStyle = dark ? 'rgba(255,224,138,0.45)' : 'rgba(216,155,38,0.5)';
+    c.lineWidth = 3;
+    GFX.rr(c, x + 1.5, y + 1.5, w - 3, h - 3, (h - 3) / 2); c.stroke();
+  }
+
+  /* Hrací trojúhelník Google Play – jednobarevně a v malém, aby v rohu jen
+     nenápadně řekl „hra je i v telefonu". Čtyřbarevnou značku schválně
+     nekreslíme: přebarvená napodobenina by vypadala hůř než decentní znak. */
+  function drawPlayMark(c, x, y, s) {
+    c.save();
+    c.translate(x, y); c.scale(s, s);
+    c.fillStyle = '#fffdf5';
+    c.beginPath();
+    c.moveTo(-8, -13); c.lineTo(12, 0); c.lineTo(-8, 13); c.closePath();
+    c.fill();
+    c.strokeStyle = 'rgba(30,20,10,0.5)'; c.lineWidth = 2.2; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(-8, -13); c.lineTo(2.5, 0); c.lineTo(-8, 13); c.stroke();
+    c.restore();
+  }
+
+  // zeměkoule u webové adresy – protějšek trojúhelníku Google Play
+  function drawWebMark(c, x, y, s) {
+    c.save();
+    c.translate(x, y); c.scale(s, s);
+    c.strokeStyle = '#fffdf5'; c.lineWidth = 2.2;
+    c.beginPath(); c.arc(0, 0, 12, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.ellipse(0, 0, 5.5, 12, 0, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(-12, 0); c.lineTo(12, 0); c.stroke();
+    c.restore();
+  }
+
+  function buildShareCard(dist, coins, chr, combo, carrots, isBest) {
     const cv = document.createElement('canvas');
     cv.width = 1080; cv.height = 1080;
     const c = cv.getContext('2d');
+    const W = 1080, H = 1080, GY = 742;
+    /* Paleta: zlatá obloha ze Zlaté hodinky nad zelenou Rozkvetlou loukou.
+       Čistá Zlatá hodinka je celá do hněda a zvířátko v ní zaniká; tahle
+       směs má teplé nebe i trávu, na které je postava vidět. */
+    const meadow = ENVS.find(e => e.id === 'louka') || ENVS[0];
+    const dusk = ENVS.find(e => e.id === 'zapad') || meadow;
+    const pal = {
+      ...meadow,
+      skyTop: '#7fc6ef', skyBottom: '#ffd9a0',
+      hillFar: '#9fd39a', hillNear: '#6bb268',
+      sun: dusk.sun, clouds: '#fff1de',
+    };
+    const T = 3200; // pevný čas, ať je kartička pokaždé stejná
 
-    // obloha a louka v barvách Zlaté hodinky – nejhezčí paleta ve hře
-    const sky = c.createLinearGradient(0, 0, 0, 1080);
-    sky.addColorStop(0, '#8fd0f0');
-    sky.addColorStop(0.55, '#ffd9a0');
-    sky.addColorStop(1, '#ffb672');
-    c.fillStyle = sky; c.fillRect(0, 0, 1080, 1080);
-    c.fillStyle = '#ffe9a8';
-    c.beginPath(); c.arc(890, 230, 110, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#7cbf5a';
-    c.beginPath();
-    c.moveTo(0, 760);
-    for (let x = 0; x <= 1080; x += 20) c.lineTo(x, 760 - 40 * Math.sin(x * 0.004));
-    c.lineTo(1080, 1080); c.lineTo(0, 1080); c.closePath(); c.fill();
-    c.fillStyle = '#6aad4c'; c.fillRect(0, 900, 1080, 180);
+    /* ---------- kulisa ---------- */
+    GFX.drawSky(c, W, H, pal, T);
+    GFX.drawClouds(c, W, H, pal, 0, T);
+    GFX.drawHills(c, W, H, pal, 0, GY);
+    GFX.drawGodRays(c, W, H, pal, GY, T, 1);
 
-    GFX.drawCharacter(c, chr, 300, 905, 2.6, { runPhase: 0.6 }, 400);
+    /* Tráva se kreslí ručně, ne přes GFX.drawGround: herní pěšina by
+       kartičku přeťala vodorovným pruhem přesně tam, kde má být volná
+       louka. Místo ní je popředí o odstín tmavší, oddělené měkkou vlnou –
+       zvířátko tak stojí „blíž ke kameře" a nevisí ve vzduchu. */
+    c.fillStyle = pal.ground; c.fillRect(0, GY, W, H - GY);
+    c.fillStyle = pal.groundDark;
+    c.beginPath(); c.moveTo(0, 902);
+    for (let x = 0; x <= W; x += 20) c.lineTo(x, 902 - 26 * Math.sin(x * 0.0042));
+    c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+    // trsy trávy na hraně popředí
+    c.strokeStyle = 'rgba(30,70,26,0.35)'; c.lineWidth = 5; c.lineCap = 'round';
+    for (let i = 0; i < 26; i++) {
+      const x = GFX.hash(i * 13 + 6) * W;
+      const y = 902 - 26 * Math.sin(x * 0.0042) + 6;
+      const lean = (GFX.hash(i * 17 + 2) - 0.5) * 16;
+      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + lean, y - 16, x + lean * 1.6, y - 28); c.stroke();
+    }
+
+    // poletující pyl – hloubka a trocha jiskry
+    c.save();
+    for (let i = 0; i < 30; i++) {
+      c.globalAlpha = 0.12 + GFX.hash(i * 5 + 1) * 0.26;
+      c.fillStyle = '#fff3c9';
+      c.beginPath();
+      c.arc(GFX.hash(i * 3 + 2) * W, 200 + GFX.hash(i * 7 + 3) * 700,
+        3 + GFX.hash(i * 11 + 4) * 9, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.restore();
+
+    // ztmavení k okrajům – text drží kontrast a obraz působí „nafoceně"
+    const vig = c.createRadialGradient(W / 2, H * 0.44, H * 0.26, W / 2, H * 0.5, H * 0.8);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(46,24,8,0.44)');
+    c.fillStyle = vig; c.fillRect(0, 0, W, H);
+
+    /* ---------- zvířátko (vlevo dole, mimo veškerý text) ---------- */
+    const chX = 226, chY = 962, chS = 2.95;
+    c.save();
+    c.globalAlpha = 0.24; c.fillStyle = '#000';
+    GFX.ell(c, chX + 8, chY + 14, 148, 22); c.fill();
+    c.restore();
+    GFX.drawCharacter(c, chr, chX, chY, chS, { runPhase: 0.6 }, 400);
+
+    /* ---------- značka ---------- */
+    c.font = '800 96px ' + SHARE_FONT;
+    c.textAlign = 'left';
+    const t1 = 'LOUKA ', t2 = 'RUN';
+    const w1 = c.measureText(t1).width, w2 = c.measureText(t2).width;
+    const tx = W / 2 - (w1 + w2) / 2;
+    c.lineJoin = 'round'; c.lineWidth = 14;
+    c.strokeStyle = 'rgba(58,32,12,0.55)';
+    c.shadowColor = 'rgba(0,0,0,0.32)'; c.shadowBlur = 20; c.shadowOffsetY = 8;
+    c.strokeText(t1, tx, 130); c.strokeText(t2, tx + w1, 130);
+    c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0;
+    c.fillStyle = '#fffdf5'; c.fillText(t1, tx, 130);
+    c.fillStyle = '#ffc94a'; c.fillText(t2, tx + w1, 130);
 
     c.textAlign = 'center';
-    c.fillStyle = '#2e2a22';
-    c.font = '700 78px "Baloo 2", system-ui, sans-serif';
-    c.fillText('LOUKA RUN', 540, 150);
-    c.font = '700 190px "Baloo 2", system-ui, sans-serif';
-    c.fillStyle = '#ffffff';
-    c.lineWidth = 16; c.strokeStyle = 'rgba(0,0,0,0.28)';
-    c.strokeText(dist + ' m', 540, 470);
-    c.fillText(dist + ' m', 540, 470);
-    // mince se kreslí stejnou funkcí jako ve hře, ne emotikonem – emotikony
-    // vypadají na každém systému jinak a kartička má vypadat všude stejně
-    c.font = '700 60px "Baloo 2", system-ui, sans-serif';
-    c.fillStyle = '#3a3428';
-    const line = `${I18N.pick(chr.name)}  ·  ${coins}`;
-    const lw = c.measureText(line).width;
-    c.fillText(line, 540 - 26, 570);
-    // drawCoin kreslí v herním měřítku (~12 px) – na kartičce ji zvětšíme
+    c.font = '600 34px ' + SHARE_FONT;
+    c.fillStyle = 'rgba(52,32,14,0.78)';
+    c.fillText(I18N.t('share.card.sub'), W / 2, 184);
+
+    /* ---------- cedule s výsledkem ---------- */
+    const px = 100, py = 214, pw = W - 200, ph = 232;
     c.save();
-    c.translate(540 + lw / 2 - 26 + 44, 552);
-    c.scale(2.6, 2.6);
-    GFX.drawCoin(c, 0, 0, 0);
+    c.shadowColor = 'rgba(0,0,0,0.38)'; c.shadowBlur = 36; c.shadowOffsetY = 14;
+    const pg = c.createLinearGradient(0, py, 0, py + ph);
+    pg.addColorStop(0, 'rgba(30,44,26,0.58)');
+    pg.addColorStop(1, 'rgba(22,30,18,0.44)');
+    c.fillStyle = pg; GFX.rr(c, px, py, pw, ph, 46); c.fill();
     c.restore();
-    if (combo > 0) {
-      c.font = '700 46px "Baloo 2", system-ui, sans-serif';
-      c.fillStyle = '#6a5a3a';
-      c.fillText(`${I18N.t('over.combo')}: ${combo}`, 540, 646);
+    c.strokeStyle = 'rgba(255,214,120,0.7)'; c.lineWidth = 3;
+    GFX.rr(c, px + 2, py + 2, pw - 4, ph - 4, 44); c.stroke();
+
+    // rekord dostane zlatou pentli přes roh cedule
+    if (isBest) {
+      c.save();
+      c.translate(px + pw - 108, py + 6);
+      c.rotate(-0.12);
+      c.font = '800 34px ' + SHARE_FONT;
+      const rt = I18N.t('share.card.record');
+      const rw = c.measureText(rt).width + 52;
+      c.shadowColor = 'rgba(0,0,0,0.35)'; c.shadowBlur = 20; c.shadowOffsetY = 8;
+      const rg = c.createLinearGradient(0, -26, 0, 26);
+      rg.addColorStop(0, '#fff0bd'); rg.addColorStop(1, '#e8a72c');
+      c.fillStyle = rg;
+      GFX.rr(c, -rw / 2, -26, rw, 52, 26); c.fill();
+      c.shadowColor = 'transparent'; c.shadowBlur = 0;
+      c.fillStyle = '#4a3220'; c.textAlign = 'center';
+      c.letterSpacing = '2px';
+      c.fillText(rt, 0, 12);
+      c.letterSpacing = '0px';
+      c.restore();
     }
-    c.font = '600 44px "Baloo 2", system-ui, sans-serif';
-    c.fillStyle = 'rgba(40,36,28,0.75)';
-    c.fillText(SHARE_URL.replace('https://', ''), 540, 1030);
+
+    c.textAlign = 'center';
+    c.font = '700 32px ' + SHARE_FONT;
+    c.fillStyle = 'rgba(255,232,178,0.85)';
+    c.letterSpacing = '4px';
+    c.fillText(I18N.t('share.card.dist'), W / 2, py + 62);
+    c.letterSpacing = '0px';
+
+    const num = dist + ' m';
+    c.font = '800 150px ' + SHARE_FONT;
+    const ng = c.createLinearGradient(0, py + 84, 0, py + 200);
+    ng.addColorStop(0, '#fff8e2'); ng.addColorStop(0.55, '#ffd76a'); ng.addColorStop(1, '#e09a24');
+    c.lineWidth = 16; c.strokeStyle = 'rgba(48,28,8,0.75)';
+    c.shadowColor = 'rgba(255,196,90,0.5)'; c.shadowBlur = 34;
+    c.strokeText(num, W / 2, py + 192);
+    c.shadowColor = 'transparent'; c.shadowBlur = 0;
+    c.fillStyle = ng; c.fillText(num, W / 2, py + 192);
+
+    /* ---------- žetony se statistikami ---------- */
+    // prázdné hodnoty se nevypisují – žeton „ŘETĚZ ×0" by se jen chlubil nulou
+    const chips = [{ icon: 'coin', text: String(coins) }];
+    if (carrots > 0) chips.push({ icon: 'carrot', text: String(carrots) });
+    if (combo > 0) chips.push({ icon: null, text: I18N.t('share.card.chain') + ' ×' + combo });
+    c.font = '700 42px ' + SHARE_FONT;
+    const chH = 82, chGap = 20;
+    for (const ch of chips) ch.w = 46 + (ch.icon ? 54 : 0) + c.measureText(ch.text).width;
+    let cx = W / 2 - (chips.reduce((s, ch) => s + ch.w, 0) + chGap * (chips.length - 1)) / 2;
+    const chYtop = 474;
+    for (const ch of chips) {
+      shareChip(c, cx, chYtop, ch.w, chH, true);
+      let inner = cx + 23;
+      if (ch.icon === 'coin') {
+        c.save(); c.translate(inner + 22, chYtop + chH / 2); c.scale(1.9, 1.9);
+        GFX.drawCoin(c, 0, 0, 0); c.restore();
+        inner += 54;
+      } else if (ch.icon === 'carrot') {
+        c.save(); c.translate(inner + 22, chYtop + chH / 2 - 4); c.scale(1.5, 1.5);
+        GFX.drawCarrot(c, 0, 0, 0); c.restore();
+        inner += 54;
+      }
+      c.textAlign = 'left';
+      c.fillStyle = '#fff3d0';
+      c.fillText(ch.text, inner, chYtop + chH / 2 + 15);
+      cx += ch.w + chGap;
+    }
+
+    /* ---------- bublina s hláškou ----------
+       Sedí vždy vpravo a ocáskem míří k hlavě zvířátka, které stojí vlevo –
+       ať je hláška jakkoli dlouhá, na postavu nikdy nedosáhne. */
+    const quip = shareQuip(chr, dist, coins, combo);
+    const bx = 452, bw = W - bx - 56, pad = 38;
+    let fs = 42;
+    let lines;
+    for (;;) {
+      c.font = '700 ' + fs + 'px ' + SHARE_FONT;
+      lines = shareWrap(c, quip, bw - pad * 2);
+      if (lines.length <= 4 || fs <= 32) break;
+      fs -= 3;
+    }
+    const lh = Math.round(fs * 1.3);
+    const bh = lines.length * lh + pad * 2 + 46;
+    const bBottom = 846, by = bBottom - bh;
+
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.34)'; c.shadowBlur = 34; c.shadowOffsetY = 12;
+    c.fillStyle = '#fffdf5';
+    c.beginPath(); // ocásek k hlavě
+    c.moveTo(bx + 30, by + bh - 92);
+    c.lineTo(396, 800);
+    c.lineTo(bx + 116, by + bh - 8);
+    c.closePath(); c.fill();
+    GFX.rr(c, bx, by, bw, bh, 44); c.fill();
+    c.restore();
+    c.strokeStyle = 'rgba(216,155,38,0.5)'; c.lineWidth = 3;
+    GFX.rr(c, bx + 1.5, by + 1.5, bw - 3, bh - 3, 42); c.stroke();
+
+    // uvozovka jako v cílové obrazovce
+    c.textAlign = 'left';
+    c.font = '800 92px ' + SHARE_FONT;
+    c.fillStyle = 'rgba(216,155,38,0.32)';
+    c.fillText('“', bx + 20, by + 88);
+
+    c.font = '700 ' + fs + 'px ' + SHARE_FONT;
+    c.fillStyle = '#4a3220';
+    lines.forEach((ln, i) => c.fillText(ln, bx + pad, by + pad + lh * (i + 0.78)));
+
+    c.textAlign = 'right';
+    c.font = '600 32px ' + SHARE_FONT;
+    c.fillStyle = 'rgba(120,92,52,0.9)';
+    c.fillText('— ' + I18N.pick(chr.name), bx + bw - pad, by + bh - pad + 6);
+
+    /* ---------- lišta: hra běží na webu i v telefonu ---------- */
+    const fh = 132;
+    const fg = c.createLinearGradient(0, H - fh, 0, H);
+    fg.addColorStop(0, 'rgba(26,16,6,0)');
+    fg.addColorStop(0.45, 'rgba(26,16,6,0.5)');
+    fg.addColorStop(1, 'rgba(20,12,4,0.8)');
+    c.fillStyle = fg; c.fillRect(0, H - fh, W, fh);
+
+    const barY = H - 84, barH = 62;
+    c.font = '700 34px ' + SHARE_FONT;
+    const webText = SHARE_URL.replace('https://', '');
+    const wW = 44 + 40 + c.measureText(webText).width + 30;
+    shareChip(c, 44, barY, wW, barH, true);
+    drawWebMark(c, 44 + 40, barY + barH / 2, 1.05);
+    c.textAlign = 'left'; c.fillStyle = '#fff3d0';
+    c.fillText(webText, 44 + 74, barY + barH / 2 + 12);
+
+    const gpText = 'Google Play';
+    const gW = 44 + 36 + c.measureText(gpText).width + 30;
+    shareChip(c, W - 44 - gW, barY, gW, barH, true);
+    drawPlayMark(c, W - 44 - gW + 38, barY + barH / 2, 1.05);
+    c.fillStyle = '#fff3d0';
+    c.fillText(gpText, W - 44 - gW + 68, barY + barH / 2 + 12);
+
     return cv;
   }
 
   function shareRun() {
     const dist = Math.floor(S.worldX / PX_PER_M);
     const chr = S.char || charById(save.selected) || CHARACTERS[0];
-    const cv = buildShareCard(dist, runCoins(), chr, S.comboBest);
+    // save.best je v tuhle chvíli už po zápisu z endRun, takže rovnost = rekord
+    const cv = buildShareCard(dist, runCoins(), chr, S.comboBest, S.carrotsRun, dist >= save.best && dist > 0);
     const text = I18N.t('share.text', { d: dist, name: I18N.pick(chr.name), url: SHARE_URL });
     AUDIO.play('click');
     cv.toBlob((blob) => {
