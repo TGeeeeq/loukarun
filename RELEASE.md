@@ -2,13 +2,18 @@
 
 ## ⏳ Čeká na vydání
 
-- v1.0.6 (versionCode 7) — AAB přestavěn a podepsán, čeká jen na nahrání
-  do Play Console (Production → Create new release). Předchozí v1.0.4
-  (versionCode 5) je v produkci; v1.0.5 (vc6) se do Play nikdy nenahrálo.
-  Změny v 1.0.6: odstraněny náhodné hlášky zvířátek za běhu (zůstal jen
-  Karlův tutoriál), přidány kulisy do pozadí (krtek, ježek, čáp na hnízdě,
-  světlušky), audio optimalizace (cache noise bufferů, předehřátí hlasů),
-  a diagnostický FPS overlay (?perf=1).
+- **v1.0.9 (versionCode 10, hra 1.8.1)** — AAB přestavěn a podepsán
+  (`googleplay/app-release.aab`), čeká jen na nahrání do Play Console
+  (Production → Create new release). V produkci je pořád v1.0.4
+  (versionCode 5); verze 1.0.5–1.0.8 se do Play nikdy nenahrály, takže
+  tenhle release nese jejich změny dohromady:
+  - žádné náhodné hlášky zvířátek za běhu (zůstal jen Karlův tutoriál)
+  - nové kulisy do pozadí (krtek, ježek, čáp na hnízdě, světlušky)
+  - Karel se zjevuje portálem a má uvítací řeč o Louce, deníček
+  - řetěz sběrů (combo), plovoucí skok, hloubka scény, nativní vrstva
+    (haptika, tlačítko Zpět, zálohování postupu do Preferences)
+  - **zvuk**: kroky přestaly znít jako střelba, vyrovnané hlasy zvířátek,
+    kompresor na efektech a výstupní pojistka
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
@@ -26,7 +31,11 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ```bash
 git pull origin main
-npm install --omit=dev
+# plné npm install, ne --omit=dev: `cap` je devDependency, a hlavně bez
+# nainstalovaných pluginů je `cap sync` mlčky vyhodí z gradle souborů
+# a vznikne AAB bez haptiky, tlačítka Zpět i zálohy postupu
+npm install
+npx cap ls android   # musí vypsat všech 5 pluginů (app, filesystem, haptics, preferences, share)
 # 1. zvednout versionCode (+1) a versionName v android/app/build.gradle,
 #    POKUD se nezvedly už během vývoje (zkontrolovat proti verzi v Play Console!)
 # 2. připravit webovou vrstvu a nativní projekt:
