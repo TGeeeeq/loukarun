@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.4.0';
+  const GAME_VERSION = '1.5.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -165,6 +165,7 @@
     coinsRun: 0,
     carrotsRun: 0,
     goldenRun: 0,           // zlaté mrkve za běh (denní mise)
+    hitsRun: 0,             // nárazy za běh (sčítá se do save.hitsTotal kvůli odznaku)
     cleanDist: 0,           // nejdelší úsek bez nárazu v px (denní mise)
     cleanFrom: 0,           // odkud se ten úsek počítá
     ramLeft: 0,
@@ -640,7 +641,7 @@
     S.char = charById(save.selected) || CHARACTERS[0];
     S.stats = S.char.stats;
     S.energy = ECONOMY.startEnergy;
-    S.coinsRun = 0; S.carrotsRun = 0; S.goldenRun = 0;
+    S.coinsRun = 0; S.carrotsRun = 0; S.goldenRun = 0; S.hitsRun = 0;
     S.cleanDist = 0; S.cleanFrom = 0;
     S.cloverT = 0;
     S.ramLeft = S.stats.ram || 0;
@@ -689,20 +690,36 @@
     S.cleanDist = Math.max(S.cleanDist, S.worldX - S.cleanFrom);
     const daily = ensureDaily();
     daily.runsToday = (daily.runsToday || 0) + 1;
-    checkDaily({
+    const runStats = {
       dist,
       carrots: S.carrotsRun,
       coins: runCoins(),
       combo: S.comboBest,
       golden: S.goldenRun,
       clean: Math.floor(S.cleanDist / PX_PER_M),
-    });
+    };
+    checkDaily(runStats);
+    // osobní úkoly zvířátka – ze stejných čísel jako denní mise
+    const hadTrophy = !!charTrophy(S.char);
+    const freshTasks = checkCharTasks(S.char, runStats);
+    const wonTrophy = !hadTrophy && !!charTrophy(S.char);
+    // sčítance pro odznaky – jinak by se nedalo poznat, co hráč nasbíral za život
+    save.metersTotal = (save.metersTotal || 0) + dist;
+    save.carrotsTotal = (save.carrotsTotal || 0) + S.carrotsRun;
+    save.hitsTotal = (save.hitsTotal || 0) + S.hitsRun;
+    if (dist > 0 && dist < 30) save.tinyRun = true;
+    const hour = new Date().getHours();
+    if (hour >= 0 && hour < 4) save.nightRun = true;
     // příběhový konec – každé zvířátko střídá své příběhy popořadě,
     // takže tři doběhy za sebou vyprávějí tři různé konce
     if (!save.storyIdx) save.storyIdx = {};
     const sIdx = (save.storyIdx[S.char.id] || 0) % S.char.stories.length;
     const story = I18N.pick(S.char.stories[sIdx]);
     save.storyIdx[S.char.id] = sIdx + 1;
+    // …a co už hráč slyšel, se dá dohledat v deníčku (sbírka příběhů)
+    if (!save.storySeen) save.storySeen = {};
+    const seen = save.storySeen[S.char.id] || (save.storySeen[S.char.id] = []);
+    if (!seen.includes(sIdx)) seen.push(sIdx);
     persist();
     AUDIO.play('finish');
     revealOver({
@@ -713,8 +730,19 @@
       best: save.best,
       combo: S.comboBest,
     });
-    // nově splněné odznaky (rekord/počet běhů/…) oznámíme přes obrazovkou konce
-    toastAchievements(syncAchievements());
+    // nově splněné úkoly a odznaky oznámíme přes obrazovkou konce.
+    // Trofej má přednost – je to větší událost než jednotlivý úkol.
+    if (wonTrophy) {
+      setTimeout(() => {
+        toast(`🎁 ${I18N.pick(S.char.name)}: ${I18N.pick(S.char.trophy.name)}!`);
+        PLATFORM.haptic('success');
+      }, 900);
+    } else {
+      freshTasks.forEach((t, i) => {
+        setTimeout(() => toast(`${t.icon} ${I18N.t('task.done')}`), 900 + i * 2600);
+      });
+    }
+    toastAchievements(syncAchievements(), (wonTrophy ? 1 : freshTasks.length) * 2600);
   }
 
   /* =========================================================
@@ -2309,6 +2337,7 @@
       const penalty = Math.round((o.soft ? 8 : ECONOMY.hitPenalty) * (S.stats.hitFactor || 1) * hitRamp);
       // ve škole běhu drží energie rezervu – klopýtnutí nesmí běh ukončit
       S.energy = Math.max(S.tut ? 15 : 0, S.energy - penalty);
+      S.hitsRun++;
       S.stumble = 0.7;
       S.invuln = 1.1;
       S.shake = 0.8;
@@ -2467,6 +2496,7 @@
           squash: S.squash,
           blink: S.blink > 0,
           sway: (S.vy - S.swayFollow) / 700,
+          trophy: charTrophy(ch),
         }, S.t);
       }
     }
@@ -2978,7 +3008,7 @@
     const c2 = cv.getContext('2d');
     const s = cv.width / 190;
     c2.clearRect(0, 0, cv.width, cv.height);
-    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: 0.6 }, 400);
+    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: 0.6, trophy: charTrophy(ch) }, 400);
   }
 
   /* =========================================================
@@ -2994,6 +3024,34 @@
      překlopení dělá jediný list (#book-leaf) nad nimi, pod kterým je
      už nový obsah – nic se tedy nekreslí dvakrát.
      ========================================================= */
+  /* ---------- osobní úkoly zvířátka ----------
+     Tři cíle na jeden běh u každého zvířátka. Vyhodnocují se ze stejné
+     tabulky výsledků jako denní mise (dist/carrots/coins/combo/golden/
+     clean), takže se za běhu nic nového neměří. Za všechny tři si
+     zvířátko vyslouží trofej, kterou od té chvíle nosí ve hře, na
+     portrétech i na kartičce ke sdílení – je to jediná odměna, která je
+     doopravdy vidět, a proto stojí za to o ni běhat. */
+  function charTasksDone(ch) {
+    return (save.charTasks && save.charTasks[ch.id]) || [];
+  }
+  function charTrophy(ch) {
+    if (!ch || !ch.trophy || !ch.tasks) return null;
+    return charTasksDone(ch).length >= ch.tasks.length ? ch.trophy.kind : null;
+  }
+  function checkCharTasks(ch, run) {
+    if (!ch || !ch.tasks) return [];
+    if (!save.charTasks) save.charTasks = {};
+    const done = save.charTasks[ch.id] || (save.charTasks[ch.id] = []);
+    const fresh = [];
+    for (const t of ch.tasks) {
+      if (done.includes(t.id)) continue;
+      if ((run[t.stat] || 0) >= t.goal) { done.push(t.id); fresh.push(t); }
+    }
+    return fresh;
+  }
+  // kolik zvířátek už má trofej – pro odznaky
+  function trophyCount() { return CHARACTERS.filter(charTrophy).length; }
+
   const DIARY_STEP = 3;    // po kolika bězích s postavou přibude zápisek
   let bookChar = null, bookPages = [], bookSpread = 0, bookBusy = false;
 
@@ -3003,10 +3061,15 @@
   }
 
   function buildBookPages(ch) {
-    const pages = [{ type: 'cover' }];
+    const pages = [{ type: 'cover' }, { type: 'tasks' }];
     const have = diaryUnlocked(ch);
     (ch.diary || []).forEach((entry, i) => {
       pages.push(i < have ? { type: 'entry', i, text: I18N.pick(entry) } : { type: 'locked', i });
+    });
+    // sbírka příběhových konců – co hráč s tímhle zvířátkem už slyšel
+    const seen = (save.storySeen && save.storySeen[ch.id]) || [];
+    (ch.stories || []).forEach((st, i) => {
+      pages.push(seen.includes(i) ? { type: 'story', i, text: I18N.pick(st) } : { type: 'storyLocked', i });
     });
     (ch.facts || []).forEach((f, i) => pages.push({ type: 'fact', i, text: I18N.pick(f) }));
     pages.push({ type: 'end' });
@@ -3068,6 +3131,50 @@
       add('page-kicker', species, 'span');
       add('page-head', I18N.t('diary.facts'), 'h3');
       add('page-body', page.text);
+      // přečtené zajímavosti se sčítají kvůli odznaku „chodící encyklopedie“
+      if (!save.factsRead) save.factsRead = [];
+      const key = `${bookChar.id}:${page.i}`;
+      if (!save.factsRead.includes(key)) { save.factsRead.push(key); persist(); }
+    } else if (page.type === 'story') {
+      add('page-kicker', I18N.t('diary.stories'), 'span');
+      add('page-head', I18N.t('diary.story', { n: page.i + 1 }), 'h3');
+      add('page-body', page.text);
+    } else if (page.type === 'storyLocked') {
+      add('page-kicker', I18N.t('diary.stories'), 'span');
+      const mid = document.createElement('div');
+      mid.className = 'page-mid';
+      const q = document.createElement('div');
+      q.className = 'page-wax page-wax-soft'; q.textContent = '?';
+      const txt = document.createElement('p');
+      txt.className = 'page-locked-text';
+      txt.textContent = I18N.t('diary.storyLocked');
+      mid.append(q, txt);
+      el.appendChild(mid);
+    } else if (page.type === 'tasks') {
+      /* Osobní úkoly – jediné místo, kde je vidět, co po hráči zvířátko
+         chce a co si tím vyslouží. Splněné se odškrtnou, trofej dole. */
+      const done = charTasksDone(bookChar);
+      add('page-kicker', I18N.t('task.title'), 'span');
+      add('page-head', I18N.t('task.head', { name: I18N.pick(bookChar.name) }), 'h3');
+      const list = document.createElement('ul');
+      list.className = 'task-list';
+      (bookChar.tasks || []).forEach((t) => {
+        const li = document.createElement('li');
+        li.className = 'task-row' + (done.includes(t.id) ? ' done' : '');
+        const mark = document.createElement('span');
+        mark.className = 'task-mark';
+        mark.textContent = done.includes(t.id) ? '✓' : t.icon;
+        const txt = document.createElement('span');
+        txt.textContent = I18N.pick(t.title);
+        li.append(mark, txt);
+        list.appendChild(li);
+      });
+      el.appendChild(list);
+      const prize = document.createElement('p');
+      prize.className = 'task-prize' + (charTrophy(bookChar) ? ' won' : '');
+      prize.textContent = (charTrophy(bookChar) ? '🎁 ' : '🔒 ')
+        + I18N.t(charTrophy(bookChar) ? 'task.won' : 'task.prize', { prize: I18N.pick(bookChar.trophy.name) });
+      el.appendChild(prize);
     } else if (page.type === 'end') {
       const mid = document.createElement('div');
       mid.className = 'page-mid';
@@ -3152,6 +3259,20 @@
     { id: 'chain175', icon: '💫', title: { cs: 'Božský řetěz – 175 v jednom tahu!', en: 'Divine chain – 175 in one go!' }, check: (s) => (s.bestCombo || 0) >= 175 },
     { id: 'friend', icon: '🐾', title: { cs: 'Našel sis parťáka do běhu', en: 'You found a running buddy' }, check: (s) => (s.unlocked || []).length >= 2 },
     { id: 'runs10', icon: '🔁', title: { cs: 'Deset rozběhů, nula lenosti', en: 'Ten runs, zero laziness' }, check: (s) => (s.runs || 0) >= 10 },
+    { id: 'runs50', icon: '🔂', title: { cs: 'Padesát rozběhů. Louka už zná tvůj rozvrh.', en: 'Fifty runs. The meadow knows your schedule now.' }, check: (s) => (s.runs || 0) >= 50 },
+    { id: 'runs150', icon: '🧭', title: { cs: 'Sto padesát běhů. Zkoušel jsi někdy jít pěšky?', en: 'A hundred and fifty runs. Ever tried walking?' }, check: (s) => (s.runs || 0) >= 150 },
+    { id: 'gang', icon: '🐾', title: { cs: 'Celá parta pohromadě. Nikdo nezůstal v ohradě.', en: 'The whole gang together. Nobody left behind in the pen.' }, check: (s) => (s.unlocked || []).length >= CHARACTERS.length },
+    { id: 'miser', icon: '🪙', title: { cs: 'Skrblík z louky: 5 000 mincí a pořád nic.', en: 'Meadow miser: 5,000 coins and still not spending.' }, check: (s) => (s.coins || 0) >= 5000 },
+    { id: 'snail', icon: '🐌', title: { cs: 'Rekord v neběhání. Necelých třicet metrů, zato s citem.', en: 'A record in not running. Under thirty metres, but with feeling.' }, check: (s) => !!s.tinyRun },
+    { id: 'owl', icon: '🦉', title: { cs: 'Noční směna. Tohle už není běhání, to je nespavost.', en: 'Night shift. That is not running any more, that is insomnia.' }, check: (s) => !!s.nightRun },
+    { id: 'wall', icon: '🧱', title: { cs: 'Sto nárazů. Překážky si na tebe dělají čárky.', en: 'A hundred hits. The obstacles are keeping score now.' }, check: (s) => (s.hitsTotal || 0) >= 100 },
+    { id: 'carrots1000', icon: '🥕', title: { cs: 'Tisíc mrkví. Zahradník přešel na jinou plodinu.', en: 'A thousand carrots. The gardener has switched crops.' }, check: (s) => (s.carrotsTotal || 0) >= 1000 },
+    { id: 'marathon', icon: '🏃', title: { cs: 'Maraton na etapy: 42 195 m dohromady. Bez tréninku!', en: 'A marathon in instalments: 42,195 m all told. Untrained!' }, check: (s) => (s.metersTotal || 0) >= 42195 },
+    { id: 'dressed', icon: '🎩', title: { cs: 'Módní ikona louky. První trofej padla.', en: 'Meadow fashion icon. First trophy in the bag.' }, check: () => trophyCount() >= 1 },
+    { id: 'wardrobe', icon: '🧣', title: { cs: 'Kompletní šatník. Celá parta vyšňořená.', en: 'Full wardrobe. The whole gang dressed up.' }, check: () => trophyCount() >= CHARACTERS.length },
+    { id: 'endings', icon: '📖', title: { cs: 'Sběratel konců. Od jednoho zvířátka jsi slyšel všechno.', en: 'Ending collector. You have heard everything one animal has to say.' }, check: (s) => CHARACTERS.some(c => ((s.storySeen && s.storySeen[c.id]) || []).length >= (c.stories || []).length) },
+    { id: 'diaryfull', icon: '📔', title: { cs: 'Přečetl jsi někomu celý deník. Snad to nevadí.', en: 'You read someone’s entire diary. Hopefully they do not mind.' }, check: () => CHARACTERS.some(c => (c.diary || []).length && diaryUnlocked(c) >= c.diary.length) },
+    { id: 'bookworm', icon: '🤓', title: { cs: 'Chodící encyklopedie. Přečteno všech třicet zajímavostí.', en: 'Walking encyclopedia. All thirty facts read.' }, check: (s) => (s.factsRead || []).length >= CHARACTERS.reduce((n, c) => n + (c.facts || []).length, 0) },
   ];
 
   // doplní nově splněné odznaky do postupu a vrátí ty čerstvě získané
@@ -3174,9 +3295,9 @@
   }
 
   // krátce oznámí čerstvě získané odznaky (po jednom, ať si je hráč přečte)
-  function toastAchievements(fresh) {
+  function toastAchievements(fresh, delay = 0) {
     fresh.forEach((a, i) => {
-      setTimeout(() => toast(`🎖️ ${I18N.t('ach.new')}: ${a.icon} ${I18N.pick(a.title)}`), 700 + i * 2800);
+      setTimeout(() => toast(`🎖️ ${I18N.t('ach.new')}: ${a.icon} ${I18N.pick(a.title)}`), 700 + delay + i * 2800);
     });
   }
 
@@ -3492,7 +3613,7 @@
     c.globalAlpha = 0.24; c.fillStyle = '#000';
     GFX.ell(c, chX + 8, chY + 14, 148, 22); c.fill();
     c.restore();
-    GFX.drawCharacter(c, chr, chX, chY, chS, { runPhase: 0.6 }, 400);
+    GFX.drawCharacter(c, chr, chX, chY, chS, { runPhase: 0.6, trophy: charTrophy(chr) }, 400);
 
     /* ---------- značka ---------- */
     c.font = '800 96px ' + SHARE_FONT;

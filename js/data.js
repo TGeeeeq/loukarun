@@ -76,6 +76,19 @@ const DATA = (() => {
           en: 'A donkey’s hoof is built for dry ground. Constant wet softens it and invites infection, so a donkey needs a dry shelter even more than a horse does.',
         },
       ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'hat', name: { cs: 'Šéfovský klobouk', en: 'Boss’s straw hat' } },
+      tasks: [
+        { id: 'sef', stat: 'dist', goal: 1200, icon: '🏁',
+          title: { cs: 'Doběhni 1 200 m. A ať je jasné, kdo tu velí.', en: 'Run 1,200 m. And make it clear who is in charge.' } },
+        { id: 'klid', stat: 'clean', goal: 600, icon: '🛡️',
+          title: { cs: '600 m bez jediného nárazu. Rozvaha, ne rychlost.', en: '600 m without a single hit. Judgement, not speed.' } },
+        { id: 'mrkve', stat: 'carrots', goal: 45, icon: '🥕',
+          title: { cs: 'Sněz 45 mrkví v jednom běhu. Zasloužím si je. Všechny.', en: 'Eat 45 carrots in one run. I deserve them. All of them.' } },
+      ],
       // černý osel s bílým čumákem a světlými kroužky kolem očí
       colors: { body: '#45403c', belly: '#93887f', mane: '#211d1a', muzzle: '#efe7da', ear: '#45403c', earIn: '#b5a89a', eyeRing: '#c6bab0', hoof: '#26221e' },
       quotes: [
@@ -182,6 +195,19 @@ const DATA = (() => {
           en: 'A lone sheep suffers. In a flock its heart rate and stress hormones drop, so a sanctuary never keeps just one — it matters as much as feeding them.',
         },
       ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'band', name: { cs: 'Sportovní čelenka', en: 'Sports headband' } },
+      tasks: [
+        { id: 'skok', stat: 'dist', goal: 1400, icon: '🏁',
+          title: { cs: 'Doskákej 1 400 m. Pružina nezná únavu.', en: 'Bounce 1,400 m. Springs do not get tired.' } },
+        { id: 'retez', stat: 'combo', goal: 25, icon: '🔗',
+          title: { cs: 'Řetěz 25 kousků za sebou. Bez zaváhání, prosím.', en: 'A chain of 25 in a row. No wobbling, please.' } },
+        { id: 'cisty', stat: 'clean', goal: 800, icon: '🛡️',
+          title: { cs: '800 m bez nárazu. I s polstrováním se to počítá.', en: '800 m without a hit. It counts even with the padding.' } },
+      ],
       // krémová vlna, hnědá tvářička a tmavé nožky
       colors: { body: '#f2ede2', belly: '#ffffff', mane: '#e2d8c6', muzzle: '#9a8268', ear: '#9a8268', earIn: '#c2a888', legs: '#8a7460', hoof: '#463c32' },
       quotes: [
@@ -286,6 +312,19 @@ const DATA = (() => {
           cs: 'Skot se v klidu dožívá dvaceti let i víc. V chovu se toho ale zvířata nedožijí ani zdaleka — v azylu jde právě o ten zbytek života.',
           en: 'Cattle can live twenty years and more. In farming they never get anywhere near that — a sanctuary is about exactly the rest of that life.',
         },
+      ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'flower', name: { cs: 'Kopretina za uchem', en: 'Daisy behind the ear' } },
+      tasks: [
+        { id: 'mince', stat: 'coins', goal: 90, icon: '🪙',
+          title: { cs: 'Nasbírej 90 mincí v jednom běhu. Šťastná kopyta, co říct.', en: 'Collect 90 coins in one run. Lucky hooves, what can I say.' } },
+        { id: 'zlate', stat: 'golden', goal: 3, icon: '✨',
+          title: { cs: 'Najdi tři zlaté mrkve. Vím, kde rostou.', en: 'Find three golden carrots. I know where they grow.' } },
+        { id: 'bezec', stat: 'dist', goal: 1600, icon: '🏁',
+          title: { cs: 'Doběhni 1 600 m. Říkají mi blesková. Teda… říkám si tak sama.', en: 'Run 1,600 m. They call me Lightning. Well… I call myself that.' } },
       ],
       // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', hoof: '#3d3128' },
@@ -392,6 +431,19 @@ const DATA = (() => {
           en: 'A piglet learns its own name and comes when called. It also tells human voices apart — and remembers who treated it how.',
         },
       ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'scarf', name: { cs: 'Puntíkatý šátek', en: 'Polka-dot bandana' } },
+      tasks: [
+        { id: 'mrkve', stat: 'carrots', goal: 60, icon: '🥕',
+          title: { cs: 'Sněz 60 mrkví. Rypáček je magnet, ne ozdoba.', en: 'Eat 60 carrots. The snout is a magnet, not an ornament.' } },
+        { id: 'mince', stat: 'coins', goal: 120, icon: '🪙',
+          title: { cs: 'Nasbírej 120 mincí. Najdu i to, co nikdo neztratil.', en: 'Collect 120 coins. I find things nobody even lost.' } },
+        { id: 'bezec', stat: 'dist', goal: 1000, icon: '🏁',
+          title: { cs: 'Doběhni 1 000 m bez zastávky v blátě. To bolí.', en: 'Run 1,000 m with no mud stop. That one hurts.' } },
+      ],
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
       colors: { body: '#b3aaa1', belly: '#cec5bc', mane: '#8a817a', muzzle: '#d9a9a0', ear: '#9a908a', earIn: '#756c66', spots: '#38342f', pattern: 'blotch', hoof: '#46403a' },
       quotes: [
@@ -497,6 +549,19 @@ const DATA = (() => {
           en: 'Mouflons are superb jumpers and climbers, handling rocky ground where a domestic sheep would not last a moment — millennia in pens took that ability away from her.',
         },
       ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'ribbon', name: { cs: 'Stužka na rohu', en: 'Ribbon on the horn' } },
+      tasks: [
+        { id: 'daleko', stat: 'dist', goal: 1800, icon: '🏁',
+          title: { cs: 'Doběhni 1 800 m. Beranidlo hlásí připravenost.', en: 'Run 1,800 m. Battering ram reports ready.' } },
+        { id: 'retez', stat: 'combo', goal: 30, icon: '🔗',
+          title: { cs: 'Řetěz 30 kousků. Rohy jsou na překážky, styl se počítá zvlášť.', en: 'A chain of 30. Horns are for obstacles, style is scored separately.' } },
+        { id: 'cisty', stat: 'clean', goal: 900, icon: '🛡️',
+          title: { cs: '900 m bez nárazu. Ano, i když do toho jde narazit.', en: '900 m without a hit. Yes, even when hitting things is an option.' } },
+      ],
       // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
       colors: { body: '#6b4830', belly: '#e6dac6', mane: '#4c3120', muzzle: '#e9dfcd', ear: '#6b4830', earIn: '#c2996f', horns: '#c7ad85', spots: '#cbb896', pattern: 'saddle', legs: '#5a3c28', hoof: '#31261e' },
       quotes: [
@@ -601,6 +666,19 @@ const DATA = (() => {
           cs: 'Čich má kráva výborný. Známého člověka nebo vodu zachytí na velkou vzdálenost a podle pachu pozná i to, jestli je někdo ve stresu.',
           en: 'A cow’s sense of smell is excellent. She picks up a familiar person or water from far away — and can even smell whether someone is stressed.',
         },
+      ],
+      /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
+         porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
+         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
+         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
+      trophy: { kind: 'wreath', name: { cs: 'Věneček z kopretin', en: 'Daisy crown' } },
+      tasks: [
+        { id: 'vytrvalost', stat: 'dist', goal: 2200, icon: '🏁',
+          title: { cs: 'Doběhni 2 200 m. Nespěchám. Ale dojdu.', en: 'Run 2,200 m. No rush. But I will get there.' } },
+        { id: 'klid', stat: 'clean', goal: 1200, icon: '🛡️',
+          title: { cs: '1 200 m bez nárazu. Klid je taky rychlost.', en: '1,200 m without a hit. Calm is a kind of speed too.' } },
+        { id: 'pastva', stat: 'carrots', goal: 70, icon: '🥕',
+          title: { cs: 'Sněz 70 mrkví. Pomalu, ale pořád.', en: 'Eat 70 carrots. Slowly, but always.' } },
       ],
       // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy
       colors: { body: '#9a5226', belly: '#f2e7d4', mane: '#5e3418', muzzle: '#efb9a2', ear: '#9a5226', earIn: '#d3a284', spots: '#f2ead9', pattern: 'patches', noHorns: true, eyePatch: '#552a12', forelock: '#f7f2e6', hoof: '#3d3128' },
