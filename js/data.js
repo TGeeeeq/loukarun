@@ -76,6 +76,25 @@ const DATA = (() => {
           en: 'A donkey’s hoof is built for dry ground. Constant wet softens it and invites infection, so a donkey needs a dry shelter even more than a horse does.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'bite',
+        doodles: ['carrot', 'hoof', 'fence'],
+        photos: [
+          { cs: 'Karel, jaro 2024 — šéf inspekce plotu', en: 'Karel, spring 2024 — chief fence inspector' },
+          { cs: 'Ranní porada u závory', en: 'Morning meeting at the gate' },
+          { cs: 'Tenhle výraz znamená: mrkev.', en: 'This expression means: carrot.' },
+        ],
+        notes: [
+          { cs: 'Nákupní seznam: mrkev, mrkev, mrkev, seno (nepovinné).', en: 'Shopping list: carrots, carrots, carrots, hay (optional).' },
+          { cs: 'Karel dnes otevřel: závoru, pytel s ovsem, moji trpělivost.', en: 'Karel opened today: the gate, the oat sack, my patience.' },
+          { cs: 'Poznámka: NENECHÁVAT kbelík bez dozoru.', en: 'Note: do NOT leave the bucket unattended.' },
+          { cs: 'Tuhle stránku nám okousal. Nechali jsme to tak.', en: 'He chewed this page. We left it as it is.' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
@@ -195,6 +214,25 @@ const DATA = (() => {
           en: 'A lone sheep suffers. In a flock its heart rate and stress hormones drop, so a sanctuary never keeps just one — it matters as much as feeding them.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'wool',
+        doodles: ['cloud', 'star', 'wool'],
+        photos: [
+          { cs: 'Pogo na svém kameni', en: 'Pogo on his rock' },
+          { cs: 'Před stříháním. Nechtěl.', en: 'Before shearing. He objected.' },
+          { cs: 'Po stříhání. Chtěl.', en: 'After shearing. He approved.' },
+        ],
+        notes: [
+          { cs: 'Nákup: nůžky (znovu), náplast, klid.', en: 'Shopping: shears (again), plasters, patience.' },
+          { cs: 'Rekord dne: čtyři skoky bez důvodu za sebou.', en: 'Record of the day: four pointless jumps in a row.' },
+          { cs: 'Dnes se lekl vlastního stínu. Dvakrát. Téhož stínu.', en: 'Today he startled at his own shadow. Twice. The same shadow.' },
+          { cs: 'Ta vlna na téhle stránce je originál. Nelepila se sama.', en: 'That wool on this page is genuine. It did not stick itself.' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
@@ -313,6 +351,25 @@ const DATA = (() => {
           en: 'Cattle can live twenty years and more. In farming they never get anywhere near that — a sanctuary is about exactly the rest of that life.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'drool',
+        doodles: ['heart', 'daisy', 'apple'],
+        photos: [
+          { cs: 'Avala čeká u vrat. Zase.', en: 'Avala waiting at the gate. Again.' },
+          { cs: 'Odpolední přežvykování', en: 'Afternoon cud-chewing' },
+          { cs: 'Její člověk. A ona.', en: 'Her human. And her.' },
+        ],
+        notes: [
+          { cs: 'Avala olízla tenhle blok. Omlouváme se za vlhkost.', en: 'Avala licked this notebook. Sorry about the damp.' },
+          { cs: 'Nákupní seznam: jablka, kartáč, dvě hodiny drbání.', en: 'Shopping list: apples, a brush, two hours of scratching.' },
+          { cs: 'Dnes bučela na traktor. Traktor neodpověděl.', en: 'Today she mooed at the tractor. The tractor did not reply.' },
+          { cs: 'Naměřeno: jedenáct minut nepřetržitého mazlení. Rekord.', en: 'Measured: eleven minutes of uninterrupted cuddling. A record.' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
@@ -431,6 +488,25 @@ const DATA = (() => {
           en: 'A piglet learns its own name and comes when called. It also tells human voices apart — and remembers who treated it how.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'mud',
+        doodles: ['apple', 'hoof', 'cloud'],
+        photos: [
+          { cs: 'Flíček ve svém důlku', en: 'Flíček in his hollow' },
+          { cs: 'Po dešti. Nejlepší den.', en: 'After the rain. Best day ever.' },
+          { cs: 'Rypáček v akci', en: 'The snout at work' },
+        ],
+        notes: [
+          { cs: 'Nákup: jablka, dýně, zámek na lednici (velikost XL).', en: 'Shopping: apples, pumpkins, a fridge lock (size XL).' },
+          { cs: 'Flíček dnes objevil kaluž. Kaluž objevila Flíčka.', en: 'Flíček discovered a puddle today. The puddle discovered Flíček.' },
+          { cs: 'Rypáček zanechal na téhle stránce vzkaz.', en: 'The snout left a message on this page.' },
+          { cs: 'Ztraceno: klíče od kůlny. Podezřelý: chrochtá.', en: 'Lost: shed keys. Suspect: grunts.' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
@@ -549,6 +625,25 @@ const DATA = (() => {
           en: 'Mouflons are superb jumpers and climbers, handling rocky ground where a domestic sheep would not last a moment — millennia in pens took that ability away from her.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'scratch',
+        doodles: ['horns', 'fence', 'star'],
+        photos: [
+          { cs: 'Yakul z bezpečné vzdálenosti', en: 'Yakul from a safe distance' },
+          { cs: 'Rohy, ročník neznámý', en: 'Horns, vintage unknown' },
+          { cs: 'První drbání mezi rohy', en: 'First scratch between the horns' },
+        ],
+        notes: [
+          { cs: 'Nákup: nové prkno k ohradě. Zase.', en: 'Shopping: a new fence board. Again.' },
+          { cs: 'Dnes vyhrál nad kolečkem. Kolečko podalo protest.', en: 'Today he beat the wheelbarrow. The wheelbarrow protested.' },
+          { cs: 'Vzdálenost, na kterou se nechá pustit: 47 cm. Měřeno pásmem.', en: 'Distance he allows: 47 cm. Measured with a tape.' },
+          { cs: 'Rohy použity na: plot (1×), sud (2×), okno (1×, remíza).', en: 'Horns used on: fence (1×), barrel (2×), window (1×, a draw).' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
@@ -667,6 +762,25 @@ const DATA = (() => {
           en: 'A cow’s sense of smell is excellent. She picks up a familiar person or water from far away — and can even smell whether someone is stressed.',
         },
       ],
+      /* Vlepené drobnosti do deníčku – fotka s popiskem, poznámka na okraj,
+         čmáranice a jedna stopa, kterou po sobě zvířátko nechalo. Vybírá je
+         deterministicky pageExtras() v js/game.js podle čísla stránky, takže
+         stejná stránka vypadá pokaždé stejně. */
+      scrap: {
+        stain: 'grass',
+        doodles: ['clover', 'daisy', 'apple'],
+        photos: [
+          { cs: 'Květa pod jabloní', en: 'Květa under the apple tree' },
+          { cs: 'Klid v kopytech', en: 'Calm, in hooves' },
+          { cs: 'Nováček a jeho průvodkyně', en: 'A newcomer and his guide' },
+        ],
+        notes: [
+          { cs: 'Nákup: seno, klid, ještě víc klidu.', en: 'Shopping: hay, calm, more calm.' },
+          { cs: 'Došla k jabloni. Trvalo to čtyřicet minut. Byla první.', en: 'She reached the apple tree. It took forty minutes. She was first.' },
+          { cs: 'Dnes nikam nespěchala. Jako včera. A předevčírem.', en: 'Today she hurried nowhere. Like yesterday. And the day before.' },
+          { cs: 'Na téhle stránce usnula. Šetrně jsme ji vzbudili.', en: 'She fell asleep on this page. We woke her gently.' },
+        ],
+      },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
          Za splnění všech tří si zvířátko vyslouží trofej, kterou pak

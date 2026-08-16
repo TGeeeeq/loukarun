@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.6.1';
+  const GAME_VERSION = '1.7.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -3005,11 +3005,11 @@
   }
 
   /* ---------- portréty postav (mini canvasy) ---------- */
-  function drawPortrait(cv, ch) {
+  function drawPortrait(cv, ch, phase = 0.6) {
     const c2 = cv.getContext('2d');
     const s = cv.width / 190;
     c2.clearRect(0, 0, cv.width, cv.height);
-    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: 0.6, trophy: charTrophy(ch) }, 400);
+    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: phase, trophy: charTrophy(ch) }, 400);
   }
 
   /* =========================================================
@@ -3077,6 +3077,128 @@
     pages.push({ type: 'end' });
     if (pages.length % 2) pages.push({ type: 'blank' });  // dvoustrana musí vyjít
     return pages;
+  }
+
+  /* ---------- vlepené drobnosti ----------
+     Prázdná spodní půlka stránky vypadala jako nedopsaný sešit. Teď se do
+     ní lepí fotky, čmáranice, poznámky na okraj a stopa, kterou po sobě
+     zvířátko nechalo (Karlův kousanec, Avalin slintanec, Flíčkovo bláto…).
+
+     Výběr je DETERMINISTICKÝ podle jména zvířátka a čísla stránky – stejná
+     stránka tak vypadá pokaždé stejně a při listování sem a tam se nic
+     nepřeskládá. Vrstva je absolutní a leží pod textem, takže ať se vybere
+     cokoli, nikdy neodstrčí obsah. */
+  function scrapHash(seed) {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0) / 4294967296;
+  }
+
+  // jednoduché skici perem – kreslí se v mřížce 48×48
+  const DOODLES = {
+    carrot: '<path d="M19 19 L31 23 L23 43 Q21 46 19 43 Z"/><path d="M19 19 L13 9"/><path d="M23 20 L23 7"/><path d="M27 21 L34 11"/>',
+    hoof: '<path d="M18 15 Q24 19 22 30 Q20 36 16 33 Q13 24 18 15 Z"/><path d="M30 15 Q36 19 34 30 Q32 36 28 33 Q25 24 30 15 Z"/>',
+    heart: '<path d="M24 40 C7 27 10 13 19 13 Q24 13 24 19 Q24 13 29 13 C38 13 41 27 24 40 Z"/>',
+    star: '<path d="M24 8 L29 19 L41 20 L32 28 L35 40 L24 34 L13 40 L16 28 L7 20 L19 19 Z"/>',
+    daisy: '<circle cx="24" cy="24" r="4"/><ellipse cx="24" cy="13" rx="4" ry="7"/><ellipse cx="24" cy="35" rx="4" ry="7"/><ellipse cx="13" cy="24" rx="7" ry="4"/><ellipse cx="35" cy="24" rx="7" ry="4"/><ellipse cx="16" cy="16" rx="6" ry="3.4" transform="rotate(-45 16 16)"/><ellipse cx="32" cy="32" rx="6" ry="3.4" transform="rotate(-45 32 32)"/>',
+    apple: '<path d="M24 15 Q16 12 13 20 Q10 32 18 40 Q24 44 30 40 Q38 32 35 20 Q32 12 24 15 Z"/><path d="M24 15 L24 8"/><path d="M24 11 Q31 6 34 11 Q29 15 24 12"/>',
+    fence: '<path d="M13 12 L13 42"/><path d="M24 9 L24 42"/><path d="M35 12 L35 42"/><path d="M8 19 L40 16"/><path d="M8 30 L40 27"/>',
+    cloud: '<path d="M14 32 Q6 32 8 25 Q10 19 17 21 Q19 12 28 14 Q37 16 36 24 Q43 25 41 31 Q39 34 33 32 Z"/>',
+    wool: '<circle cx="18" cy="26" r="7"/><circle cx="28" cy="22" r="8"/><circle cx="33" cy="31" r="6"/><circle cx="22" cy="34" r="6"/>',
+    horns: '<path d="M24 34 Q10 32 11 21 Q12 13 19 14"/><path d="M24 34 Q38 32 37 21 Q36 13 29 14"/>',
+    clover: '<circle cx="18" cy="18" r="6"/><circle cx="30" cy="18" r="6"/><circle cx="18" cy="30" r="6"/><circle cx="30" cy="30" r="6"/><path d="M24 34 Q26 40 22 44"/>',
+  };
+
+  function doodleSvg(kind) {
+    const inner = DOODLES[kind] || DOODLES.star;
+    return `<svg viewBox="0 0 48 48" aria-hidden="true">${inner}</svg>`;
+  }
+
+  /* Co se na stránku vlepí. Rozpočet je nejvýš dvě věci plus stopa –
+     víc už z deníku dělá nástěnku.
+
+     Rozhoduje ZBYTEK PO DĚLENÍ čísla stránky, ne náhoda: fotka padne na
+     každou čtvrtou stránku, poznámka na každou třetí, stopa na každou
+     pátou. Tím je zaručeno, že se na jedné dvoustraně nikdy neobjeví
+     dvě fotky (levá i pravá by musely mít stejný zbytek po čtyřech) a že
+     dvě sousední stránky nemají stejnou čmáranici. Posun (slot) je
+     odvozený od jména zvířátka, takže každý deník začíná jinde. */
+  function pageExtras(page, num) {
+    const sc = bookChar && bookChar.scrap;
+    if (!sc || !page) return [];
+    if (page.type === 'cover' || page.type === 'end' || page.type === 'blank') return [];
+    const seed = scrapHash(bookChar.id);
+    const photoSlot = Math.floor(seed * 4);
+    const noteSlot = Math.floor(seed * 97) % 3;
+    const stainSlot = Math.floor(seed * 313) % 5;
+    const roomy = page.type !== 'fact';       // výstřižek zabírá horní půlku
+    const out = [];
+
+    if (roomy && sc.photos.length && num % 4 === photoSlot) {
+      out.push({
+        kind: 'photo',
+        caption: I18N.pick(sc.photos[num % sc.photos.length]),
+        side: num % 8 < 4 ? 'l' : 'r',
+        pose: 0.35 + (num % 5) * 0.42,        // jiný krok = jiná fotka
+      });
+    } else if (sc.notes.length && num % 3 !== noteSlot) {
+      // poznámka padne na dvě stránky ze tří – prázdný spodek pak zbude
+      // jen občas, a to je dobře: pořád je to deník, ne nástěnka
+      out.push({ kind: 'note', text: I18N.pick(sc.notes[num % sc.notes.length]) });
+    }
+    if (sc.doodles.length && num % 2 === 0 || (num % 3 === 1 && sc.doodles.length)) {
+      const hasPhoto = out.length && out[0].kind === 'photo';
+      out.push({
+        kind: 'doodle',
+        name: sc.doodles[num % sc.doodles.length],
+        side: hasPhoto ? (out[0].side === 'l' ? 'r' : 'l') : (num % 2 ? 'l' : 'r'),
+      });
+    }
+    if (num % 5 === stainSlot) out.push({ kind: 'stain', name: sc.stain });
+    return out;
+  }
+
+  function renderExtras(el, page, idx) {
+    const list = pageExtras(page, idx);
+    if (!list.length) return;
+    const layer = document.createElement('div');
+    layer.className = 'page-extras';
+    layer.setAttribute('aria-hidden', 'true');
+    for (const d of list) {
+      if (d.kind === 'photo') {
+        const box = document.createElement('div');
+        box.className = 'scrap-photo ' + d.side;
+        const tape = document.createElement('span');
+        tape.className = 'scrap-tape';
+        const cv = document.createElement('canvas');
+        cv.width = 190; cv.height = 150;
+        box.append(tape, cv);
+        const cap = document.createElement('span');
+        cap.className = 'scrap-caption';
+        cap.textContent = d.caption;
+        box.appendChild(cap);
+        layer.appendChild(box);
+        drawPortrait(cv, bookChar, d.pose);
+      } else if (d.kind === 'note') {
+        const n = document.createElement('p');
+        n.className = 'scrap-note';
+        n.textContent = d.text;
+        layer.appendChild(n);
+      } else if (d.kind === 'doodle') {
+        const g = document.createElement('span');
+        g.className = 'scrap-doodle ' + d.side;
+        g.innerHTML = doodleSvg(d.name);
+        layer.appendChild(g);
+      } else if (d.kind === 'stain') {
+        const s = document.createElement('span');
+        s.className = 'scrap-stain stain-' + d.name;
+        layer.appendChild(s);
+      }
+    }
+    el.appendChild(layer);
   }
 
   // ke které části knížky stránka patří – barví popisek a přepíná sazbu
@@ -3215,6 +3337,7 @@
       el.appendChild(mid);
     }
     add('page-num', String(num), 'div');
+    renderExtras(el, page, num);
   }
 
   function drawSpread() {
