@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.0.9';
+  const GAME_VERSION = '1.1.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -698,17 +698,129 @@
     save.storyIdx[S.char.id] = sIdx + 1;
     persist();
     AUDIO.play('finish');
-    document.getElementById('over-title').textContent = isBest ? I18N.t('over.record') : I18N.t('over.finish');
-    document.getElementById('over-story').textContent = story;
-    document.getElementById('over-dist').textContent = dist + ' m';
-    document.getElementById('over-carrots').textContent = S.carrotsRun;
-    document.getElementById('over-coins').textContent = '+' + runCoins();
-    document.getElementById('over-best').textContent = save.best + ' m';
-    document.getElementById('over-combo').textContent = S.comboBest;
-    drawPortrait(document.getElementById('over-portrait'), S.char);
-    showScreen('over');
+    revealOver({
+      story, isBest,
+      dist,
+      carrots: S.carrotsRun,
+      coins: runCoins(),
+      best: save.best,
+      combo: S.comboBest,
+    });
     // nově splněné odznaky (rekord/počet běhů/…) oznámíme přes obrazovkou konce
     toastAchievements(syncAchievements());
+  }
+
+  /* =========================================================
+     CÍLOVÁ OBRAZOVKA
+     Karta, portrét, konfety i nástup řádků jsou v CSS (sekce „KONEC BĚHU"
+     ve style.css) a spouští je třídy .anim / .record. Tady zbývá to, co
+     CSS neumí: vypsat vtip písmenko po písmenku a dopočítat čísla.
+     Obojí jede z jedné smyčky na requestAnimationFrame – úloha vrátí true,
+     když je hotová. Odchod z obrazovky smyčku zruší (viz showScreen).
+     ========================================================= */
+  const overTasks = [];
+  let overRaf = 0;
+  let overSkip = null; // dopsat vtip hned – ťuknutím do karty
+
+  function overTick(now) {
+    for (let i = overTasks.length - 1; i >= 0; i--) {
+      if (overTasks[i](now)) overTasks.splice(i, 1);
+    }
+    overRaf = overTasks.length ? requestAnimationFrame(overTick) : 0;
+  }
+  function overRun(task) {
+    overTasks.push(task);
+    if (!overRaf) overRaf = requestAnimationFrame(overTick);
+  }
+  function overStop() {
+    overTasks.length = 0;
+    overSkip = null;
+    if (overRaf) cancelAnimationFrame(overRaf);
+    overRaf = 0;
+  }
+
+  // číslo naběhne z nuly a na konci ještě poskočí (třída .pop)
+  function overCount(el, to, fmt, delay, dur, done) {
+    el.textContent = fmt(0);
+    let t0 = 0;
+    overRun((now) => {
+      if (!t0) t0 = now + delay;
+      if (now < t0) return false;
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) return false;
+      el.classList.add('pop');
+      if (done) done();
+      return true;
+    });
+  }
+
+  // psací stroj. Rychlost se dopočítá z délky, ať dlouhý vtip netrvá věčně
+  // a krátký nebliknul dřív, než na něj hráč stihne pohlédnout.
+  function overType(el, text, delay) {
+    const panel = el.parentElement;
+    const chars = Array.from(text); // Array.from kvůli emoji – ta jsou dvě jednotky
+    const per = Math.min(17, 1700 / Math.max(1, chars.length));
+    let t0 = 0, shown = -1;
+    const finish = () => {
+      el.textContent = text;
+      panel.classList.add('done', 'punch');
+      AUDIO.play('quote');
+      overSkip = null;
+    };
+    overSkip = () => { overTasks.length = 0; finish(); };
+    overRun((now) => {
+      if (!t0) t0 = now + delay;
+      if (now < t0) return false;
+      const n = Math.min(chars.length, Math.floor((now - t0) / per) + 1);
+      if (n !== shown) { shown = n; el.textContent = chars.slice(0, n).join(''); }
+      if (n < chars.length) return false;
+      finish();
+      return true;
+    });
+  }
+
+  function revealOver(d) {
+    const card = document.querySelector('#screen-over .over-card');
+    const storyEl = $('over-story');
+    const textEl = storyEl.querySelector('.story-text');
+    const meters = (v) => v + ' m';
+
+    overStop();
+    card.classList.remove('anim', 'record');
+    storyEl.classList.remove('done', 'punch');
+    for (const el of document.querySelectorAll('#screen-over .stat-val')) el.classList.remove('pop');
+
+    $('over-title').textContent = d.isBest ? I18N.t('over.record') : I18N.t('over.finish');
+    storyEl.setAttribute('aria-label', d.story); // čtečka dostane celý vtip najednou, ne po písmenkách
+    drawPortrait($('over-portrait'), S.char);
+
+    // šetrný režim / slabý telefon: rovnou hotový výsledek, žádná show
+    if (lowFx || reduceMotionMq.matches) {
+      textEl.textContent = d.story;
+      storyEl.classList.add('done');
+      $('over-dist').textContent = meters(d.dist);
+      $('over-carrots').textContent = d.carrots;
+      $('over-coins').textContent = '+' + d.coins;
+      $('over-best').textContent = meters(d.best);
+      $('over-combo').textContent = d.combo;
+      showScreen('over');
+      return;
+    }
+
+    textEl.textContent = '';
+    card.classList.add('anim');
+    if (d.isBest) card.classList.add('record');
+    void card.offsetWidth; // restart CSS animací – druhý doběh v řadě by jinak naskočil bez nich
+    showScreen('over');
+
+    overType(textEl, d.story, 320);
+    overCount($('over-dist'), d.dist, meters, 400, 900);
+    overCount($('over-carrots'), d.carrots, String, 470, 800);
+    overCount($('over-coins'), d.coins, (v) => '+' + v, 540, 800,
+      () => { if (d.coins > 0) AUDIO.play('coin'); });
+    overCount($('over-best'), d.best, meters, 610, 900);
+    overCount($('over-combo'), d.combo, String, 680, 700);
   }
 
   /* =========================================================
@@ -2685,6 +2797,7 @@
   function showScreen(name) {
     curScreen = name;
     if (name !== 'menu') closeDaily();
+    if (name !== 'over') overStop(); // odchod z cíle zastaví psaní vtipu i počítadla
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
     $('hud').classList.toggle('visible', name === null);
     if (name === 'menu') AUDIO.playMusic('menu');
@@ -3329,6 +3442,12 @@
   $('btn-tut-continue').addEventListener('click', continueLesson);
   $('btn-resume').addEventListener('click', togglePause);
   $('btn-pause-menu').addEventListener('click', backToMenu);
+
+  // ťuknutí do karty dopíše vtip hned – kdo pointu nechce číst po písmenkách,
+  // nemusí čekat (tlačítka si klik nechají pro sebe)
+  $('screen-over').addEventListener('pointerdown', (e) => {
+    if (overSkip && !e.target.closest('button')) overSkip();
+  });
 
   // ťuknutí mimo panel misí ho zavře – jinak by v menu překážel
   $('screen-menu').addEventListener('pointerdown', (e) => {

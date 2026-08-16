@@ -142,12 +142,20 @@
     </div>
   </div>
 
-  <!-- KONEC BĚHU -->
+  <!-- KONEC BĚHU
+       Kulisa (paprsky, pyl, konfety) je čistě ozdobná a nese aria-hidden;
+       vtip se vypisuje do .story-text, celé znění drží aria-label odstavce,
+       aby ho čtečka přečetla najednou a ne písmenko po písmenku. -->
   <div id="screen-over" class="screen">
+    <div class="over-rays" aria-hidden="true"></div>
+    <div class="menu-fx over-fx" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="over-card">
+      <div class="over-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <h2 id="over-title">CÍL DNEŠNÍHO BĚHU!</h2>
-      <canvas id="over-portrait" width="190" height="150"></canvas>
-      <p id="over-story" class="story"></p>
+      <div class="over-pic">
+        <canvas id="over-portrait" width="190" height="150"></canvas>
+      </div>
+      <p id="over-story" class="story"><span class="story-text" aria-hidden="true"></span></p>
       <div class="over-stats">
         <div class="stat"><span class="stat-label" data-i18n="over.dist">Doběhnuto</span><span class="stat-val" id="over-dist">0 m</span></div>
         <div class="stat"><span class="stat-label" data-i18n="over.carrots">Mrkviček</span><span class="stat-val" id="over-carrots">0 🥕</span></div>
