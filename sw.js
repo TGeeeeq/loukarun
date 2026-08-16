@@ -18,7 +18,7 @@
      hudba, písma  z cache hned, na pozadí se nestahují znovu
    ========================================================= */
 
-const CACHE = 'loukarun-v36';
+const CACHE = 'loukarun-v37';
 
 const CORE = [
   './',
@@ -38,6 +38,8 @@ const CORE = [
   'assets/icon-maskable-512.png',
   'assets/fonts/baloo2-latin.woff2',
   'assets/fonts/baloo2-latin-ext.woff2',
+  'assets/fonts/caveat-latin.woff2',
+  'assets/fonts/caveat-latin-ext.woff2',
 ];
 
 // Stránka hry. Zastupuje i adresu s koncovým lomítkem („…/app/“), kterou

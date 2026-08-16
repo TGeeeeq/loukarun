@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.5.0';
+  const GAME_VERSION = '1.6.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -1856,13 +1856,14 @@
 
   /* Okno na další sběr se krátí s rychlostí. Mrkve a mince stojí ve světě
      v metrech, ne v sekundách – při 620 px/s proletí hráč stejnou mezeru
-     dvakrát rychleji než na startu, takže pevných 1,6 s by řetěz na konci
-     běhu udrželo skoro samo. Držíme proto zhruba konstantní VZDÁLENOST
-     mezi kousky; comboWindowMin je podlaha, aby to i naplno šlo stihnout. */
+     dvakrát rychleji než na startu, takže pevné okno by řetěz na konci běhu
+     udrželo skoro samo. Krátíme ho ale jen odmocninou poměru rychlostí
+     (ECONOMY.comboSpeedBite), ne celým poměrem: plné krácení bylo naplno
+     neúnosné a řetěz se trhal kolem čtyřicítky. comboWindowMin je podlaha. */
   function comboWindow() {
     const base = S.baseSpeed * (S.stats?.speed || 1);
     const rel = Math.max(1, (S.speed || base) / base);
-    return Math.max(ECONOMY.comboWindowMin, ECONOMY.comboWindow / rel);
+    return Math.max(ECONOMY.comboWindowMin, ECONOMY.comboWindow / Math.pow(rel, ECONOMY.comboSpeedBite));
   }
 
   function bumpCombo() {
@@ -3077,8 +3078,17 @@
     return pages;
   }
 
+  // ke které části knížky stránka patří – barví popisek a přepíná sazbu
+  const PAGE_SECTION = {
+    cover: 'cover', tasks: 'tasks',
+    entry: 'notes', locked: 'notes',
+    story: 'stories', storyLocked: 'stories',
+    fact: 'facts', end: 'end',
+  };
+
   function renderPage(el, page, num) {
     el.innerHTML = '';
+    el.dataset.sec = (page && PAGE_SECTION[page.type]) || '';
     if (!page || page.type === 'blank') return;
     const add = (cls, txt, tag = 'p') => {
       const n = document.createElement(tag);
@@ -3128,9 +3138,23 @@
       mid.append(wax, txt);
       el.appendChild(mid);
     } else if (page.type === 'fact') {
-      add('page-kicker', species, 'span');
-      add('page-head', I18N.t('diary.facts'), 'h3');
-      add('page-body', page.text);
+      /* Zajímavost není zápisek – je to výstřižek z encyklopedie vlepený
+         do deníku. Proto vlastní kartička, tištěné patkové písmo a páska
+         přes horní roh; rukopis ošetřovatelů zůstává jen na zápiscích. */
+      add('page-kicker', I18N.t('diary.factsTab'), 'span');
+      const card = document.createElement('div');
+      card.className = 'fact-card';
+      const badge = document.createElement('span');
+      badge.className = 'fact-badge';
+      badge.textContent = '💡 ' + I18N.t('diary.facts');
+      const body = document.createElement('p');
+      body.className = 'fact-body';
+      body.textContent = page.text;
+      const src = document.createElement('span');
+      src.className = 'fact-src';
+      src.textContent = species;
+      card.append(badge, body, src);
+      el.appendChild(card);
       // přečtené zajímavosti se sčítají kvůli odznaku „chodící encyklopedie“
       if (!save.factsRead) save.factsRead = [];
       const key = `${bookChar.id}:${page.i}`;

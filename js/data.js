@@ -1138,8 +1138,14 @@ const DATA = (() => {
        obrazovku, 3 = plná pyrotechnika). Slabé telefony (dprStep 2)
        si z toho kreslí jen nápis. */
     comboMin: 5,          // pod tímhle se řetěz vůbec nezobrazí ani neplatí
-    comboWindow: 1.6,     // sekund mezi sběry při základní rychlosti (dál se krátí, viz comboWindow() v game.js)
-    comboWindowMin: 0.8,  // pod tohle se okno nikdy nestáhne, ať zůstane co chytat
+    comboWindow: 2.0,     // sekund mezi sběry při základní rychlosti (dál se krátí, viz comboWindow() v game.js)
+    comboWindowMin: 1.3,  // pod tohle se okno nikdy nestáhne, ať zůstane co chytat
+    /* Jak tvrdě se okno krátí s rychlostí (mocnina poměru rychlostí).
+       1 = konstantní vzdálenost mezi kousky, 0 = pevný čas. Na 1 to bylo
+       na konci běhu neúnosné (okno spadlo na 0,8 s a řetěz se trhal kolem
+       čtyřicítky), takže bereme odmocninu: začátek běhu je znatelně
+       štědřejší než dřív a naplno je pořád ještě co chytat. */
+    comboSpeedBite: 0.5,
     comboCoinRate: 0.5,   // mincí za každý kousek v řetězu
     comboTiers: [         // od kolika kousků platí jaký násobitel (vzestupně)
       { at: 5, mul: 1.0, color: '#ffd24a', name: 'combo.tier1', fx: 0 },
