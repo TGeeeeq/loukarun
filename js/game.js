@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.7.0';
+  const GAME_VERSION = '1.7.1';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -3134,7 +3134,8 @@
     const photoSlot = Math.floor(seed * 4);
     const noteSlot = Math.floor(seed * 97) % 3;
     const stainSlot = Math.floor(seed * 313) % 5;
-    const roomy = page.type !== 'fact';       // výstřižek zabírá horní půlku
+    // na výstřižek se zajímavostí ani na seznam úkolů se fotka nevejde
+    const roomy = page.type !== 'fact' && page.type !== 'tasks';
     const out = [];
 
     if (roomy && sc.photos.length && num % 4 === photoSlot) {
@@ -3161,8 +3162,8 @@
     return out;
   }
 
-  function renderExtras(el, page, idx) {
-    const list = pageExtras(page, idx);
+  function renderExtras(el, page, num) {
+    const list = pageExtras(page, num);
     if (!list.length) return;
     const layer = document.createElement('div');
     layer.className = 'page-extras';
@@ -3199,6 +3200,51 @@
       }
     }
     el.appendChild(layer);
+    fitExtras(el, num);
+  }
+
+  /* Vlepené drobnosti se NESMÍ potkat s textem. Kde text končí, se nedá
+     odhadnout procentem – zápisek má dva řádky, seznam úkolů deset a na
+     širokém displeji se všechno zalomí jinak. Vrstvu proto po vykreslení
+     změříme a posadíme přesně pod poslední řádek. Co se do zbylého místa
+     nevejde, vypadne: nejdřív fotka (nahradí ji poznámka), pak čmáranice,
+     nakonec celá vrstva. Stránky jsou v rozvržení i když je obrazovka
+     schovaná (jen visibility: hidden), takže měření platí i napoprvé. */
+  function fitExtras(el, num) {
+    const layer = el.querySelector('.page-extras');
+    if (!layer) return;
+    const pageNum = el.querySelector('.page-num');
+    let textBottom = 0;
+    for (const n of el.children) {
+      if (n === layer || n === pageNum) continue;
+      textBottom = Math.max(textBottom, n.offsetTop + n.offsetHeight);
+    }
+    const limit = (pageNum ? pageNum.offsetTop : el.clientHeight) - 6;
+    const top = Math.min(textBottom + 14, limit);
+    const room = limit - top;
+
+    const photo = layer.querySelector('.scrap-photo');
+    if (photo && room < 168) {
+      photo.remove();
+      // za fotku nastoupí poznámka, ať stránka nezůstane úplně holá
+      const notes = (bookChar.scrap && bookChar.scrap.notes) || [];
+      if (notes.length && room >= 40 && !layer.querySelector('.scrap-note')) {
+        const n = document.createElement('p');
+        n.className = 'scrap-note';
+        n.textContent = I18N.pick(notes[num % notes.length]);
+        layer.insertBefore(n, layer.firstChild);
+      }
+    }
+    const doodle = layer.querySelector('.scrap-doodle');
+    if (doodle && room < 96) doodle.remove();
+    const note = layer.querySelector('.scrap-note');
+    if (note && room < 40) note.remove();
+    // stopa je plochá a leží u okraje – vejde se skoro vždycky
+    if (!layer.children.length || room < 24) { layer.remove(); return; }
+
+    layer.style.top = top + 'px';
+    layer.style.bottom = 'auto';
+    layer.style.height = room + 'px';
   }
 
   // ke které části knížky stránka patří – barví popisek a přepíná sazbu
