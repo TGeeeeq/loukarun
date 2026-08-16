@@ -558,6 +558,171 @@ a.btn { text-decoration: none; display: inline-block; }
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 .diary-entry.locked { opacity: 0.5; font-style: italic; }
+/* celý blok je tlačítko – otevírá knížku na celou obrazovku */
+button.diary { display: block; width: 100%; border: 0; font: inherit; cursor: pointer; }
+button.diary:hover { background: rgba(0,0,0,0.075); }
+.diary-more {
+  display: block; margin-top: 5px;
+  font-size: 0.7rem; font-weight: 800; color: #a8762a;
+}
+
+/* =========================================================
+   DENÍČEK Z AZYLU – knížka na celou obrazovku
+
+   Starý sešit v kožené vazbě: krémový papír s linkami, zlacený
+   hřbet, stužka místo záložky. Dojem ručně psaného textu dělá
+   serifové písmo ze systému – hra si veze jediný vlastní font
+   (Baloo 2) a další soubor kvůli deníčku by se nevyplatil.
+
+   Listuje se po dvoustranách. Otočení stránky je jeden list
+   (.book-leaf), který se překlopí kolem hřbetu; pod ním je už
+   nový obsah, takže se nic nemusí kreslit dvakrát.
+   ========================================================= */
+#screen-diary {
+  justify-content: center;
+  background: radial-gradient(120% 100% at 50% 0%, rgba(58,44,26,0.72), rgba(18,24,20,0.9));
+  backdrop-filter: blur(4px);
+  padding-left: 12px; padding-right: 12px;
+}
+.book-stage { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; margin: auto 0; }
+.book-head {
+  display: flex; align-items: center; gap: 10px;
+  width: min(940px, calc(94 * var(--gvw)));
+}
+.book-head h2 { flex: 1; text-align: center; font-size: clamp(1rem, 2.6vmin, 1.4rem); color: #f7ecd4; }
+.book-pos {
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em;
+  color: rgba(247,236,212,0.7); min-width: 62px; text-align: right;
+}
+
+.book {
+  position: relative;
+  display: flex;
+  width: min(940px, calc(94 * var(--gvw)));
+  height: min(540px, calc(72 * var(--gvh)));
+  padding: 10px;
+  border-radius: 10px 16px 16px 10px;
+  background: linear-gradient(150deg, #7a5531, #4b3420 60%, #3b2917);
+  perspective: 1800px;
+  box-shadow:
+    0 0 0 2px rgba(212,164,90,0.45),
+    0 28px 64px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  touch-action: pan-y;
+}
+/* papír: vodorovné linky přes teplý krém, u hřbetu přisvětlený stín */
+.book-page {
+  position: relative;
+  flex: 1 1 50%;
+  min-width: 0;
+  display: flex; flex-direction: column;
+  padding: clamp(12px, 2.6vmin, 26px) clamp(14px, 3vmin, 30px);
+  overflow: hidden;
+  color: #4a3a26;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 26px, rgba(96,72,42,0.11) 26px 27px),
+    radial-gradient(130% 90% at 22% 0%, #fffdf4, #f4e7cb 68%, #e6d3ac);
+}
+.book-page.left { border-radius: 6px 2px 2px 6px; box-shadow: inset -26px 0 30px -22px rgba(70,46,18,0.75); }
+.book-page.right { border-radius: 2px 6px 6px 2px; box-shadow: inset 26px 0 30px -22px rgba(70,46,18,0.75); }
+.book-spine {
+  position: absolute; left: 50%; top: 10px; bottom: 10px; width: 22px;
+  transform: translateX(-50%); pointer-events: none; z-index: 3;
+  background: linear-gradient(90deg, rgba(70,46,18,0) 0%, rgba(70,46,18,0.28) 42%, rgba(70,46,18,0.34) 50%, rgba(70,46,18,0.28) 58%, rgba(70,46,18,0) 100%);
+}
+.book-ribbon {
+  position: absolute; top: -4px; right: 13%; width: 22px; height: 76px; z-index: 4;
+  background: linear-gradient(180deg, #c8483c, #8d2b24);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+}
+
+/* obsah stránky */
+.page-kicker {
+  font: 800 0.64rem/1 "Baloo 2", system-ui, sans-serif;
+  letter-spacing: 0.18em; text-transform: uppercase; color: #a3803f;
+}
+.page-head {
+  font-size: clamp(0.98rem, 2.5vmin, 1.35rem); font-weight: 700; color: #5b4023;
+  margin: 5px 0 9px; line-height: 1.2;
+}
+.page-head::after {
+  content: ''; display: block; width: 42px; height: 2px; margin-top: 7px;
+  background: linear-gradient(90deg, #c8a35c, rgba(200,163,92,0));
+}
+.page-body { font-size: clamp(0.82rem, 1.95vmin, 1.04rem); line-height: 1.62; margin: 0; }
+.page-body + .page-body { margin-top: 8px; }
+.page-body em { color: #6b5433; }
+.page-sign { margin-top: 10px; font-size: 0.78rem; font-style: italic; color: #8a7147; }
+.page-num { margin-top: auto; padding-top: 8px; text-align: center; font-size: 0.7rem; letter-spacing: 0.12em; color: #a9926a; }
+.page-mid { margin: auto 0; text-align: center; }
+.page-mid .page-sign { text-align: center; }
+
+/* titulní strana */
+.page-portrait { display: block; margin: 0 auto; width: min(58%, 200px); height: auto; }
+.page-title { text-align: center; font-size: clamp(1.1rem, 3vmin, 1.7rem); font-weight: 700; color: #5b4023; margin-top: 2px; }
+.page-species {
+  display: block; text-align: center; margin-top: 3px;
+  font: 800 0.66rem/1 "Baloo 2", system-ui, sans-serif;
+  letter-spacing: 0.14em; text-transform: uppercase; color: #a3803f;
+}
+.page-quote { margin-top: 10px; text-align: center; font-style: italic; font-size: clamp(0.8rem, 1.9vmin, 1rem); color: #6b5433; }
+
+/* zamčený zápisek – pečeť místo textu */
+.page-wax {
+  width: 62px; height: 62px; margin: 0 auto 12px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 1.6rem;
+  background: radial-gradient(circle at 34% 28%, #d2594a, #8d2b23 70%);
+  box-shadow: 0 5px 12px rgba(0,0,0,0.32), inset 0 -5px 10px rgba(0,0,0,0.28);
+}
+.page-locked-text { font-style: italic; color: #7d6743; font-size: clamp(0.8rem, 1.9vmin, 1rem); }
+.page-link {
+  display: inline-block; margin-top: 12px;
+  font: 800 0.84rem "Baloo 2", system-ui, sans-serif;
+  color: #a8762a; text-decoration: none;
+  border-bottom: 2px solid rgba(168,118,42,0.4);
+}
+
+/* překlápějící se list */
+.book-leaf {
+  position: absolute; top: 10px; bottom: 10px; width: calc(50% - 10px);
+  z-index: 5; opacity: 0; pointer-events: none;
+  padding: clamp(12px, 2.6vmin, 26px) clamp(14px, 3vmin, 30px);
+  overflow: hidden; color: #4a3a26;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 26px, rgba(96,72,42,0.11) 26px 27px),
+    radial-gradient(130% 90% at 22% 0%, #fffdf4, #f4e7cb 68%, #e6d3ac);
+  backface-visibility: hidden;
+}
+.book-leaf.turn-next { left: 50%; transform-origin: left center; border-radius: 2px 6px 6px 2px; animation: leafNext .52s ease-in both; }
+.book-leaf.turn-prev { left: 10px; transform-origin: right center; border-radius: 6px 2px 2px 6px; animation: leafPrev .52s ease-in both; }
+/* list zůstává neprůhledný skoro do konce – jinak přes něj prosvítá
+   nový text a otočení stránky vypadá jako dvojexpozice */
+@keyframes leafNext {
+  0%   { opacity: 1; transform: rotateY(0deg); filter: brightness(1); }
+  76%  { opacity: 1; }
+  100% { opacity: 0; transform: rotateY(-168deg); filter: brightness(0.7); }
+}
+@keyframes leafPrev {
+  0%   { opacity: 1; transform: rotateY(0deg); filter: brightness(1); }
+  76%  { opacity: 1; }
+  100% { opacity: 0; transform: rotateY(168deg); filter: brightness(0.7); }
+}
+
+.book-nav { display: flex; align-items: center; gap: 14px; }
+.book-hint { font-size: 0.72rem; font-weight: 700; color: rgba(247,236,212,0.6); text-align: center; min-width: 130px; }
+.book-nav .btn.round:disabled { opacity: 0.35; }
+
+/* na nízkých displejích (telefon na šířku) se knížka scvrkne, ne ořízne */
+@media (max-height: 560px) and (orientation: landscape) {
+  .book { height: calc(74 * var(--gvh)); }
+  .book-head h2 { font-size: 0.95rem; }
+  .page-body { line-height: 1.5; }
+  .book-page { padding: 10px 14px; }
+  .page-portrait { width: min(52%, 150px); }
+}
 .controls-hint {
   font-size: 0.78rem; font-weight: 600;
   color: rgba(255,255,255,0.9);

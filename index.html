@@ -130,6 +130,29 @@
     <div id="shop-grid"></div>
   </div>
 
+  <!-- DENÍČEK Z AZYLU – knížka přes celou obrazovku, dá se v ní listovat -->
+  <div id="screen-diary" class="screen">
+    <div class="book-stage">
+      <div class="book-head">
+        <button id="btn-diary-close" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
+        <h2 id="book-title">📔 Deníček z azylu</h2>
+        <span class="book-pos" id="book-pos"></span>
+      </div>
+      <div class="book" id="book">
+        <div class="book-ribbon" aria-hidden="true"></div>
+        <div class="book-page left" id="book-left"></div>
+        <div class="book-page right" id="book-right"></div>
+        <div class="book-spine" aria-hidden="true"></div>
+        <div class="book-leaf" id="book-leaf" aria-hidden="true"></div>
+      </div>
+      <div class="book-nav">
+        <button id="btn-diary-prev" class="btn round" aria-label="Předchozí strana">‹</button>
+        <span class="book-hint" id="book-hint"></span>
+        <button id="btn-diary-next" class="btn round" aria-label="Další strana">›</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ODZNAKY / ACHIEVEMENTY -->
   <div id="screen-ach" class="screen">
     <div class="over-card ach-card">

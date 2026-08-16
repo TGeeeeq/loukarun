@@ -25,17 +25,55 @@ const DATA = (() => {
         en: 'A balanced runner. The heart of the sanctuary.',
       },
       stats: { speed: 1.0, jump: 1.0, drain: 1.0 },
+      speciesName: { cs: 'osel domácí', en: 'domestic donkey' },
       /* Deníček z azylu – krátké zápisky ošetřovatelů. Odemykají se po
-         3 a 6 bězích s touhle postavou (viz buildShop v js/game.js).
+         třech bězích za zápisek (viz openDiary v js/game.js).
          Je to hravé vyprávění v duchu hry, ne veterinární záznam. */
       diary: [
         {
-          cs: 'Zápisek první: Karel se naučil otevírat závoru u výběhu. Ne že by chtěl utéct — jenom chce, aby bylo jasné, kdo tu závoru ovládá.',
-          en: 'Entry one: Karel learned to open the paddock latch. Not that he wants to escape — he just wants it clear who is in charge of that latch.',
+          cs: 'Karel se naučil otevírat závoru u výběhu. Ne že by chtěl utéct — jenom chce, aby bylo jasné, kdo tu závoru ovládá.',
+          en: 'Karel learned to open the paddock latch. Not that he wants to escape — he just wants it clear who is in charge of that latch.',
         },
         {
-          cs: 'Zápisek druhý: Když má někdo z party špatný den, Karel si k němu stoupne a mlčí. Umí to líp než my všichni dohromady.',
-          en: 'Entry two: When someone in the herd is having a bad day, Karel goes and stands beside them in silence. He does it better than all of us put together.',
+          cs: 'Když má někdo z party špatný den, Karel si k němu stoupne a mlčí. Umí to líp než my všichni dohromady.',
+          en: 'When someone in the herd is having a bad day, Karel goes and stands beside them in silence. He does it better than all of us put together.',
+        },
+        {
+          cs: 'Karla nikdo nikam nedotlačí. Když se zastaví, má k tomu důvod — a většinou se nakonec ukáže, že měl pravdu on a ne my.',
+          en: 'Nobody pushes Karel anywhere. When he stops, he has a reason — and it usually turns out he was right and we were not.',
+        },
+        {
+          cs: 'Nejradši má rána, kdy prší. Stojí pod přístřeškem, kouká do deště a vypadá jako filozof, kterému nikdo neplatí.',
+          en: 'He loves rainy mornings. He stands under the shelter watching the rain, looking like a philosopher nobody pays.',
+        },
+        {
+          cs: 'Přišel k nám s kopyty v hrozném stavu a čtyři měsíce se učil, že natažená ruka může znamenat i něco hezkého. Dneska chodí první.',
+          en: 'He arrived with his hooves in a terrible state and spent four months learning that an outstretched hand can mean something good. Today he is the first to come.',
+        },
+      ],
+      /* Věděli jste? – vzdělávací část deníčku. Na rozdíl od zápisků je
+         volně přístupná i u nekoupených zvířátek: je to to, kvůli čemu
+         hra existuje, a nemá smysl to schovávat za odměnu. */
+      facts: [
+        {
+          cs: 'Osel není tvrdohlavý. Má jen mnohem silnější pud sebezáchovy než kůň: když si není jistý, co ho čeká, radši se zastaví a rozmyslí si to. Kůň by utekl, osel přemýšlí.',
+          en: 'Donkeys are not stubborn. They simply have a far stronger sense of self-preservation than horses: when unsure what lies ahead, a donkey stops and thinks it over. A horse would bolt; a donkey reasons.',
+        },
+        {
+          cs: 'Ty velké uši nejsou jen na poslech. Je v nich hustá síť cév, která odvádí teplo — domácí osli totiž pocházejí z afrických polopouští.',
+          en: 'Those big ears are not just for listening. They are laced with blood vessels that shed heat — domestic donkeys descend from the semi-deserts of Africa.',
+        },
+        {
+          cs: 'Hýkání je jeden z nejhlasitějších zvuků na statku. V otevřené krajině je slyšet i na tři kilometry daleko.',
+          en: 'A bray is one of the loudest sounds on a farm. In open country it carries as far as three kilometres.',
+        },
+        {
+          cs: 'Osli si pamatují místa i kamarády celé roky. Většinou si najdou jednoho jediného parťáka a odloučení od něj nesou opravdu těžce — proto se v azylech nikdy nerozdělují.',
+          en: 'Donkeys remember places and friends for years. Most bond with one single companion and take separation very badly — which is why sanctuaries never split a pair.',
+        },
+        {
+          cs: 'Oslí kopyto je stavěné na sucho. V trvale mokré půdě měkne a snadno se zanítí, takže osel potřebuje suchý přístřešek víc než kůň.',
+          en: 'A donkey’s hoof is built for dry ground. Constant wet softens it and invites infection, so a donkey needs a dry shelter even more than a horse does.',
         },
       ],
       // černý osel s bílým čumákem a světlými kroužky kolem očí
@@ -99,14 +137,49 @@ const DATA = (() => {
         en: 'Perk: WOOLLY CUSHION – takes only half the energy from a hit and jumps a little higher.',
       },
       stats: { speed: 1.0, jump: 1.10, drain: 1.0, hitFactor: 0.5 },
+      speciesName: { cs: 'ovce domácí', en: 'domestic sheep' },
       diary: [
         {
-          cs: 'Zápisek první: Pogo si našel svůj kámen. Stojí na něm každé ráno a kouká do kraje, jako by kontroloval, jestli louka přes noc nikam neutekla.',
-          en: 'Entry one: Pogo has found his rock. He stands on it every morning and surveys the land, as if checking the meadow hasn’t wandered off overnight.',
+          cs: 'Pogo si našel svůj kámen. Stojí na něm každé ráno a kouká do kraje, jako by kontroloval, jestli louka přes noc nikam neutekla.',
+          en: 'Pogo has found his rock. He stands on it every morning and surveys the land, as if checking the meadow hasn’t wandered off overnight.',
         },
         {
-          cs: 'Zápisek druhý: Po stříhání vlny chodí tři dny uraženě. Čtvrtý den zjistí, že se mu líp skáče, a je zase king.',
-          en: 'Entry two: For three days after shearing he sulks. On the fourth he discovers he jumps better, and he is king again.',
+          cs: 'Po stříhání vlny chodí tři dny uraženě. Čtvrtý den zjistí, že se mu líp skáče, a je zase king.',
+          en: 'For three days after shearing he sulks. On the fourth he discovers he jumps better, and he is king again.',
+        },
+        {
+          cs: 'Naučil se, že když zaklepe kopýtkem o kbelík, někdo přijde. Od té doby klepe, i když nic nepotřebuje. Prostě si ověřuje, že to pořád funguje.',
+          en: 'He learned that tapping a hoof on the bucket makes someone appear. Now he taps even when he needs nothing. Just checking the system still works.',
+        },
+        {
+          cs: 'Ve stádu je nejmenší a chodí první. Nikdo se tomu nediví, nejmíň ze všech on sám.',
+          en: 'He is the smallest in the flock and he walks in front. Nobody finds this strange, least of all him.',
+        },
+        {
+          cs: 'Přivezli ho v krabici od banánů, vešel se do dlaní. Rok nato jsme mu museli zvýšit ohradník.',
+          en: 'He arrived in a banana box and fitted in two cupped hands. A year later we had to raise the fence.',
+        },
+      ],
+      facts: [
+        {
+          cs: 'Ovce si pamatuje obličeje. Ve výzkumu poznávaly ovce desítky tváří jiných ovcí i lidí — a pamatovaly si je přes dva roky.',
+          en: 'Sheep remember faces. In research, sheep recognised dozens of other sheep and of human faces — and still knew them two years later.',
+        },
+        {
+          cs: 'Zorničky má ovce vodorovné a obdélníkové. Díky nim vidí kolem sebe skoro dokola, aniž by musela otočit hlavou — hodí se to, když vás celý svět považuje za oběd.',
+          en: 'A sheep’s pupils are horizontal rectangles. They give it a near-panoramic view without turning its head — handy when the whole world thinks of you as lunch.',
+        },
+        {
+          cs: 'Domácí ovce vlnu sama neshodí. Roste jí pořád dál — je to vlastnost, kterou v ní vypěstoval člověk, a proto ji stříhání nezdobí, ale doslova zachraňuje.',
+          en: 'A domestic sheep cannot shed its fleece. It simply keeps growing — a trait bred into them by humans, which is why shearing is not grooming but a genuine rescue.',
+        },
+        {
+          cs: 'Ovce nemá horní přední zuby. Místo nich má tvrdou dásňovou destičku a trávu utrhává o spodní řezáky.',
+          en: 'Sheep have no upper front teeth. Instead they have a hard dental pad and tear grass against their lower incisors.',
+        },
+        {
+          cs: 'Sama ovce trpí. Ve stádu jí klesá tep i hladina stresových hormonů, takže v azylu nikdy nezůstává jediná — je to stejně důležité jako krmení.',
+          en: 'A lone sheep suffers. In a flock its heart rate and stress hormones drop, so a sanctuary never keeps just one — it matters as much as feeding them.',
         },
       ],
       // krémová vlna, hnědá tvářička a tmavé nožky
@@ -169,14 +242,49 @@ const DATA = (() => {
         en: 'Perk: LUCKY HOOVES – collects 50% more coins and golden carrots give her twice the energy.',
       },
       stats: { speed: 1.06, jump: 1.0, drain: 1.0, coinMult: 1.5, goldenBonus: 2.0 },
+      speciesName: { cs: 'skot domácí', en: 'domestic cattle' },
       diary: [
         {
-          cs: 'Zápisek první: Avala pozná zvuk našeho auta o dvě zatáčky dřív než my. Než zaparkujeme, už stojí u vrat a tváří se, že tam byla náhodou.',
-          en: 'Entry one: Avala recognizes our car two bends before we arrive. By the time we park she is at the gate, pretending she just happened to be passing.',
+          cs: 'Avala pozná zvuk našeho auta o dvě zatáčky dřív než my. Než zaparkujeme, už stojí u vrat a tváří se, že tam byla náhodou.',
+          en: 'Avala recognizes our car two bends before we arrive. By the time we park she is at the gate, pretending she just happened to be passing.',
         },
         {
-          cs: 'Zápisek druhý: Nejradši má, když si k ní někdo sedne do trávy a nic nechce. To si lehne vedle a přežvykuje do rytmu.',
-          en: 'Entry two: Her favourite thing is someone sitting down in the grass wanting nothing at all. Then she lies beside them and chews in rhythm.',
+          cs: 'Nejradši má, když si k ní někdo sedne do trávy a nic nechce. To si lehne vedle a přežvykuje do rytmu.',
+          en: 'Her favourite thing is someone sitting down in the grass wanting nothing at all. Then she lies beside them and chews in rhythm.',
+        },
+        {
+          cs: 'Avala si vybrala svého člověka. Nevybíráme si my je — vybírají si ony nás, a ona se rozhodla hned první den.',
+          en: 'Avala picked her human. We do not choose them — they choose us, and she made up her mind on day one.',
+        },
+        {
+          cs: 'Umí otevřít vrata krkem. Neutíká, jen si projde k sousedům, pozdraví a vrátí se. Vrata po sobě zásadně nechává otevřená.',
+          en: 'She can open the gate with her neck. She does not run off, just strolls over to the neighbours, says hello and comes back. She never closes the gate behind her.',
+        },
+        {
+          cs: 'Když do azylu přijede nové zvíře, jde k němu Avala první. Zůstane stát kousek od něj a čeká přesně tak dlouho, jak je potřeba.',
+          en: 'When a new animal arrives, Avala goes first. She stands a little way off and waits exactly as long as it takes.',
+        },
+      ],
+      facts: [
+        {
+          cs: 'Kráva má jeden žaludek, ale ten má čtyři oddíly: bachor, čepec, knihu a slez. Přežvykováním stráví kolem osmi hodin denně — proto ji nikdy neuvidíte jen tak nudit se.',
+          en: 'A cow has one stomach with four chambers: rumen, reticulum, omasum and abomasum. She spends around eight hours a day chewing the cud — which is why you never really see her idle.',
+        },
+        {
+          cs: 'Krávy mají kamarádky. Když je zvíře se svou oblíbenou družkou, klesá mu tep i hladina stresových hormonů; když je od ní odděleno, obojí stoupá.',
+          en: 'Cows have best friends. Beside a preferred companion, a cow’s heart rate and stress hormones drop; separate the two and both go straight back up.',
+        },
+        {
+          cs: 'Otisk krávina čenichu je jedinečný jako lidský otisk prstu. Na některých místech světa se podle něj zvířata skutečně evidují.',
+          en: 'A cow’s muzzle print is as unique as a human fingerprint. In some parts of the world cattle really are identified by it.',
+        },
+        {
+          cs: 'Kráva vidí skoro dokola, ale přímo před čenichem špatně odhaduje vzdálenost. Proto ji dokáže zastavit obyčejný stín nebo louže — nevidí, jak jsou hluboké.',
+          en: 'A cow sees almost all the way around herself but judges distance poorly right in front of her nose. That is why a plain shadow or puddle can stop her — she cannot tell how deep it is.',
+        },
+        {
+          cs: 'Skot se v klidu dožívá dvaceti let i víc. V chovu se toho ale zvířata nedožijí ani zdaleka — v azylu jde právě o ten zbytek života.',
+          en: 'Cattle can live twenty years and more. In farming they never get anywhere near that — a sanctuary is about exactly the rest of that life.',
         },
       ],
       // tmavě hnědo-oranžová kravka s bílými flíčky a malými růžky (podle skutečné Avaly)
@@ -239,14 +347,49 @@ const DATA = (() => {
         en: 'Perk: SNOUT MAGNET – pulls in carrots and coins from afar.',
       },
       stats: { speed: 0.96, jump: 0.95, drain: 0.95, magnet: 105 },
+      speciesName: { cs: 'prase domácí', en: 'domestic pig' },
       diary: [
         {
-          cs: 'Zápisek první: Flíček si vyryl v bahně důlek přesně na svoje tělo. Kdo si do něj lehne, musí ven. I když je to jiné prase.',
-          en: 'Entry one: Flíček has dug a mud hollow shaped exactly like himself. Anyone who lies in it has to leave. Even another pig.',
+          cs: 'Flíček si vyryl v bahně důlek přesně na svoje tělo. Kdo si do něj lehne, musí ven. I když je to jiné prase.',
+          en: 'Flíček has dug a mud hollow shaped exactly like himself. Anyone who lies in it has to leave. Even another pig.',
         },
         {
-          cs: 'Zápisek druhý: Nosem najde jablko pod deseti centimetry listí. Klíče od kůlny bohužel taky, takže je schováváme výš.',
-          en: 'Entry two: His nose finds an apple under four inches of leaves. Unfortunately it finds the shed keys too, so we keep those higher up now.',
+          cs: 'Nosem najde jablko pod deseti centimetry listí. Klíče od kůlny bohužel taky, takže je schováváme výš.',
+          en: 'His nose finds an apple under four inches of leaves. Unfortunately it finds the shed keys too, so we keep those higher up now.',
+        },
+        {
+          cs: 'Flíček má tři různá chrochtání: jedno na jídlo, jedno na drbání a jedno, kterému pořád nerozumíme. Zní docela naléhavě.',
+          en: 'Flíček has three distinct grunts: one for food, one for scratches and one we still cannot decode. It sounds fairly urgent.',
+        },
+        {
+          cs: 'Naučil se otevírat lednici v kůlně. Musíme na ní mít kolík. Kolík se naučil vytáhnout za dva dny.',
+          en: 'He learned to open the shed fridge, so we put a peg on it. He learned to pull the peg out in two days.',
+        },
+        {
+          cs: 'Spí v seně srovnaném do hnízda, které si každý večer staví znovu. Nikdy ne stejně a nikdy ne rychle.',
+          en: 'He sleeps in a nest of hay he rebuilds every single evening. Never the same way twice and never in a hurry.',
+        },
+      ],
+      facts: [
+        {
+          cs: 'Prasata patří k nejchytřejším zvířatům vůbec. Naučí se používat zrcadlo k nalezení schovaného jídla a zvládnou i jednoduchou počítačovou hru ovládanou rypáčkem.',
+          en: 'Pigs are among the most intelligent animals there are. They learn to use a mirror to find hidden food, and can even play a simple computer game with a snout-driven joystick.',
+        },
+        {
+          cs: 'Prase se nepotí. Válí se v bahně, aby se ochladilo — a bahno mu k tomu slouží jako opalovací krém i jako ochrana proti parazitům.',
+          en: 'Pigs cannot sweat. They wallow in mud to cool down — and the mud doubles as sunscreen and as protection from parasites.',
+        },
+        {
+          cs: 'Prasata jsou čistotná zvířata. Kdykoli mají dost místa, důsledně oddělují spací kout od záchodu. Špinavá jsou jen tam, kde jim místo nikdo nedal.',
+          en: 'Pigs are clean animals. Given enough space they strictly separate their sleeping corner from their toilet. They are only filthy where nobody gave them the room.',
+        },
+        {
+          cs: 'Rypák je citlivější než lidská dlaň a čich prasete patří ke špičce. Proto se prasata odjakživa vodila do lesa hledat lanýže.',
+          en: 'A pig’s snout is more sensitive than a human palm and its sense of smell is world class. That is why pigs have always been taken into the woods to find truffles.',
+        },
+        {
+          cs: 'Sele se naučí svoje jméno a přijde, když ho zavoláte. Rozezná také hlasy jednotlivých lidí — a pamatuje si, kdo se k němu jak choval.',
+          en: 'A piglet learns its own name and comes when called. It also tells human voices apart — and remembers who treated it how.',
         },
       ],
       // šedivé prasátko s černými fleky a růžovošedým rypáčkem
@@ -309,14 +452,49 @@ const DATA = (() => {
         en: 'Perk: BATTERING RAM – smashes through 5 obstacles per run without losing energy.',
       },
       stats: { speed: 1.04, jump: 1.05, drain: 1.0, ram: 5 },
+      speciesName: { cs: 'muflon (divoká ovce)', en: 'mouflon (wild sheep)' },
       diary: [
         {
-          cs: 'Zápisek první: Yakul se poprvé nechal podrbat mezi rohy. Trvalo to rok a půl a stálo to spoustu trpělivosti — jeho i naší.',
-          en: 'Entry one: Yakul let us scratch between his horns for the first time. It took a year and a half and a great deal of patience — his and ours.',
+          cs: 'Yakul se poprvé nechal podrbat mezi rohy. Trvalo to rok a půl a stálo to spoustu trpělivosti — jeho i naší.',
+          en: 'Yakul let us scratch between his horns for the first time. It took a year and a half and a great deal of patience — his and ours.',
         },
         {
-          cs: 'Zápisek druhý: Když přijde bouřka, postaví se mezi ni a ostatní. Nikdo ho o to neprosil.',
-          en: 'Entry two: When a storm comes, he places himself between it and the others. Nobody asked him to.',
+          cs: 'Když přijde bouřka, postaví se mezi ni a ostatní. Nikdo ho o to neprosil.',
+          en: 'When a storm comes, he places himself between it and the others. Nobody asked him to.',
+        },
+        {
+          cs: 'Yakul si hlídá vzdálenost. Půl metru je jeho hranice — a kdo ji respektuje, toho si jednou za čas pustí o krok blíž.',
+          en: 'Yakul keeps his distance. Half a metre is his line — and whoever respects it is let one step closer, every once in a while.',
+        },
+        {
+          cs: 'Zkusil rohy na plot, na kolečko, na sud i na vlastní odraz v okně. Vyhrálo okno. Yakul tvrdí, že to byla remíza.',
+          en: 'He has tested his horns on the fence, the wheelbarrow, a barrel and his own reflection in a window. The window won. Yakul insists it was a draw.',
+        },
+        {
+          cs: 'Přišel k nám jako sirotek, kterého někdo našel u silnice. Krmili jsme ho z lahve a on nám dodnes neodpustil, že jsme přestali.',
+          en: 'He came to us as an orphan someone found by the roadside. We bottle-fed him, and he has never quite forgiven us for stopping.',
+        },
+      ],
+      facts: [
+        {
+          cs: 'Muflon je divoká ovce — nejbližší divoký příbuzný té domácí. A hlavní rozdíl je vidět hned: srst mu na jaře vypadá sama, nůžky v životě nepotřebuje.',
+          en: 'The mouflon is a wild sheep — the closest wild relative of the domestic one. The main difference shows at once: its coat sheds by itself in spring, and it never needs shears.',
+        },
+        {
+          cs: 'Rohy rostou beranovi celý život a přibývají na nich přírůstkové rýhy. Podobně jako letokruhy na stromě se podle nich dá odhadnout věk.',
+          en: 'A ram’s horns grow all his life, adding annual growth rings. Much like tree rings, they can be used to estimate his age.',
+        },
+        {
+          cs: 'Do našich lesů se muflon nedostal sám. Pochází z Korsiky a Sardinie a ve střední Evropě ho v 19. století vysadili lidé jako lovnou zvěř.',
+          en: 'The mouflon did not reach our forests on its own. It comes from Corsica and Sardinia, and was released into central Europe in the 19th century as game.',
+        },
+        {
+          cs: 'V zimní srsti mu na bocích vyskočí světlé „sedlo“. Podle téhle skvrny se muflon pozná i na velkou dálku.',
+          en: 'In winter coat a pale “saddle” patch appears on his flanks. It is what lets you identify a mouflon from a long way off.',
+        },
+        {
+          cs: 'Muflon je výborný skokan a lezec. Ve skalách zvládá terén, ve kterém by se ovce domácí neudržela ani chvíli — po tisíciletích v ohradách o tuhle schopnost přišla.',
+          en: 'Mouflons are superb jumpers and climbers, handling rocky ground where a domestic sheep would not last a moment — millennia in pens took that ability away from her.',
         },
       ],
       // tmavohnědý muflon se světlým sedlem, bílým čumákem a rohy
@@ -379,14 +557,49 @@ const DATA = (() => {
         en: 'Perk: INNER PEACE – energy drains a quarter slower.',
       },
       stats: { speed: 0.94, jump: 0.95, drain: 0.75 },
+      speciesName: { cs: 'skot domácí', en: 'domestic cattle' },
       diary: [
         {
-          cs: 'Zápisek první: Květa dojde všude. Ne rychle — ale dojde. Zatímco ostatní odpočívají, ona je už o louku dál.',
-          en: 'Entry one: Květa gets everywhere. Not fast — but she gets there. While the others are still resting she is a meadow ahead.',
+          cs: 'Květa dojde všude. Ne rychle — ale dojde. Zatímco ostatní odpočívají, ona je už o louku dál.',
+          en: 'Květa gets everywhere. Not fast — but she gets there. While the others are still resting she is a meadow ahead.',
         },
         {
-          cs: 'Zápisek druhý: Nováčci se drží u ní. Ona nic nedělá, jen stojí a klidně žvýká, a i to úplně stačí.',
-          en: 'Entry two: Newcomers stay close to her. She does nothing, just stands and chews calmly, and somehow that is entirely enough.',
+          cs: 'Nováčci se drží u ní. Ona nic nedělá, jen stojí a klidně žvýká, a i to úplně stačí.',
+          en: 'Newcomers stay close to her. She does nothing, just stands and chews calmly, and somehow that is entirely enough.',
+        },
+        {
+          cs: 'Květa nikdy nikam nespěchá, a přesto je vždycky u toho. Po čase nám došlo, že prostě vyráží dřív.',
+          en: 'Květa never hurries anywhere and yet she is always there. It eventually dawned on us that she simply sets off earlier.',
+        },
+        {
+          cs: 'Když se ostatní přetahují o seno, Květa počká. Za pět minut je u sena sama a má klid.',
+          en: 'While the others scrap over the hay, Květa waits. Five minutes later she has the hay to herself and complete peace.',
+        },
+        {
+          cs: 'Přijela k nám v den, kdy měla jet úplně jinam. Od té doby je jí patnáct let a stín pod jabloní je oficiálně její.',
+          en: 'She arrived on the day she was supposed to go somewhere else entirely. She is fifteen now, and the shade under the apple tree is officially hers.',
+        },
+      ],
+      facts: [
+        {
+          cs: 'Kráva dá mléko jen tehdy, když má tele — stejně jako každý jiný savec. Bez otelení mléko netvoří. Je to jedna z věcí, které o kravách skoro nikdo neví.',
+          en: 'A cow gives milk only when she has a calf — like every other mammal. Without calving there is no milk at all. It is one of the things almost nobody knows about cows.',
+        },
+        {
+          cs: 'Krávy se dorozumívají hlasem a poznají se podle něj. Matka rozezná bučení svého telete mezi desítkami jiných — a tele pozná ji.',
+          en: 'Cows communicate by voice and know each other by it. A mother picks out her own calf’s call among dozens of others — and the calf knows hers.',
+        },
+        {
+          cs: 'Ve stádu platí pořadí a krávy si ho pamatují léta. Nováček se do něj zařazuje pomalu, proto se zvířata v azylu seznamují postupně a nikdy ne násilím.',
+          en: 'A herd has a rank order and cows remember it for years. A newcomer works her way in slowly, which is why sanctuary animals are introduced gradually and never by force.',
+        },
+        {
+          cs: 'Kráva spí jen po kouscích — dohromady sotva čtyři hodiny denně. Zato deset až dvanáct hodin denně jen tak leží, přežvykuje a odpočívá, a měkké místo na ležení je pro ni zásadní.',
+          en: 'A cow sleeps only in snatches — barely four hours a day in total. She does, however, spend ten to twelve hours lying down, chewing and resting, so a soft place to lie is essential to her.',
+        },
+        {
+          cs: 'Čich má kráva výborný. Známého člověka nebo vodu zachytí na velkou vzdálenost a podle pachu pozná i to, jestli je někdo ve stresu.',
+          en: 'A cow’s sense of smell is excellent. She picks up a familiar person or water from far away — and can even smell whether someone is stressed.',
         },
       ],
       // stejná tmavě hnědo-oranžová jako Avala – liší se maskou přes oči, bílou ofinkou a chybějícími rohy

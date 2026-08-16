@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.3.0';
+  const GAME_VERSION = '1.4.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -2880,7 +2880,7 @@
      HUD & OBRAZOVKY (DOM)
      ========================================================= */
   const $ = (id) => document.getElementById(id);
-  const screens = ['menu', 'shop', 'over', 'pause', 'ach', 'settings'];
+  const screens = ['menu', 'shop', 'over', 'pause', 'ach', 'settings', 'diary'];
 
   let curScreen = null; // co je zrovna vidět – potřebuje to tlačítko Zpět
   function showScreen(name) {
@@ -2917,6 +2917,11 @@
     // rozbalené mise jsou nejvrchnější vrstva – zavřou se první
     if (curScreen === 'menu' && !$('daily-pop').hidden) {
       closeDaily(); AUDIO.play('click');
+      return true;
+    }
+    // otevřená knížka je nad obchodem – Zpět ji jen zavře
+    if (curScreen === 'diary') {
+      showScreen('shop'); AUDIO.play('click');
       return true;
     }
     if (curScreen === 'shop' || curScreen === 'ach' || curScreen === 'over' || curScreen === 'settings') {
@@ -2974,6 +2979,154 @@
     const s = cv.width / 190;
     c2.clearRect(0, 0, cv.width, cv.height);
     GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: 0.6 }, 400);
+  }
+
+  /* =========================================================
+     DENÍČEK Z AZYLU
+
+     Knížka přes celou obrazovku. Má dvě části: zápisky ošetřovatelů,
+     které se odemykají běháním s daným zvířátkem (DIARY_STEP běhů za
+     zápisek), a „Věděli jste?“ – zajímavosti o druhu, které jsou
+     přístupné vždycky, i u nekoupeného zvířátka. Vzdělávací část je
+     důvod, proč hra existuje, a nemá smysl ji schovávat za odměnu.
+
+     Listuje se po dvoustranách. Stránky jsou obyčejné DOM prvky;
+     překlopení dělá jediný list (#book-leaf) nad nimi, pod kterým je
+     už nový obsah – nic se tedy nekreslí dvakrát.
+     ========================================================= */
+  const DIARY_STEP = 3;    // po kolika bězích s postavou přibude zápisek
+  let bookChar = null, bookPages = [], bookSpread = 0, bookBusy = false;
+
+  function diaryUnlocked(ch) {
+    const runs = (save.charRuns && save.charRuns[ch.id]) || 0;
+    return Math.min((ch.diary || []).length, Math.floor(runs / DIARY_STEP));
+  }
+
+  function buildBookPages(ch) {
+    const pages = [{ type: 'cover' }];
+    const have = diaryUnlocked(ch);
+    (ch.diary || []).forEach((entry, i) => {
+      pages.push(i < have ? { type: 'entry', i, text: I18N.pick(entry) } : { type: 'locked', i });
+    });
+    (ch.facts || []).forEach((f, i) => pages.push({ type: 'fact', i, text: I18N.pick(f) }));
+    pages.push({ type: 'end' });
+    if (pages.length % 2) pages.push({ type: 'blank' });  // dvoustrana musí vyjít
+    return pages;
+  }
+
+  function renderPage(el, page, num) {
+    el.innerHTML = '';
+    if (!page || page.type === 'blank') return;
+    const add = (cls, txt, tag = 'p') => {
+      const n = document.createElement(tag);
+      n.className = cls; n.textContent = txt;
+      el.appendChild(n);
+      return n;
+    };
+    const species = bookChar.speciesName ? I18N.pick(bookChar.speciesName) : '';
+    if (page.type === 'cover') {
+      // titulní strana sedí uprostřed papíru, ne nahoře – jako v knize
+      const mid = document.createElement('div');
+      mid.className = 'page-mid';
+      el.appendChild(mid);
+      const cv = document.createElement('canvas');
+      cv.className = 'page-portrait'; cv.width = 190; cv.height = 150;
+      mid.appendChild(cv);
+      drawPortrait(cv, bookChar);
+      const put = (cls, txt, tag = 'p') => {
+        const n = document.createElement(tag);
+        n.className = cls; n.textContent = txt;
+        mid.appendChild(n);
+      };
+      put('page-title', I18N.pick(bookChar.name), 'h3');
+      put('page-species', species, 'span');
+      put('page-quote', '„' + I18N.pick(bookChar.tagline) + '“');
+      put('page-sign', I18N.t('diary.home'));
+    } else if (page.type === 'entry') {
+      add('page-kicker', I18N.t('diary.entries'), 'span');
+      add('page-head', I18N.t('diary.entry', { n: page.i + 1 }), 'h3');
+      add('page-body', page.text);
+      add('page-sign', I18N.t('diary.sign'));
+    } else if (page.type === 'locked') {
+      add('page-kicker', I18N.t('diary.entries'), 'span');
+      const mid = document.createElement('div');
+      mid.className = 'page-mid';
+      const wax = document.createElement('div');
+      wax.className = 'page-wax'; wax.textContent = '🔒';
+      const txt = document.createElement('p');
+      txt.className = 'page-locked-text';
+      const runs = (save.charRuns && save.charRuns[bookChar.id]) || 0;
+      const left = (page.i + 1) * DIARY_STEP - runs;
+      // čeština skloňuje: 1 běh, 2–4 běhy, 5+ běhů
+      const w = I18N.lang === 'cs'
+        ? (left === 1 ? 'běh' : left < 5 ? 'běhy' : 'běhů')
+        : (left === 1 ? 'run' : 'runs');
+      txt.textContent = I18N.t('diary.locked', { n: left, w });
+      mid.append(wax, txt);
+      el.appendChild(mid);
+    } else if (page.type === 'fact') {
+      add('page-kicker', species, 'span');
+      add('page-head', I18N.t('diary.facts'), 'h3');
+      add('page-body', page.text);
+    } else if (page.type === 'end') {
+      const mid = document.createElement('div');
+      mid.className = 'page-mid';
+      const p = document.createElement('p');
+      p.className = 'page-body';
+      p.textContent = I18N.t('diary.endText');
+      const a = document.createElement('a');
+      a.className = 'page-link';
+      a.href = 'https://nechmerust.org';
+      a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = I18N.t('diary.endLink');
+      mid.append(p, a);
+      el.appendChild(mid);
+    }
+    add('page-num', String(num), 'div');
+  }
+
+  function drawSpread() {
+    renderPage($('book-left'), bookPages[bookSpread * 2], bookSpread * 2 + 1);
+    renderPage($('book-right'), bookPages[bookSpread * 2 + 1], bookSpread * 2 + 2);
+    const total = Math.ceil(bookPages.length / 2);
+    $('book-pos').textContent = `${bookSpread + 1}/${total}`;
+    $('btn-diary-prev').disabled = bookSpread === 0;
+    $('btn-diary-next').disabled = bookSpread >= total - 1;
+  }
+
+  function turnBook(dir) {
+    const total = Math.ceil(bookPages.length / 2);
+    const next = bookSpread + dir;
+    if (bookBusy || !bookChar || next < 0 || next >= total) return;
+    AUDIO.play('click');
+    PLATFORM.haptic('light');
+    if (lowFx || reduceMotionMq.matches) { bookSpread = next; drawSpread(); return; }
+    // list je otisk odcházející stránky – plátno se musí překreslit ručně,
+    // innerHTML bitmapu nepřenese
+    const from = dir > 0 ? $('book-right') : $('book-left');
+    const leaf = $('book-leaf');
+    leaf.innerHTML = from.innerHTML;
+    const srcs = from.querySelectorAll('canvas'), dsts = leaf.querySelectorAll('canvas');
+    for (let i = 0; i < srcs.length && i < dsts.length; i++) {
+      dsts[i].width = srcs[i].width; dsts[i].height = srcs[i].height;
+      dsts[i].getContext('2d').drawImage(srcs[i], 0, 0);
+    }
+    leaf.className = 'book-leaf ' + (dir > 0 ? 'turn-next' : 'turn-prev');
+    bookBusy = true;
+    bookSpread = next;
+    drawSpread();
+    setTimeout(() => { leaf.className = 'book-leaf'; leaf.innerHTML = ''; bookBusy = false; }, 560);
+  }
+
+  function openDiary(ch) {
+    bookChar = ch;
+    bookPages = buildBookPages(ch);
+    bookSpread = 0;
+    $('book-title').textContent = '📔 ' + I18N.pick(ch.name);
+    $('book-hint').textContent = I18N.t('diary.hint');
+    drawSpread();
+    AUDIO.play('click');
+    showScreen('diary');
   }
 
   /* ---------- odznaky (achievementy) ----------
@@ -3629,34 +3782,38 @@
 
       card.appendChild(statRows(ch));
 
-      /* Deníček z azylu – opravdové útržky ze života zvířátka. Odemyká se
-         běháním právě s ním, takže hráč má důvod prostřídat celou partu
-         a ne jen zůstat u nejrychlejšího. */
-      if (owned && ch.diary && ch.diary.length) {
-        const runsWith = (save.charRuns && save.charRuns[ch.id]) || 0;
-        const box = document.createElement('div');
+      /* Deníček z azylu – opravdové útržky ze života zvířátka a zajímavosti
+         o jeho druhu. Na kartě je jen ochutnávka: karta v karuselu má pevnou
+         výšku (#shop-grid má overflow-y: hidden), takže celý deníček by
+         přetlačil statistiky i tlačítko mimo záběr. Kliknutím se otevře
+         knížka přes celou obrazovku, ve které se dá listovat.
+
+         Otevírá se i u nekoupeného zvířátka – zajímavosti o druhu za
+         odměnu schované nejsou, zamčené zůstávají jen osobní zápisky. */
+      if ((ch.diary && ch.diary.length) || (ch.facts && ch.facts.length)) {
+        const box = document.createElement('button');
         box.className = 'diary';
+        box.type = 'button';
         const dTitle = document.createElement('div');
         dTitle.className = 'diary-title';
+        const have = diaryUnlocked(ch);
         dTitle.textContent = I18N.t('shop.diary');
+        if (ch.diary && ch.diary.length) dTitle.textContent += `  ${have}/${ch.diary.length}`;
         box.appendChild(dTitle);
-        /* Ukazuje se vždy jen JEDEN zápisek – ten poslední odemčený, nebo
-           zámek s tím, kolik běhů ještě chybí. Karta v karuselu má pevnou
-           výšku (#shop-grid má overflow-y: hidden), takže celý deníček
-           najednou by přetlačil statistiky i tlačítko mimo záběr. Takhle
-           navíc každý nový zápisek dorazí jako samostatná odměna. */
-        const step = 3;                        // po kolika bězích přibývá zápisek
-        const have = Math.min(ch.diary.length, Math.floor(runsWith / step));
         const p = document.createElement('p');
         if (have > 0) {
           p.className = 'diary-entry';
           p.textContent = I18N.pick(ch.diary[have - 1]);
-          if (ch.diary.length > 1) dTitle.textContent += `  ${have}/${ch.diary.length}`;
         } else {
           p.className = 'diary-entry locked';
-          p.textContent = '🔒 ' + I18N.t('shop.diaryLocked', { n: step });
+          p.textContent = '🔒 ' + I18N.t('shop.diaryLocked', { n: DIARY_STEP });
         }
         box.appendChild(p);
+        const more = document.createElement('span');
+        more.className = 'diary-more';
+        more.textContent = I18N.t('shop.diaryOpen', { n: (ch.facts || []).length });
+        box.appendChild(more);
+        box.addEventListener('click', () => openDiary(ch));
         card.appendChild(box);
       }
 
@@ -3787,6 +3944,28 @@
   $('btn-ach-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-settings').addEventListener('click', () => { showScreen('settings'); AUDIO.play('click'); });
   $('btn-settings-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
+  /* ---------- listování v deníčku ---------- */
+  $('btn-diary-close').addEventListener('click', () => { AUDIO.play('click'); showScreen('shop'); });
+  $('btn-diary-prev').addEventListener('click', () => turnBook(-1));
+  $('btn-diary-next').addEventListener('click', () => turnBook(1));
+  // tažení prstem po knížce listuje jako v opravdové knize; v otočené
+  // hře nese vodorovnou osu clientY (stejně jako u pointerGameY)
+  const bookX = (e) => (forcedLandscape() ? e.clientY : e.clientX);
+  let bookDrag = null;
+  $('book').addEventListener('pointerdown', (e) => { bookDrag = bookX(e); });
+  $('book').addEventListener('pointerup', (e) => {
+    if (bookDrag === null) return;
+    const dx = bookX(e) - bookDrag;
+    bookDrag = null;
+    if (Math.abs(dx) > 42) turnBook(dx < 0 ? 1 : -1);
+  });
+  $('book').addEventListener('pointercancel', () => { bookDrag = null; });
+  window.addEventListener('keydown', (e) => {
+    if (curScreen !== 'diary') return;
+    if (e.code === 'ArrowRight') { e.preventDefault(); turnBook(1); }
+    if (e.code === 'ArrowLeft') { e.preventDefault(); turnBook(-1); }
+  });
+
   $('btn-daily').addEventListener('click', toggleDaily);
   $('btn-again').addEventListener('click', startRun);
   $('btn-share').addEventListener('click', shareRun);
