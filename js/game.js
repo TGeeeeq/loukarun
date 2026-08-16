@@ -784,6 +784,7 @@
     const card = document.querySelector('#screen-over .over-card');
     const storyEl = $('over-story');
     const textEl = storyEl.querySelector('.story-text');
+    const ghostEl = storyEl.querySelector('.story-ghost');
     const meters = (v) => v + ' m';
 
     overStop();
@@ -793,6 +794,7 @@
 
     $('over-title').textContent = d.isBest ? I18N.t('over.record') : I18N.t('over.finish');
     storyEl.setAttribute('aria-label', d.story); // čtečka dostane celý vtip najednou, ne po písmenkách
+    ghostEl.textContent = d.story; // neviditelná kopie – drží panelu výšku celého vtipu
     drawPortrait($('over-portrait'), S.char);
 
     // šetrný režim / slabý telefon: rovnou hotový výsledek, žádná show
