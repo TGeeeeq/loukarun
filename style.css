@@ -32,6 +32,30 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --gvw: 1vw; /* 1 % šířky hry */
   --gvh: 1vh; /* 1 % výšky hry */
+
+  /* značka – stejná jména jako promo/znacka/tokeny.css */
+  --lr-sky: #8ed4f7;
+  --lr-gold-1: #ffe08a;
+  --lr-gold-2: #ffc94a;
+  --lr-gold-dark: #d89b26;
+  --lr-green-1: #b0e89a;
+  --lr-green-2: #7ac95e;
+  --lr-green-dark: #55a13c;
+  --lr-ink: #4a3220;
+  --lr-ink-soft: #5a4a38;
+  --lr-cream-1: #fffdf5;
+  --lr-cream-2: #f5ecd8;
+
+  /* pohyb – jeden slovník, ať se menu chová jednotně */
+  --dur-fast: .12s;
+  --dur-base: .28s;
+  --dur-slow: .55s;
+  --ease-out: cubic-bezier(.2, .9, .3, 1);
+  --ease-back: cubic-bezier(.2, .9, .3, 1.2);
+
+  /* parallax – přepisuje js/game.js podle myši (jen desktop) */
+  --px: 0;
+  --py: 0;
 }
 
 /* =========================================================
@@ -177,32 +201,122 @@ a.btn { text-decoration: none; display: inline-block; }
   50% { transform: translateX(-50%) scale(1.07); }
 }
 
-/* ---------- obrazovky ---------- */
+/* ---------- obrazovky ----------
+   Obrazovky se nepřepínají display:none/flex (to nejde animovat), ale
+   viditelností + průhledností. Skrytá obrazovka je pořád v rozvržení, ale
+   `visibility: hidden` ji vyřadí z čteček i z trefování prstem a
+   `pointer-events: none` pojistí, že přes ni jde ťuknout na hru. */
 .screen {
   position: fixed; inset: 0;
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   padding: max(20px, var(--safe-top)) 20px max(20px, var(--safe-bottom));
   overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.985);
+  transition:
+    opacity var(--dur-base) ease,
+    transform var(--dur-base) var(--ease-out),
+    visibility 0s linear var(--dur-base);
 }
-.screen.visible { display: flex; }
+.screen.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    opacity var(--dur-base) ease,
+    transform var(--dur-base) var(--ease-back),
+    visibility 0s;
+}
+/* nádech směru – odkud která obrazovka přilétá */
+#screen-shop, #screen-ach { transform: translateX(4%) scale(0.99); }
+#screen-settings { transform: translateY(5%) scale(0.99); }
+#screen-over { transform: scale(0.94); }
+#screen-shop.visible, #screen-ach.visible,
+#screen-settings.visible, #screen-over.visible { transform: none; }
 
-/* menu */
-#screen-menu { justify-content: space-between; background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0) 30%); }
+/* =========================================================
+   HLAVNÍ MENU
+   Základ = vysoký displej (desktop, tablet): vystředěný sloupec
+   značka → deck → mise. Nízký displej (telefon na šířku) přebírá
+   níže grid, kde levá polovina zůstane volná pro běžící zvířátko.
+   ========================================================= */
+#screen-menu {
+  justify-content: center;
+  gap: clamp(14px, calc(3 * var(--gvh)), 32px);
+  /* menu se z principu musí vejít bez rolování; navíc rozpínavý kroužek
+     kolem „Běžet“ přesahuje mimo tlačítko a bez tohohle by přidal
+     vodorovný posuvník přes celou obrazovku */
+  overflow: clip;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,0.16), transparent 62%),
+    linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0) 32%),
+    linear-gradient(0deg, rgba(0,0,0,0.20), rgba(0,0,0,0) 26%);
+}
 /* plynulé objevení menu po intru */
 #screen-menu.fade-in { animation: menuFadeIn .7s ease both; }
 @keyframes menuFadeIn {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: none; }
 }
-.menu-top { text-align: center; margin-top: 4vh; }
 
-/* přepínač jazyka – viditelný v rohu úvodní obrazovky */
-.lang-switch {
+/* ---------- ambientní pyl ----------
+   Osm bodů, jeden keyframe, nula JS – stejný recept jako světlušky
+   u výzvy „otoč telefon“. Zhasíná v .low-fx i v šetrném režimu. */
+.menu-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.menu-fx i {
   position: absolute;
-  top: max(14px, var(--safe-top));
-  right: max(14px, var(--safe-right));
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,240,190,0) 70%);
+  opacity: 0;
+  animation: pollenFloat 9s ease-in-out infinite;
+}
+.menu-fx i:nth-child(1) { left: 10%; top: 62%; animation-delay: 0s;   animation-duration: 8.4s; }
+.menu-fx i:nth-child(2) { left: 26%; top: 78%; animation-delay: 1.7s; animation-duration: 10.2s; }
+.menu-fx i:nth-child(3) { left: 41%; top: 55%; animation-delay: 3.1s; animation-duration: 9.1s; }
+.menu-fx i:nth-child(4) { left: 58%; top: 82%; animation-delay: 0.9s; animation-duration: 11s; }
+.menu-fx i:nth-child(5) { left: 72%; top: 48%; animation-delay: 4.6s; animation-duration: 8.8s; }
+.menu-fx i:nth-child(6) { left: 86%; top: 70%; animation-delay: 2.4s; animation-duration: 10.6s; }
+.menu-fx i:nth-child(7) { left: 18%; top: 40%; animation-delay: 5.8s; animation-duration: 9.6s; }
+.menu-fx i:nth-child(8) { left: 64%; top: 34%; animation-delay: 7.1s; animation-duration: 12s; }
+@keyframes pollenFloat {
+  0%       { opacity: 0; transform: translate3d(0, 0, 0) scale(0.6); }
+  12%      { opacity: 0.85; }
+  70%      { opacity: 0.5; }
+  100%     { opacity: 0; transform: translate3d(26px, -120px, 0) scale(1.15); }
+}
+
+/* ---------- systémová lišta (nastavení + jazyk) ----------
+   Vždy absolutně v rohu, ať ji nemusí řešit ani sloupec, ani grid. */
+.menu-rail {
+  position: absolute;
+  top: max(12px, var(--safe-top));
+  right: max(12px, var(--safe-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+#btn-settings {
+  background: rgba(255,255,255,0.28);
+  border: 1px solid rgba(255,255,255,0.45);
+  color: #fff;
+  font-size: 1.25rem;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  backdrop-filter: blur(6px);
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
+}
+#btn-settings:hover { background: rgba(255,255,255,0.42); }
+#btn-settings:active { transform: rotate(50deg) scale(0.94); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+/* přepínač jazyka */
+.lang-switch {
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -211,7 +325,6 @@ a.btn { text-decoration: none; display: inline-block; }
   border-radius: 999px;
   backdrop-filter: blur(6px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-  z-index: 5;
 }
 .lang-btn {
   font-family: inherit;
@@ -233,80 +346,178 @@ a.btn { text-decoration: none; display: inline-block; }
   text-shadow: none;
   box-shadow: 0 2px 0 #d89b26, 0 3px 8px rgba(0,0,0,0.2);
 }
+/* ---------- značka ---------- */
+.menu-brand {
+  text-align: center;
+  /* parallax jede přes samostatnou vlastnost `translate`, aby se nepral
+     s `transform`, kterým se prvky menu animují při nástupu */
+  translate: calc(var(--px) * 10px) calc(var(--py) * 7px);
+}
 .game-title {
-  font-size: clamp(3rem, 11vw, 5.5rem);
+  position: relative;
+  font-size: clamp(3rem, calc(11 * var(--gvw)), 5.5rem);
   font-weight: 800;
   letter-spacing: 2px;
   color: #fff;
-  text-shadow: 0 4px 0 #55a13c, 0 8px 0 rgba(0,0,0,0.15), 0 14px 30px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 0 var(--lr-green-dark), 0 8px 0 rgba(0,0,0,0.15), 0 14px 30px rgba(0,0,0,0.3);
   line-height: 0.95;
 }
-.game-title span { color: #ffe08a; text-shadow: 0 4px 0 #d89b26, 0 8px 0 rgba(0,0,0,0.15), 0 14px 30px rgba(0,0,0,0.3); }
-.game-version {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: rgba(255,255,255,0.55);
+.game-title span {
+  display: inline-block;
+  color: var(--lr-gold-1);
+  text-shadow: 0 4px 0 var(--lr-gold-dark), 0 8px 0 rgba(0,0,0,0.15), 0 14px 30px rgba(0,0,0,0.3);
+  animation: runFloat 3.6s ease-in-out infinite;
+}
+@keyframes runFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+/* světelný přejezd přes titul – jednou za sedm vteřin, jinak se neděje nic */
+.game-title::after {
+  content: '';
+  position: absolute; inset: -8% -6%;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.65) 50%, transparent 58%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: overlay;
+  animation: titleShine 7s ease-in-out 1.6s infinite;
+}
+@keyframes titleShine {
+  0%   { background-position: 240% 0; }
+  16%  { background-position: -90% 0; }
+  100% { background-position: -90% 0; }
 }
 .subtitle {
-  margin-top: 12px;
+  margin-top: 10px;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 2px 6px rgba(0,0,0,0.35);
   font-size: 1.05rem;
 }
-.subtitle a { color: #ffe08a; }
-
-/* druhý jazyk pod titulkem – úvodní obrazovka je dvojjazyčná */
-.subtitle-alt {
-  margin-top: 4px;
+.subtitle a { color: var(--lr-gold-1); }
+.game-version {
+  display: block;
+  font-size: 0.72rem;
   font-weight: 600;
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.75);
-  text-shadow: 0 1px 4px rgba(0,0,0,0.35);
-  font-style: italic;
-}
-.subtitle-alt a { color: rgba(255,224,138,0.85); }
-
-.menu-mid { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.menu-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-
-/* zvýrazněné hlavní tlačítko – jemné pulzování */
-.btn.play { animation: playPulse 2.2s ease-in-out infinite; }
-@keyframes playPulse {
-  0%, 100% { box-shadow: 0 4px 0 #d89b26, 0 8px 18px rgba(0,0,0,0.18), 0 0 0 0 rgba(255,224,138,0.55); }
-  50%      { box-shadow: 0 4px 0 #d89b26, 0 8px 22px rgba(0,0,0,0.22), 0 0 0 12px rgba(255,224,138,0); }
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.55);
 }
 
-/* jemný nástup prvků menu */
-#screen-menu.visible .menu-top   { animation: menuDrop .5s cubic-bezier(.2,.9,.3,1.2) both; }
-#screen-menu.visible .menu-mid   { animation: menuRise .5s .08s cubic-bezier(.2,.9,.3,1.2) both; }
-#screen-menu.visible .menu-bottom{ animation: menuRise .5s .16s cubic-bezier(.2,.9,.3,1.2) both; }
-@keyframes menuDrop { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
-@keyframes menuRise { from { opacity: 0; transform: translateY(14px); }  to { opacity: 1; transform: none; } }
-.menu-char-info {
-  text-align: center; color: #fff;
-  background: rgba(0,0,0,0.28);
-  padding: 10px 26px;
-  border-radius: 18px;
-  backdrop-filter: blur(4px);
+/* ---------- deck: karta postavy + hlavní akce ----------
+   Jediné místo, kam má v menu padnout oko. Tmavé sklo, aby bílý text
+   držel kontrast nad jakoukoli oblohou (ta se během dne mění). */
+.menu-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(360px, calc(92 * var(--gvw)));
+  padding: 14px 18px 16px;
+  border-radius: 26px;
+  color: #fff;
+  background: linear-gradient(165deg, rgba(20,46,35,0.52), rgba(20,46,35,0.34));
+  border: 1px solid rgba(255,255,255,0.28);
+  backdrop-filter: blur(10px) saturate(1.15);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
+  translate: calc(var(--px) * -8px) calc(var(--py) * -5px);
 }
-.menu-char-info .charname { font-size: 1.3rem; font-weight: 800; }
-.menu-char-info .perk { font-size: 0.9rem; opacity: 0.9; }
+.deck-chips {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.16);
+}
+.deck-char { text-align: center; }
+.deck-char .charname {
+  font-size: 1.3rem; font-weight: 800; letter-spacing: 0.01em;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+.deck-char .perk { font-size: 0.88rem; opacity: 0.92; line-height: 1.3; }
+/* stat bary se sem půjčují z obchodu – jen se obarví na tmavé sklo */
+.deck-stats { margin-top: 10px; }
+.deck-stats .stat-row span { color: rgba(255,255,255,0.8); }
+.deck-stats .stat-track { background: rgba(0,0,0,0.3); }
+.deck-actions { display: flex; flex-direction: column; gap: 10px; }
+.deck-actions .btn { width: 100%; }
 
-.menu-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.menu-stats, .menu-settings { display: flex; gap: 10px; }
+/* ---------- hlavní tlačítko ----------
+   Dýchání i rozpínavý kroužek jedou přes `scale`, ne `transform` –
+   `.btn:active { transform: translateY(3px) }` tak zůstane funkční. */
+.btn.play { position: relative; animation: playBreathe 2.6s ease-in-out infinite; }
+@keyframes playBreathe { 0%, 100% { scale: 1; } 50% { scale: 1.035; } }
+.btn.play::after {
+  content: '';
+  position: absolute; inset: -3px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,224,138,0.9);
+  pointer-events: none;
+  animation: playRing 2.6s ease-out infinite;
+}
+@keyframes playRing {
+  0%        { scale: 1;    opacity: 0.7; }
+  65%, 100% { scale: 1.32; opacity: 0; }
+}
+/* stisk „Běžet“ – tlačítko se přikrčí, kroužek praskne, obrazovka blikne */
+#screen-menu.launching .btn.play { animation: none; scale: 0.94; transition: scale .18s var(--ease-out); }
+#screen-menu.launching .btn.play::after { animation: playBurst .34s ease-out both; }
+@keyframes playBurst { from { scale: 1; opacity: 0.9; } to { scale: 2.1; opacity: 0; } }
+#screen-menu::after {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(70% 60% at 50% 55%, rgba(255,255,255,0.92), rgba(255,240,190,0) 70%);
+}
+#screen-menu.launching::after { animation: menuFlash .34s ease-out both; }
+@keyframes menuFlash { 0% { opacity: 0; } 35% { opacity: 0.8; } 100% { opacity: 0; } }
 
-/* denní mise – tři úkoly na den nad statistikami v menu */
-.daily-panel {
-  background: rgba(255,255,255,0.9);
+/* ---------- nástup prvků menu ----------
+   Jeden keyframe, pořadí řídí --d nastavené v index.html. */
+#screen-menu.visible > .menu-brand,
+#screen-menu.visible > .menu-rail,
+#screen-menu.visible > .menu-deck,
+#screen-menu.visible > .menu-missions {
+  animation: menuIn var(--dur-slow) var(--ease-back) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- denní mise: odznak + vysouvací panel ---------- */
+.menu-missions { position: relative; }
+.daily-chip {
+  border: none; cursor: pointer; font-family: inherit; font-size: inherit;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.daily-chip:hover { transform: translateY(-2px); }
+.daily-chip[aria-expanded="true"] { background: var(--lr-gold-1); }
+.daily-pop {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  width: min(360px, calc(78 * var(--gvw)));
+  translate: -50% 0;
+  background: rgba(255,255,255,0.94);
   border-radius: 16px;
-  padding: 6px 12px 7px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.16);
-  max-width: min(440px, 92vw);
-  width: 100%;
+  padding: 8px 12px 9px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.24);
+  text-align: left;
+  transform-origin: bottom center;
+  transition:
+    opacity var(--dur-base) ease,
+    transform var(--dur-base) var(--ease-back),
+    visibility 0s;
+}
+/* `hidden` zůstává zdrojem pravdy pro čtečky, ale display:none by nešel
+   animovat – proto se přebíjí viditelností */
+.daily-pop[hidden] {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.96);
+  transition:
+    opacity var(--dur-base) ease,
+    transform var(--dur-base) var(--ease-out),
+    visibility 0s linear var(--dur-base);
 }
 .daily-title {
   font-size: 0.8rem; font-weight: 800; letter-spacing: 0.02em;
@@ -352,6 +563,31 @@ a.btn { text-decoration: none; display: inline-block; }
   color: rgba(255,255,255,0.9);
   text-shadow: 0 1px 4px rgba(0,0,0,0.4);
   text-align: center;
+}
+
+/* ---------- nastavení ----------
+   Vysunuté z hlavní obrazovky, ať menu dýchá. Stejná karta jako pauza. */
+#screen-settings { justify-content: center; background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }
+.settings-card { max-width: 400px; gap: 12px; }
+.settings-rows { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.settings-rows .btn { width: 100%; }
+.settings-ver { font-size: 0.72rem; font-weight: 600; letter-spacing: 1px; color: #8a7a66; }
+/* uvnitř krémové karty musí být nápověda tmavá, ne bílá */
+.settings-card .controls-hint {
+  color: #6a5a48; text-shadow: none;
+  font-size: 0.74rem; line-height: 1.4;
+}
+.settings-links { font-size: 0.78rem; font-weight: 700; }
+.settings-card .privacy-link { color: #7a6242; }
+
+/* ---------- viditelný fokus ----------
+   Doteď menu neukazovalo vůbec nic – klávesnicí se v něm nedalo orientovat. */
+.btn:focus-visible,
+.hud-chip:focus-visible,
+.lang-btn:focus-visible,
+.char-card:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
 }
 
 /* obchod – karusel karet od nejlevnější (vlevo) po nejdražší (vpravo) */
@@ -490,7 +726,7 @@ a.btn { text-decoration: none; display: inline-block; }
   .diary-entry { font-size: 0.68rem; -webkit-line-clamp: 3; }
 }
 @media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
-  .stat-rows { display: none; }
+  .char-card .stat-rows { display: none; }
   .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
   .portrait-wrap canvas { height: 72px; }
   .diary-entry { -webkit-line-clamp: 2; }
@@ -851,7 +1087,7 @@ a.btn { text-decoration: none; display: inline-block; }
       linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0) 34%),
       linear-gradient(0deg, rgba(0,0,0,0.22), rgba(0,0,0,0) 30%);
   }
-  .lang-switch { top: max(8px, var(--safe-top)); right: max(10px, var(--safe-right)); }
+  .menu-rail { top: max(8px, var(--safe-top)); right: max(10px, var(--safe-right)); gap: 6px; }
   .lang-btn { font-size: 0.74rem; padding: 5px 11px; }
 }
 
@@ -863,49 +1099,57 @@ a.btn { text-decoration: none; display: inline-block; }
 
 @media (max-height: 560px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) {
 
-  .menu-top { margin-top: 0; }
-  .game-title {
-    font-size: clamp(1.9rem, 14vh, 3.4rem);
-    text-shadow: 0 3px 0 #55a13c, 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3);
+  /* ---------- menu na šířku ----------
+     Grid: značka vlevo nahoře, deck vpravo přes dva řádky, mise vlevo dole.
+     Pravý horní roh zůstává prázdný – sedí v něm absolutní systémová lišta.
+     Levý sloupec je záměrně volný: běží v něm vybrané zvířátko na canvasu. */
+  #screen-menu {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "brand    ."
+      ".        deck"
+      "missions deck";
+    align-items: start;
+    justify-items: start;
+    gap: 6px 12px;
+    padding-right: max(calc(2 * var(--gvw)), var(--safe-right), 12px);
   }
-  .game-title span { text-shadow: 0 3px 0 #d89b26, 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3); }
-  .subtitle { margin-top: 2px; font-size: 0.85rem; }
-  .subtitle-alt { margin-top: 0; font-size: 0.72rem; }
+  .menu-brand { grid-area: brand; text-align: left; }
+  .menu-deck  { grid-area: deck; align-self: center; justify-self: end; }
+  .menu-missions { grid-area: missions; align-self: end; }
 
-  /* karta postavy + tlačítka vedle sebe ve skleněném panelu;
-     panel uhne doprava, ať je vybrané zvířátko vidět, jak běhá */
-  .menu-mid {
-    flex-direction: row;
-    align-items: stretch;
-    align-self: flex-end;
-    margin-right: max(calc(3 * var(--gvw)), var(--safe-right));
-    gap: 14px;
-    background: rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.22);
-    border-radius: 22px;
-    padding: 12px 18px;
-    backdrop-filter: blur(6px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  .game-title {
+    font-size: clamp(1.9rem, calc(14 * var(--gvh)), 3.4rem);
+    text-shadow: 0 3px 0 var(--lr-green-dark), 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3);
   }
-  .menu-char-info {
-    display: flex; flex-direction: column; justify-content: center;
-    background: rgba(0,0,0,0.22);
-    padding: 6px 18px; border-radius: 16px;
-    max-width: calc(46 * var(--gvw));
+  .game-title span { text-shadow: 0 3px 0 var(--lr-gold-dark), 0 6px 0 rgba(0,0,0,0.15), 0 10px 22px rgba(0,0,0,0.3); }
+  .subtitle { margin-top: 2px; font-size: 0.8rem; max-width: calc(46 * var(--gvw)); }
+
+  /* deck se stáhne, ať vlevo zbyde místo na zvířátko */
+  .menu-deck {
+    width: min(calc(46 * var(--gvw)), 320px);
+    gap: 8px;
+    padding: 10px 14px 12px;
+    border-radius: 20px;
   }
-  .menu-char-info .charname { font-size: 1.05rem; }
-  .menu-char-info .perk { font-size: 0.76rem; }
-  .menu-actions { flex-direction: column; justify-content: center; gap: 8px; }
+  .deck-chips { gap: 6px; padding-bottom: 8px; }
+  .deck-char .charname { font-size: 1.05rem; }
+  .deck-char .perk { font-size: 0.76rem; }
+  .deck-stats { margin-top: 6px; }
+  .deck-actions { gap: 8px; }
 
   .btn { font-size: 0.92rem; padding: 8px 20px; }
   .btn.big { font-size: 1.15rem; padding: 10px 32px; }
   .btn.tiny { font-size: 0.76rem; padding: 6px 12px; }
   .btn.round { width: 40px; height: 40px; line-height: 40px; font-size: 1.1rem; }
   .hud-chip { padding: 4px 12px; font-size: 0.85rem; }
-  .menu-bottom { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  .controls-hint { width: 100%; font-size: 0.68rem; opacity: 0.9; }
-  /* na nízkém displeji je menu na šířku – mise se vejdou vedle statistik */
-  .daily-panel { width: auto; max-width: calc(52 * var(--gvw)); padding: 6px 10px 7px; }
+  .controls-hint { font-size: 0.7rem; }
+
+  /* popover misí se otevírá od levého okraje, ne od středu */
+  .daily-pop { left: 0; translate: 0 0; width: min(340px, calc(56 * var(--gvw))); }
+  .daily-pop[hidden] { translate: 0 0; }
   .daily-title { font-size: 0.7rem; margin-bottom: 3px; }
   .daily-row { font-size: 0.72rem; padding: 2px 0; gap: 6px; }
   .daily-alldone { font-size: 0.72rem; }
@@ -937,12 +1181,70 @@ a.btn { text-decoration: none; display: inline-block; }
   .over-card.small h2 { font-size: 1.25rem; }
 }
 
-/* opravdu malý telefon na šířku – panel menu se stáhne, aby vlevo
-   zbylo místo na vybrané zvířátko (schopnost je pořád vidět v obchodě) */
+/* úzký telefon na šířku – deck se stáhne, aby vlevo zbylo místo
+   na vybrané zvířátko */
 @media (max-height: 560px) and (max-width: 540px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) and (max-height: 540px) {
-  .menu-mid { gap: 10px; padding: 10px 12px; }
-  .menu-char-info { padding: 6px 12px; }
-  .menu-char-info .perk { display: none; }
+  .menu-deck { gap: 6px; padding: 8px 12px 10px; width: min(calc(48 * var(--gvw)), 280px); }
+  .deck-chips { padding-bottom: 6px; }
   .btn.big { font-size: 1.05rem; padding: 9px 24px; }
   .btn { font-size: 0.85rem; padding: 7px 14px; }
+}
+
+/* opravdu nízký displej – rozhoduje výška, ne šířka. Obětují se stat bary
+   a podtitul, ne popis schopnosti: ten je jediný důvod, proč si hráč
+   postavu vybírá (a v obchodě jsou pruhy pořád vidět). */
+@media (max-height: 360px), (orientation: portrait) and (pointer: coarse) and (max-width: 360px) {
+  .deck-stats { display: none; }
+  .subtitle { display: none; }
+  .menu-deck { gap: 6px; padding: 8px 12px 10px; }
+  .deck-chips { padding-bottom: 6px; }
+  .deck-actions { gap: 6px; }
+  .btn.big { font-size: 1.05rem; padding: 8px 24px; }
+}
+
+/* =========================================================
+   POJISTKY POHYBU
+   „low-fx“ nasazuje js/game.js, když v menu klesnou snímky – efekty
+   zhasnou dřív, než se z menu stane trhaná diashow. Šetrný režim
+   (nastavení systému) vypíná totéž plus animace, které tu byly dřív
+   a nebyly nijak ošetřené.
+   ========================================================= */
+html.low-fx .menu-fx,
+html.low-fx .rotate-fireflies { display: none; }
+html.low-fx .game-title::after,
+html.low-fx .btn.play::after { display: none; }
+html.low-fx .game-title span,
+html.low-fx .btn.play,
+html.low-fx .hud-chip.lucky { animation: none; }
+html.low-fx .menu-deck { backdrop-filter: none; background: rgba(20,46,35,0.62); }
+html.low-fx .lang-switch,
+html.low-fx #btn-settings { backdrop-filter: none; background: rgba(255,255,255,0.34); }
+html.low-fx #screen-over,
+html.low-fx #screen-pause,
+html.low-fx #screen-settings { backdrop-filter: none; }
+html.low-fx .menu-brand,
+html.low-fx .menu-deck { translate: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-fx { display: none; }
+  .game-title::after,
+  .btn.play::after { display: none; }
+  .game-title span,
+  .btn.play,
+  .hud-chip.lucky,
+  #hud-energy-fill.low,
+  #btn-tut-continue { animation: none; }
+  .menu-brand, .menu-deck { translate: none; }
+  #screen-menu.fade-in { animation: none; }
+  #screen-menu.launching::after { animation: none; }
+  /* nástup i přechody obrazovek zůstanou, ale jen jako prolnutí */
+  #screen-menu.visible > .menu-brand,
+  #screen-menu.visible > .menu-rail,
+  #screen-menu.visible > .menu-deck,
+  #screen-menu.visible > .menu-missions {
+    animation: none;
+  }
+  .screen, .screen.visible,
+  #screen-shop, #screen-ach, #screen-settings, #screen-over { transform: none; }
+  .daily-pop, .daily-pop[hidden] { transform: none; }
 }

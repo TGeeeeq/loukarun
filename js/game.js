@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.0.8';
+  const GAME_VERSION = '1.0.9';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -38,14 +38,14 @@
       : r;
   }
 
-  // levý okraj panelu menu (.menu-mid) – zvířátko v demu mu uhýbá,
-  // aby na malých displejích nebylo schované za panelem
+  // levý okraj decku (.menu-deck) – zvířátko v demu mu uhýbá, aby na
+  // malých displejích nebylo schované za panelem
   let menuPanelLeft = Infinity;
   function measureMenuPanel() {
     const menu = document.getElementById('screen-menu');
-    const mid = menu && menu.querySelector('.menu-mid');
-    menuPanelLeft = (mid && menu.classList.contains('visible'))
-      ? gameRect(mid).left
+    const deck = menu && menu.querySelector('.menu-deck');
+    menuPanelLeft = (deck && menu.classList.contains('visible'))
+      ? gameRect(deck).left
       : Infinity;
   }
 
@@ -78,6 +78,30 @@
     if (fastT > 10 && dprStep > 0 && dropCount < 2) {
       dprStep--; fastT = 0; resize();
     }
+  }
+
+  /* ---------- útlum efektů menu ----------
+     autoQuality() řeší jen běh (v menu se schválně nespouští, aby stání
+     v nabídce nesrazilo kvalitu celé hry). Menu má ale vlastní ozdoby –
+     poletující pyl, sklo, přejezd světla po titulu – a na slabém telefonu
+     soupeří o snímek s pořád běžící scénou na plátně. Když se menu začne
+     trhat, ozdoby zhasnou. Zpátky se nezapínají: blikající efekty působí
+     hůř než žádné. */
+  let menuSlowT = 0;
+  let lowFx = false;
+  function setLowFx() {
+    if (lowFx) return;
+    lowFx = true;
+    document.documentElement.classList.add('low-fx');
+  }
+  function menuFxWatch(rawDt) {
+    if (lowFx) return;
+    // telefon, kterému už jednou spadlo rozlišení, ozdoby stejně neutáhne
+    if (dprStep > 0) { setLowFx(); return; }
+    if (S.mode !== 'menu') { menuSlowT = 0; return; }
+    if (rawDt > 0.025) menuSlowT += rawDt;
+    else menuSlowT = Math.max(0, menuSlowT - rawDt * 0.5);
+    if (menuSlowT > 1.5) setLowFx();
   }
 
   function resize() {
@@ -2655,17 +2679,30 @@
      HUD & OBRAZOVKY (DOM)
      ========================================================= */
   const $ = (id) => document.getElementById(id);
-  const screens = ['menu', 'shop', 'over', 'pause', 'ach'];
+  const screens = ['menu', 'shop', 'over', 'pause', 'ach', 'settings'];
 
   let curScreen = null; // co je zrovna vidět – potřebuje to tlačítko Zpět
   function showScreen(name) {
     curScreen = name;
+    if (name !== 'menu') closeDaily();
     for (const s of screens) $(`screen-${s}`).classList.toggle('visible', s === name);
     $('hud').classList.toggle('visible', name === null);
     if (name === 'menu') AUDIO.playMusic('menu');
     // na pauze se hudba i efekty ztiší – ať je slyšet, že hra čeká
     AUDIO.duck(name === 'pause');
-    measureMenuPanel();
+    // obrazovky se prolínají, takže rozvržení decku je usazené až v dalším
+    // snímku – dřív by se změřila jeho poloha ještě před přechodem
+    requestAnimationFrame(measureMenuPanel);
+  }
+
+  // společný návrat do menu – dřív byla tahle čtveřice zkopírovaná na
+  // čtyřech místech a snadno se rozešla
+  function backToMenu() {
+    S.mode = 'menu';
+    S.demo = true;
+    resetWorld(true);
+    initMenu();
+    showScreen('menu');
   }
 
   /* ---------- tlačítko Zpět (Android) / Escape (web) ----------
@@ -2675,9 +2712,13 @@
     if (S.mode === 'intro') return true;   // během intra se nikam nechodí
     if (S.mode === 'run') { togglePause(); return true; }
     if (S.mode === 'paused') { togglePause(); return true; }
-    if (curScreen === 'shop' || curScreen === 'ach' || curScreen === 'over') {
-      S.mode = 'menu'; S.demo = true; resetWorld(true);
-      initMenu(); showScreen('menu'); AUDIO.play('click');
+    // rozbalené mise jsou nejvrchnější vrstva – zavřou se první
+    if (curScreen === 'menu' && !$('daily-pop').hidden) {
+      closeDaily(); AUDIO.play('click');
+      return true;
+    }
+    if (curScreen === 'shop' || curScreen === 'ach' || curScreen === 'over' || curScreen === 'settings') {
+      backToMenu(); AUDIO.play('click');
       return true;
     }
     return false; // menu
@@ -2886,17 +2927,39 @@
     initMenu();
   }
 
+  // vysouvací panel misí – zdrojem pravdy je atribut hidden (kvůli čtečkám),
+  // vzhled přechodu si CSS řeší samo
+  function closeDaily() {
+    const pop = $('daily-pop');
+    if (!pop || pop.hidden) return;
+    pop.hidden = true;
+    $('btn-daily').setAttribute('aria-expanded', 'false');
+  }
+  function toggleDaily() {
+    const pop = $('daily-pop');
+    const open = pop.hidden;
+    pop.hidden = !open;
+    $('btn-daily').setAttribute('aria-expanded', String(open));
+    AUDIO.play('click');
+  }
+
+  // vrací { done, total }, ať odznak v menu ví, co má ukázat
   function buildDaily() {
     const d = ensureDaily();
     const list = $('daily-list');
     list.innerHTML = '';
+    const stat = {
+      done: d.picks.filter(p => p.done || p.claimed).length,
+      total: d.picks.length,
+      claimable: d.picks.filter(p => p.done && !p.claimed).length,
+    };
     const allClaimed = d.picks.every(p => p.claimed);
     if (allClaimed) {
       const p = document.createElement('p');
       p.className = 'daily-alldone';
       p.textContent = I18N.t('daily.allDone');
       list.appendChild(p);
-      return;
+      return stat;
     }
     d.picks.forEach((p, i) => {
       if (p.claimed) return;
@@ -2915,6 +2978,7 @@
       }
       list.appendChild(row);
     });
+    return stat;
   }
 
   /* =========================================================
@@ -3000,10 +3064,17 @@
     const ch = charById(save.selected);
     $('menu-charname').textContent = I18N.pick(ch.name);
     $('menu-perk').textContent = I18N.pick(ch.perk);
+    // stejné pruhy rychlost/skok/výdrž jako na kartě v obchodě
+    const stats = $('menu-stats');
+    stats.innerHTML = '';
+    stats.appendChild(statRows(ch));
     $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
     $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
     $('btn-install').textContent = I18N.t('menu.install');
-    buildDaily();
+    const d = buildDaily();
+    $('daily-badge').textContent = `${d.done}/${d.total}`;
+    // odznak svítí, jen když je opravdu co vyzvednout – jinak by pulzoval pořád
+    $('btn-daily').classList.toggle('lucky', d.claimable > 0);
     measureMenuPanel(); // texty mění šířku panelu, zvířátko v demu mu uhýbá
   }
 
@@ -3018,6 +3089,29 @@
     { key: 'jump', label: 'shop.stat.jump', val: (st) => st.jump },
     { key: 'stamina', label: 'shop.stat.stamina', val: (st) => 2 - st.drain },
   ];
+  // pruhy rychlost/skok/výdrž – stejné v obchodě i v decku hlavního menu
+  function statRows(ch) {
+    const rows = document.createElement('div');
+    rows.className = 'stat-rows';
+    STAT_KEYS.forEach((sk, i) => {
+      const { min, max } = STAT_RANGE[i];
+      const pct = max > min ? 25 + 75 * (sk.val(ch.stats) - min) / (max - min) : 60;
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      const label = document.createElement('span');
+      label.textContent = I18N.t(sk.label);
+      const track = document.createElement('div');
+      track.className = 'stat-track';
+      const fill = document.createElement('div');
+      fill.className = 'stat-fill ' + sk.key;
+      fill.style.width = pct.toFixed(0) + '%';
+      track.appendChild(fill);
+      row.appendChild(label); row.appendChild(track);
+      rows.appendChild(row);
+    });
+    return rows;
+  }
+
   const STAT_RANGE = STAT_KEYS.map(sk => {
     const vals = CHARACTERS.map(ch => sk.val(ch.stats));
     return { min: Math.min(...vals), max: Math.max(...vals) };
@@ -3066,25 +3160,7 @@
       perk.appendChild(perkText);
       card.appendChild(perk);
 
-      const rows = document.createElement('div');
-      rows.className = 'stat-rows';
-      STAT_KEYS.forEach((sk, i) => {
-        const { min, max } = STAT_RANGE[i];
-        const pct = max > min ? 25 + 75 * (sk.val(ch.stats) - min) / (max - min) : 60;
-        const row = document.createElement('div');
-        row.className = 'stat-row';
-        const label = document.createElement('span');
-        label.textContent = I18N.t(sk.label);
-        const track = document.createElement('div');
-        track.className = 'stat-track';
-        const fill = document.createElement('div');
-        fill.className = 'stat-fill ' + sk.key;
-        fill.style.width = pct.toFixed(0) + '%';
-        track.appendChild(fill);
-        row.appendChild(label); row.appendChild(track);
-        rows.appendChild(row);
-      });
-      card.appendChild(rows);
+      card.appendChild(statRows(ch));
 
       /* Deníček z azylu – opravdové útržky ze života zvířátka. Odemyká se
          běháním právě s ním, takže hráč má důvod prostřídat celou partu
@@ -3225,19 +3301,64 @@
   }
 
   /* ---------- tlačítka ---------- */
-  $('btn-play').addEventListener('click', startRun);
+  /* Start běhu z menu má krátkou „nápřahovku“: tlačítko se přikrčí, kroužek
+     kolem něj praskne a obrazovka blikne. Je to 180 ms, po kterých teprve
+     hra vystartuje – dost na to, aby stisk něco znamenal, a málo na to, aby
+     to zdržovalo. V šetrném režimu i na slabém telefonu se přeskočí. */
+  const LAUNCH_MS = 180;
+  const reduceMotionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  $('btn-play').addEventListener('click', () => {
+    if (lowFx || reduceMotionMq.matches) { startRun(); return; }
+    const menu = $('screen-menu');
+    menu.classList.add('launching');
+    AUDIO.play('click');
+    setTimeout(() => { menu.classList.remove('launching'); startRun(); }, LAUNCH_MS);
+  });
   $('btn-shop').addEventListener('click', () => { buildShop(); showScreen('shop'); AUDIO.play('click'); });
   $('btn-shop-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-ach').addEventListener('click', () => { buildAch(); showScreen('ach'); AUDIO.play('click'); });
   $('btn-ach-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
+  $('btn-settings').addEventListener('click', () => { showScreen('settings'); AUDIO.play('click'); });
+  $('btn-settings-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
+  $('btn-daily').addEventListener('click', toggleDaily);
   $('btn-again').addEventListener('click', startRun);
   $('btn-share').addEventListener('click', shareRun);
-  $('btn-over-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
+  $('btn-over-menu').addEventListener('click', backToMenu);
   $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-tut-continue').addEventListener('click', continueLesson);
   $('btn-resume').addEventListener('click', togglePause);
-  $('btn-pause-menu').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); initMenu(); showScreen('menu'); });
+  $('btn-pause-menu').addEventListener('click', backToMenu);
+
+  // ťuknutí mimo panel misí ho zavře – jinak by v menu překážel
+  $('screen-menu').addEventListener('pointerdown', (e) => {
+    if (!$('daily-pop').hidden && !e.target.closest('.menu-missions')) closeDaily();
+  });
+
+  /* ---------- parallax (jen myš) ----------
+     Vrstvy menu se posunou podle kurzoru. Schválně jen na jemném ukazovateli:
+     na telefonu je hra otočená o 90° (souřadnice by se musely prohazovat)
+     a snímkový rozpočet patří scéně na plátně, ne ozdobě. */
+  if (window.matchMedia('(pointer: fine)').matches) {
+    const menu = $('screen-menu');
+    let px = 0, py = 0, queued = false;
+    menu.addEventListener('pointermove', (e) => {
+      if (lowFx || reduceMotionMq.matches) return;
+      px = (e.clientX / window.innerWidth - 0.5) * 2;
+      py = (e.clientY / window.innerHeight - 0.5) * 2;
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        menu.style.setProperty('--px', px.toFixed(3));
+        menu.style.setProperty('--py', py.toFixed(3));
+      });
+    });
+    menu.addEventListener('pointerleave', () => {
+      menu.style.setProperty('--px', '0');
+      menu.style.setProperty('--py', '0');
+    });
+  }
   $('btn-sfx').addEventListener('click', () => {
     save.sfx = !(save.sfx !== false);
     persist(); AUDIO.setSfx(save.sfx); PLATFORM.setHaptics(save.sfx); initMenu();
@@ -3332,6 +3453,7 @@
     last = now;
     if (PERF) PERF.record(rawDt * 1000);
     autoQuality(rawDt);
+    menuFxWatch(rawDt);
     update(dt);
     render();
     requestAnimationFrame(frame);
