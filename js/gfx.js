@@ -2245,7 +2245,7 @@ const GFX = (() => {
   }
 
   return {
-    lerp, lerpColor, shade, hash, rr, ell,
+    lerp, lerpColor, shade, hexA, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround, drawGodRays,
     drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter,
     PROPS,

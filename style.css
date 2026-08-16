@@ -580,6 +580,16 @@ a.btn { text-decoration: none; display: inline-block; }
 .settings-links { font-size: 0.78rem; font-weight: 700; }
 .settings-card .privacy-link { color: #7a6242; }
 
+/* ztlumený přepínač je vidět na první pohled – vyšisovaný a bez zlata */
+.btn.muted { filter: saturate(0.35) brightness(0.94); opacity: 0.8; }
+
+/* pauza: zvuk a hudba vedle sebe, ať karta nenaroste do sloupce tlačítek */
+.pause-audio { display: flex; gap: 8px; width: 100%; }
+.pause-audio .btn { flex: 1; min-width: 0; font-size: 0.9rem; padding-left: 10px; padding-right: 10px; }
+@media (max-height: 560px) and (orientation: landscape) {
+  .pause-audio .btn { font-size: 0.82rem; padding: 8px 8px; }
+}
+
 /* ---------- viditelný fokus ----------
    Doteď menu neukazovalo vůbec nic – klávesnicí se v něm nedalo orientovat. */
 .btn:focus-visible,

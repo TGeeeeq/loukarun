@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.2.0';
+  const GAME_VERSION = '1.3.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -172,10 +172,14 @@
     // řetěz sběrů – viz sekce COMBO
     combo: 0,               // kolik věcí za sebou bez přerušení
     comboT: 0,              // zbývá času do vypršení řetězu (s)
+    comboWin: 0,            // jak dlouhé bylo okno naposled (kvůli prstenci – mění se s rychlostí)
     comboPop: 0,            // pružinový doskok čísla (1 → 0)
     comboRing: 0,           // jak moc je prstenec vidět (0 → 1), plynulý náběh i zánik
     comboBreak: 0,          // doběh praskliny po nárazu (s)
     comboBest: 0,           // nejdelší řetěz běhu (do výsledků)
+    comboWaves: [],         // rázové vlny nového stupně (screen space)
+    comboFlash: 0,          // záblesk přes obrazovku u vysokých stupňů (1 → 0)
+    comboFlashCol: '#fff',  // barva toho záblesku
     // hráč
     py: 0, vy: 0, airborne: false, jumps: 0,
     sliding: 0,             // zbývající čas skluzu (s)
@@ -609,6 +613,7 @@
     S.nextFlyerX = 400;
     S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.sliding = 0; S.jumpBuf = 0; S.jumpImpulse = 0; S.swayFollow = 0;
     S.combo = 0; S.comboT = 0; S.comboPop = 0; S.comboRing = 0; S.comboBreak = 0; S.comboBest = 0;
+    S.comboWin = ECONOMY.comboWindow; S.comboWaves.length = 0; S.comboFlash = 0;
     S.stumble = 0; S.invuln = 0; S.bubble = null; S.sideBubbles = [];
     S.saidLowEnergy = false; S.lastMilestone = 0; S.milestone = null; S.nextQuoteAt = 10 + Math.random() * 8;
     S.tut = null;
@@ -675,6 +680,8 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
     if (isBest) save.best = dist;
+    // nejdelší řetěz napříč všemi běhy – jen kvůli odznakům
+    if (S.comboBest > (save.bestCombo || 0)) save.bestCombo = S.comboBest;
     // kolikátý běh s touhle postavou – odemyká deníčky z azylu
     if (!save.charRuns) save.charRuns = {};
     save.charRuns[S.char.id] = (save.charRuns[S.char.id] || 0) + 1;
@@ -1819,21 +1826,46 @@
     return GFX.lerpColor(cur.color, next.color, q);
   }
 
+  /* Okno na další sběr se krátí s rychlostí. Mrkve a mince stojí ve světě
+     v metrech, ne v sekundách – při 620 px/s proletí hráč stejnou mezeru
+     dvakrát rychleji než na startu, takže pevných 1,6 s by řetěz na konci
+     běhu udrželo skoro samo. Držíme proto zhruba konstantní VZDÁLENOST
+     mezi kousky; comboWindowMin je podlaha, aby to i naplno šlo stihnout. */
+  function comboWindow() {
+    const base = S.baseSpeed * (S.stats?.speed || 1);
+    const rel = Math.max(1, (S.speed || base) / base);
+    return Math.max(ECONOMY.comboWindowMin, ECONOMY.comboWindow / rel);
+  }
+
   function bumpCombo() {
     const before = comboTierIdx(S.combo);
     S.combo++;
-    S.comboT = ECONOMY.comboWindow;
+    S.comboWin = comboWindow();
+    S.comboT = S.comboWin;
     S.comboPop = 1;
     S.comboBreak = 0;
     if (S.combo > S.comboBest) S.comboBest = S.combo;
     const after = comboTierIdx(S.combo);
     if (after < 0) return;                 // pod pátým kouskem je řetěz neviditelný
     AUDIO.comboTone(S.combo - ECONOMY.comboMin);
-    if (after > before) {                  // nový stupeň – krátká oslava
+    if (after > before) {                  // nový stupeň – oslava sílí s číslem
       const tier = ECONOMY.comboTiers[after];
-      burst(COMBO_X(), COMBO_Y, tier.color, 16);
+      const fx = tier.fx || 0;
+      burst(COMBO_X(), COMBO_Y, tier.color, 16 + fx * 12);
       floater(I18N.t(tier.name), COMBO_X(), COMBO_Y + 64, tier.color);
-      PLATFORM.haptic('medium');
+      PLATFORM.haptic(fx >= 2 ? 'heavy' : 'medium');
+      if (fx >= 1) {
+        AUDIO.play('golden');
+        S.shake = Math.max(S.shake, 0.22 + fx * 0.13);
+        if (dprStep < 2) S.comboWaves.push({ t: 0, col: tier.color, fx });
+      }
+      // záblesk je jediný efekt přes celou obrazovku – komu bliká, tomu vadí
+      if (fx >= 2 && dprStep < 2 && !reduceMotionMq.matches) {
+        S.comboFlash = 1; S.comboFlashCol = tier.color;
+      }
+      if (fx >= 3) {                       // dva stupně nejvyšší – jiskry i od hráče
+        burst(playerX(), groundY - S.py - 40, tier.color, 24);
+      }
     }
   }
 
@@ -1876,12 +1908,44 @@
     const want = comboTierIdx(S.combo) >= 0 ? 1 : 0;
     S.comboRing += (want - S.comboRing) * Math.min(1, dt * 12);
     if (S.comboRing < 0.004 && want === 0) S.comboRing = 0;
+    // oslava nového stupně – vlny i záblesk běží vlastním časem
+    S.comboFlash = Math.max(0, S.comboFlash - dt * 3.4);
+    for (const w of S.comboWaves) w.t += dt;
+    compact(S.comboWaves, (w) => w.t < 0.75);
+  }
+
+  /* Rázové vlny a záblesk nového stupně. Kreslí se do screen space (mimo
+     třes), aby oslava neubližovala čitelnosti běhu pod ní. */
+  function drawComboFx(c) {
+    if (S.comboFlash > 0) {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      c.globalAlpha = S.comboFlash * S.comboFlash * 0.2;
+      c.fillStyle = S.comboFlashCol;
+      c.fillRect(0, 0, W, H);
+      c.restore();
+    }
+    if (!S.comboWaves.length) return;
+    c.save();
+    for (const w of S.comboWaves) {
+      const q = w.t / 0.75;
+      c.globalAlpha = (1 - q) * (1 - q) * 0.9;
+      c.strokeStyle = w.col;
+      c.lineWidth = (3 + w.fx * 2) * (1 - q * 0.7);
+      c.beginPath();
+      c.arc(COMBO_X(), COMBO_Y, 20 + q * (150 + w.fx * 70), 0, Math.PI * 2);
+      c.stroke();
+    }
+    c.restore();
   }
 
   function drawCombo(c) {
+    drawComboFx(c);
     if (S.comboRing <= 0 && S.comboBreak <= 0) return;
     const n = S.combo;
     const shown = S.comboRing;
+    const tierIdx = comboTierIdx(n);
+    const fx = tierIdx >= 0 ? (ECONOMY.comboTiers[tierIdx].fx || 0) : 0;
     const col = S.comboBreak > 0 ? '#e5533a' : comboColor(n || ECONOMY.comboMin);
     const x = COMBO_X(), y = COMBO_Y;
     // prasklý řetěz odlétá nahoru a mizí, dokončený se jen scvrkne
@@ -1894,13 +1958,25 @@
 
     if (dprStep < 2) {
       // slabý telefon prstenec vynechá – zůstane jen čitelné číslo
+      // od třetího stupně kolem prstence dýchá záře v barvě stupně
+      if (fx >= 1 && S.comboBreak <= 0) {
+        const glow = c.createRadialGradient(0, 0, r * 0.6, 0, 0, r * (2 + fx * 0.35));
+        glow.addColorStop(0, GFX.hexA(col, 0.32 + fx * 0.07));
+        glow.addColorStop(1, GFX.hexA(col, 0));
+        c.fillStyle = glow;
+        c.beginPath();
+        c.arc(0, 0, r * (2 + fx * 0.35), 0, Math.PI * 2);
+        c.fill();
+      }
       c.beginPath();
       c.arc(0, 0, r, 0, Math.PI * 2);
       c.strokeStyle = 'rgba(0,0,0,0.28)';
       c.lineWidth = 6;
       c.stroke();
       if (S.comboT > 0) {
-        const frac = S.comboT / ECONOMY.comboWindow;
+        // okno se s rychlostí zkracuje, takže se ubývající oblouk musí
+        // měřit proti oknu, které opravdu běží – ne proti základnímu
+        const frac = S.comboT / (S.comboWin || ECONOMY.comboWindow);
         c.beginPath();
         c.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
         c.strokeStyle = col;
@@ -1908,9 +1984,20 @@
         c.lineCap = 'round';
         c.stroke();
       }
+      // nejvyšší stupně obíhají jiskry
+      if (fx >= 2 && S.comboBreak <= 0) {
+        const sparks = fx >= 3 ? 5 : 3;
+        for (let i = 0; i < sparks; i++) {
+          const a = S.t * 0.0026 + (i / sparks) * Math.PI * 2;
+          c.beginPath();
+          c.arc(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5, 2.4 + fx * 0.5, 0, Math.PI * 2);
+          c.fillStyle = col;
+          c.fill();
+        }
+      }
     }
 
-    c.font = `700 ${Math.round(20 * pop)}px "Baloo 2", system-ui, sans-serif`;
+    c.font = `700 ${Math.round((20 + fx * 2) * pop)}px "Baloo 2", system-ui, sans-serif`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.lineWidth = 4;
@@ -2907,6 +2994,9 @@
     { id: 'm12000', icon: '🌟', title: { cs: 'Tucet kiláků v kopytech!', en: 'A full dozen K under the hooves!' }, check: (s) => (s.best || 0) >= 12000 },
     { id: 'm16000', icon: '🔥', title: { cs: 'Šestnáctka – kopyta v jednom ohni!', en: 'Sixteen K – hooves on fire!' }, check: (s) => (s.best || 0) >= 16000 },
     { id: 'm20000', icon: '🦄', title: { cs: 'Dvacítka – bájný běžec louky!', en: 'Twenty K – the meadow’s living legend!' }, check: (s) => (s.best || 0) >= 20000 },
+    { id: 'chain30', icon: '🔗', title: { cs: 'Řetěz třiceti kousků', en: 'A thirty-piece chain' }, check: (s) => (s.bestCombo || 0) >= 30 },
+    { id: 'chain80', icon: '⛓️', title: { cs: 'Osmdesát bez zaváhání', en: 'Eighty without a wobble' }, check: (s) => (s.bestCombo || 0) >= 80 },
+    { id: 'chain175', icon: '💫', title: { cs: 'Božský řetěz – 175 v jednom tahu!', en: 'Divine chain – 175 in one go!' }, check: (s) => (s.bestCombo || 0) >= 175 },
     { id: 'friend', icon: '🐾', title: { cs: 'Našel sis parťáka do běhu', en: 'You found a running buddy' }, check: (s) => (s.unlocked || []).length >= 2 },
     { id: 'runs10', icon: '🔁', title: { cs: 'Deset rozběhů, nula lenosti', en: 'Ten runs, zero laziness' }, check: (s) => (s.runs || 0) >= 10 },
   ];
@@ -2978,7 +3068,7 @@
     { id: 'dist', targets: [800, 1200, 1800, 2500], val: (r) => r.dist },
     { id: 'carrots', targets: [25, 40, 60], val: (r) => r.carrots },
     { id: 'coins', targets: [30, 50, 80], val: (r) => r.coins },
-    { id: 'combo', targets: [8, 12, 18], val: (r) => r.combo },
+    { id: 'combo', targets: [8, 12, 18, 30], val: (r) => r.combo },
     { id: 'golden', targets: [1, 2, 3], val: (r) => r.golden },
     { id: 'clean', targets: [400, 700, 1000], val: (r) => r.clean },
     // jediná kumulativní mise – počítá běhy za celý dnešek, ne za jeden běh
@@ -3446,8 +3536,7 @@
     const stats = $('menu-stats');
     stats.innerHTML = '';
     stats.appendChild(statRows(ch));
-    $('btn-sfx').textContent = (save.sfx !== false ? '🔊 ' : '🔇 ') + I18N.t('menu.sounds');
-    $('btn-music').textContent = (save.music !== false ? '🎵 ' : '🚫 ') + I18N.t('menu.music');
+    syncAudioBtns();
     $('btn-install').textContent = I18N.t('menu.install');
     const d = buildDaily();
     $('daily-badge').textContent = `${d.done}/${d.total}`;
@@ -3743,15 +3832,38 @@
       menu.style.setProperty('--py', '0');
     });
   }
-  $('btn-sfx').addEventListener('click', () => {
+  /* ---------- zvuk a hudba ----------
+     Stejná dvojice přepínačů je v nastavení i na pauze: když hráče uprostřed
+     běhu vyruší hudba, nemá důvod kvůli ztlumení opouštět rozběhnutý běh.
+     Popisky drží obě dvojice pohromadě syncAudioBtns(). */
+  function labelAudioBtn(id, on, onIcon, offIcon, key) {
+    const b = $(id);
+    if (!b) return;
+    b.textContent = (on ? onIcon : offIcon) + ' ' + I18N.t(key);
+    b.classList.toggle('muted', !on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  function syncAudioBtns() {
+    const sfx = save.sfx !== false, music = save.music !== false;
+    labelAudioBtn('btn-sfx', sfx, '🔊', '🔇', 'menu.sounds');
+    labelAudioBtn('btn-pause-sfx', sfx, '🔊', '🔇', 'menu.sounds');
+    labelAudioBtn('btn-music', music, '🎵', '🚫', 'menu.music');
+    labelAudioBtn('btn-pause-music', music, '🎵', '🚫', 'menu.music');
+  }
+  function toggleSfx() {
     save.sfx = !(save.sfx !== false);
-    persist(); AUDIO.setSfx(save.sfx); PLATFORM.setHaptics(save.sfx); initMenu();
-  });
-  $('btn-music').addEventListener('click', () => {
+    persist(); AUDIO.setSfx(save.sfx); PLATFORM.setHaptics(save.sfx); syncAudioBtns();
+  }
+  function toggleMusic() {
     save.music = !(save.music !== false);
-    persist(); AUDIO.setMusic(save.music); initMenu();
-    if (save.music) AUDIO.playMusic('menu');
-  });
+    persist(); AUDIO.setMusic(save.music); syncAudioBtns();
+    // po zapnutí navázat tam, kde hráč je – na pauze zní stopa prostředí, ne menu
+    if (save.music) AUDIO.playMusic(S.mode === 'paused' ? (S.lastEnvId || 'louka') : 'menu');
+  }
+  $('btn-sfx').addEventListener('click', toggleSfx);
+  $('btn-music').addEventListener('click', toggleMusic);
+  $('btn-pause-sfx').addEventListener('click', toggleSfx);
+  $('btn-pause-music').addEventListener('click', toggleMusic);
 
   // hardwarové Zpět na Androidu i Escape v prohlížeči – bez tohohle by
   // aplikace na Androidu skončila i uprostřed běhu

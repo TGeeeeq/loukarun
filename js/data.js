@@ -836,15 +836,29 @@ const DATA = (() => {
        oba bonusy nesčítaly do nesmyslných čísel.
 
        bonus = floor(n * comboCoinRate * násobitel stupně)
-       n=5 → 2, n=14 → 7, n=20 → 15, n=30 → 30, n=50 → 50 mincí
-       (pro srovnání: celý Zvířecí koncert dává 25) */
+       n=5 → 2, n=15 → 11, n=30 → 30, n=50 → 62, n=80 → 120,
+       n=120 → 210, n=200 → 400, n=250 → 575 mincí
+       (pro srovnání: celý Zvířecí koncert dává 25)
+
+       Stupňů je osm, protože nejlepší hráči se dostávají přes dvě stě
+       kousků a nad třicítkou už se předtím nic nedělo – běh ztrácel
+       tah. fx říká, jak hlasitě se nový stupeň oslaví (0 = jen jiskry
+       a nápis, 1 = rázová vlna a otřes, 2 = k tomu záblesk přes celou
+       obrazovku, 3 = plná pyrotechnika). Slabé telefony (dprStep 2)
+       si z toho kreslí jen nápis. */
     comboMin: 5,          // pod tímhle se řetěz vůbec nezobrazí ani neplatí
-    comboWindow: 1.6,     // kolik sekund je mezi sběry, než řetěz vyprší
+    comboWindow: 1.6,     // sekund mezi sběry při základní rychlosti (dál se krátí, viz comboWindow() v game.js)
+    comboWindowMin: 0.8,  // pod tohle se okno nikdy nestáhne, ať zůstane co chytat
     comboCoinRate: 0.5,   // mincí za každý kousek v řetězu
     comboTiers: [         // od kolika kousků platí jaký násobitel (vzestupně)
-      { at: 5, mul: 1.0, color: '#ffd24a', name: 'combo.tier1' },
-      { at: 15, mul: 1.5, color: '#ff9a3c', name: 'combo.tier2' },
-      { at: 30, mul: 2.0, color: '#ff6fc8', name: 'combo.tier3' },
+      { at: 5, mul: 1.0, color: '#ffd24a', name: 'combo.tier1', fx: 0 },
+      { at: 15, mul: 1.5, color: '#ff9a3c', name: 'combo.tier2', fx: 0 },
+      { at: 30, mul: 2.0, color: '#ff6fc8', name: 'combo.tier3', fx: 1 },
+      { at: 50, mul: 2.5, color: '#b07cff', name: 'combo.tier4', fx: 1 },
+      { at: 80, mul: 3.0, color: '#5fd8ff', name: 'combo.tier5', fx: 2 },
+      { at: 120, mul: 3.5, color: '#63f5b0', name: 'combo.tier6', fx: 2 },
+      { at: 175, mul: 4.0, color: '#ffe9a0', name: 'combo.tier7', fx: 3 },
+      { at: 250, mul: 4.6, color: '#e9f7ff', name: 'combo.tier8', fx: 3 },
     ],
   };
 
