@@ -707,9 +707,9 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 .page-mid .page-sign { text-align: center; }
 
 /* barva popisku podle sekce – aby bylo vidět, v které části knížky jsi */
-.book-page[data-sec="stories"] .page-kicker { color: #6f4a86; background: rgba(111,74,134,0.16); }
-.book-page[data-sec="tasks"] .page-kicker { color: #8a6320; background: rgba(168,118,42,0.18); }
-.book-page[data-sec="facts"] .page-kicker { color: #2f6a4a; background: rgba(47,106,74,0.16); }
+[data-sec="stories"] .page-kicker { color: #6f4a86; background: rgba(111,74,134,0.16); }
+[data-sec="tasks"] .page-kicker { color: #8a6320; background: rgba(168,118,42,0.18); }
+[data-sec="facts"] .page-kicker { color: #2f6a4a; background: rgba(47,106,74,0.16); }
 
 /* ---------- zajímavost = výstřižek vlepený do deníku ---------- */
 .fact-card {
@@ -798,32 +798,112 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   border-bottom: 2px solid rgba(168,118,42,0.4);
 }
 
-/* překlápějící se list */
+/* ---------- překlápějící se list ----------
+   List je opravdový list papíru: rub i líc. Líc nese otisk odcházející
+   stránky, rub je prázdný papír – proto se za polovinou otočky ukáže
+   druhá strana listu a ne text, který pod ním právě přibyl. Obě strany
+   mají backface-visibility: hidden, takže se nikdy nepřekrývají. */
 .book-leaf {
   position: absolute; top: 10px; bottom: 10px; width: calc(50% - 10px);
   z-index: 5; opacity: 0; pointer-events: none;
+  transform-style: preserve-3d;
+}
+.leaf-face {
+  position: absolute; inset: 0;
   padding: clamp(12px, 2.6vmin, 26px) clamp(14px, 3vmin, 30px);
-  overflow: hidden; color: #4a3a26;
-  font-family: Georgia, "Times New Roman", Times, serif;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border-radius: inherit;
   background:
     repeating-linear-gradient(180deg, transparent 0 calc(var(--rule) - 1px), rgba(96,72,42,0.1) calc(var(--rule) - 1px) var(--rule)),
     radial-gradient(130% 90% at 22% 0%, #fffdf4, #f4e7cb 68%, #e6d3ac);
   background-origin: content-box, padding-box;
-  backface-visibility: hidden;
 }
-.book-leaf.turn-next { left: 50%; transform-origin: left center; border-radius: 2px 6px 6px 2px; animation: leafNext .52s ease-in both; }
-.book-leaf.turn-prev { left: 10px; transform-origin: right center; border-radius: 6px 2px 2px 6px; animation: leafPrev .52s ease-in both; }
-/* list zůstává neprůhledný skoro do konce – jinak přes něj prosvítá
-   nový text a otočení stránky vypadá jako dvojexpozice */
+.leaf-face.back { transform: rotateY(180deg); }
+/* stín, jak se list zvedá od hřbetu – dělá z ploché rotace ohyb papíru */
+.leaf-face::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; opacity: 0;
+}
+.book-leaf.turn-next { left: 50%; transform-origin: left center; border-radius: 2px 6px 6px 2px; animation: leafNext .62s ease-in-out both; }
+.book-leaf.turn-prev { left: 10px; transform-origin: right center; border-radius: 6px 2px 2px 6px; animation: leafPrev .62s ease-in-out both; }
+.book-leaf.turn-next .leaf-face::after {
+  background: linear-gradient(90deg, rgba(70,46,18,0.5), rgba(70,46,18,0) 55%);
+  animation: leafShade .62s ease-in-out both;
+}
+.book-leaf.turn-prev .leaf-face::after {
+  background: linear-gradient(270deg, rgba(70,46,18,0.5), rgba(70,46,18,0) 55%);
+  animation: leafShade .62s ease-in-out both;
+}
 @keyframes leafNext {
-  0%   { opacity: 1; transform: rotateY(0deg); filter: brightness(1); }
-  76%  { opacity: 1; }
-  100% { opacity: 0; transform: rotateY(-168deg); filter: brightness(0.7); }
+  0%   { opacity: 1; transform: rotateY(0deg); }
+  99%  { opacity: 1; }
+  100% { opacity: 0; transform: rotateY(-180deg); }
 }
 @keyframes leafPrev {
-  0%   { opacity: 1; transform: rotateY(0deg); filter: brightness(1); }
-  76%  { opacity: 1; }
-  100% { opacity: 0; transform: rotateY(168deg); filter: brightness(0.7); }
+  0%   { opacity: 1; transform: rotateY(0deg); }
+  99%  { opacity: 1; }
+  100% { opacity: 0; transform: rotateY(180deg); }
+}
+@keyframes leafShade {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+/* stín, který během otáčení přejede po stránce pod listem */
+.book-page::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; opacity: 0; z-index: 2;
+  background: linear-gradient(90deg, rgba(58,38,14,0.42), rgba(58,38,14,0) 60%);
+}
+.book-page.left::after { background: linear-gradient(270deg, rgba(58,38,14,0.42), rgba(58,38,14,0) 60%); }
+.book.turning .book-page::after { animation: pageShade .62s ease-in-out both; }
+@keyframes pageShade {
+  0%   { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
+/* stužka se při otáčení lehce zhoupne */
+.book.turning .book-ribbon { animation: ribbonSway .8s var(--ease-out) both; }
+@keyframes ribbonSway {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(4.5deg); }
+  70%  { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* ---------- nástup obsahu stránky ----------
+   Obsah nepřiletí naráz: popisek, nadpis, text a podpis se objeví po
+   sobě, jako by je někdo dopisoval. Rozestup je krátký (60 ms), takže
+   se to nikdy nepřetáhne přes otočení listu. */
+.book-page > * { animation: pageInk .38s var(--ease-out) both; }
+.book-page > *:nth-child(1) { animation-delay: .16s; }
+.book-page > *:nth-child(2) { animation-delay: .22s; }
+.book-page > *:nth-child(3) { animation-delay: .28s; }
+.book-page > *:nth-child(4) { animation-delay: .34s; }
+.book-page > *:nth-child(5) { animation-delay: .40s; }
+.book-page > .page-num { animation-delay: .46s; }
+@keyframes pageInk {
+  from { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+/* výstřižek se „nalepí“ – dosedne s natočením a lehkým doskokem */
+.book-page > .fact-card { animation: cardPaste .46s var(--ease-back) .2s both; }
+@keyframes cardPaste {
+  from { opacity: 0; transform: rotate(-7deg) scale(0.9) translateY(10px); }
+  to   { opacity: 1; transform: rotate(-0.7deg) scale(1) translateY(0); }
+}
+/* list otevřené knížky – otevře se, ne jen naskočí */
+#screen-diary.visible .book { animation: bookOpen .55s var(--ease-back) both; }
+@keyframes bookOpen {
+  from { opacity: 0; transform: scale(0.9) translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+/* pečeť dýchá, ať je vidět, že tam něco čeká */
+.page-wax { animation: waxBreath 3.4s ease-in-out infinite; }
+@keyframes waxBreath {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50%      { transform: scale(1.06) rotate(2deg); }
 }
 
 .book-nav { display: flex; align-items: center; gap: 14px; }
@@ -834,7 +914,6 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 @media (max-height: 560px) and (orientation: landscape) {
   .book { height: calc(74 * var(--gvh)); --rule: 24px; }
   .book-head h2 { font-size: 0.95rem; }
-  .page-body { line-height: 1.5; }
   .book-page { padding: 10px 14px; }
   .page-portrait { width: min(52%, 150px); }
 }
@@ -1779,6 +1858,15 @@ html.low-fx #over-portrait,
 html.low-fx .over-card .story,
 html.low-fx .over-card .stat,
 html.low-fx .over-buttons { animation: none; opacity: 1; }
+/* deníček: papír zůstane, pohyb zmizí (js/game.js v tomhle režimu list
+   ani nerozehraje, tohle je pojistka pro nástup obsahu a pečeť) */
+html.low-fx .book-page > *,
+html.low-fx .book-page > .fact-card,
+html.low-fx #screen-diary.visible .book { animation: none; opacity: 1; transform: none; }
+html.low-fx .book-page > .fact-card { transform: rotate(-0.7deg); }
+html.low-fx .page-wax { animation: none; }
+html.low-fx .book-page::after,
+html.low-fx .book-leaf { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .menu-fx { display: none; }
@@ -1792,6 +1880,13 @@ html.low-fx .over-buttons { animation: none; opacity: 1; }
   .menu-brand, .menu-deck { translate: none; }
   #screen-menu.fade-in { animation: none; }
   #screen-menu.launching::after { animation: none; }
+  .book-page > *,
+  .book-page > .fact-card,
+  #screen-diary.visible .book { animation: none; opacity: 1; transform: none; }
+  .book-page > .fact-card { transform: rotate(-0.7deg); }
+  .page-wax { animation: none; }
+  .book-page::after,
+  .book-leaf { display: none; }
   /* nástup i přechody obrazovek zůstanou, ale jen jako prolnutí */
   #screen-menu.visible > .menu-brand,
   #screen-menu.visible > .menu-rail,

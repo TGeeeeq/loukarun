@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.6.0';
+  const GAME_VERSION = '1.6.1';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -3053,7 +3053,8 @@
   // kolik zvířátek už má trofej – pro odznaky
   function trophyCount() { return CHARACTERS.filter(charTrophy).length; }
 
-  const DIARY_STEP = 3;    // po kolika bězích s postavou přibude zápisek
+  const DIARY_STEP = 3;      // po kolika bězích s postavou přibude zápisek
+  const BOOK_TURN_MS = 640;  // musí sedět s .book-leaf v style.css
   let bookChar = null, bookPages = [], bookSpread = 0, bookBusy = false;
 
   function diaryUnlocked(ch) {
@@ -3232,21 +3233,33 @@
     AUDIO.play('click');
     PLATFORM.haptic('light');
     if (lowFx || reduceMotionMq.matches) { bookSpread = next; drawSpread(); return; }
-    // list je otisk odcházející stránky – plátno se musí překreslit ručně,
-    // innerHTML bitmapu nepřenese
+    /* Líc listu je otisk odcházející stránky. Plátno (portrét na titulní
+       straně) se musí překreslit ručně – innerHTML bitmapu nepřenese –
+       a data-sec se kopíruje taky, jinak by měl list na otočce jinou
+       barvu popisku než stránka, ze které vznikl. */
     const from = dir > 0 ? $('book-right') : $('book-left');
     const leaf = $('book-leaf');
-    leaf.innerHTML = from.innerHTML;
-    const srcs = from.querySelectorAll('canvas'), dsts = leaf.querySelectorAll('canvas');
+    const face = $('leaf-front');
+    face.innerHTML = from.innerHTML;
+    leaf.dataset.sec = from.dataset.sec || '';
+    const srcs = from.querySelectorAll('canvas'), dsts = face.querySelectorAll('canvas');
     for (let i = 0; i < srcs.length && i < dsts.length; i++) {
       dsts[i].width = srcs[i].width; dsts[i].height = srcs[i].height;
       dsts[i].getContext('2d').drawImage(srcs[i], 0, 0);
     }
+    // otisk se nesmí znovu rozanimovat – je to fotka, ne nová stránka
+    face.querySelectorAll('*').forEach((n) => { n.style.animation = 'none'; });
     leaf.className = 'book-leaf ' + (dir > 0 ? 'turn-next' : 'turn-prev');
+    $('book').classList.add('turning');
     bookBusy = true;
     bookSpread = next;
     drawSpread();
-    setTimeout(() => { leaf.className = 'book-leaf'; leaf.innerHTML = ''; bookBusy = false; }, 560);
+    setTimeout(() => {
+      leaf.className = 'book-leaf';
+      face.innerHTML = '';
+      $('book').classList.remove('turning');
+      bookBusy = false;
+    }, BOOK_TURN_MS);
   }
 
   function openDiary(ch) {

@@ -143,7 +143,13 @@
         <div class="book-page left" id="book-left"></div>
         <div class="book-page right" id="book-right"></div>
         <div class="book-spine" aria-hidden="true"></div>
-        <div class="book-leaf" id="book-leaf" aria-hidden="true"></div>
+        <!-- otáčený list má dvě strany: lícem je odcházející stránka,
+             rubem prázdný papír – proto je za polovinou otočky vidět
+             druhá strana listu a ne text pod ním -->
+        <div class="book-leaf" id="book-leaf" aria-hidden="true">
+          <div class="leaf-face front" id="leaf-front"></div>
+          <div class="leaf-face back"></div>
+        </div>
       </div>
       <div class="book-nav">
         <button id="btn-diary-prev" class="btn round" aria-label="Předchozí strana">‹</button>
