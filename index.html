@@ -65,6 +65,8 @@
 
     <div class="menu-rail" style="--d:.06s">
       <button id="btn-settings" class="btn round" aria-label="Nastavení" data-i18n-label="a11y.settings" aria-expanded="false">⚙</button>
+      <!-- Karel je po prvním uvítání dostupný odsud, ať ho jde zavolat kdykoli -->
+      <button id="btn-karel" class="btn round karel-call" aria-label="Karel" data-i18n-label="a11y.karel">🫏</button>
       <div class="lang-switch" role="group" aria-label="Jazyk / Language">
         <button class="lang-btn active" data-lang="cs">🇨🇿<span class="lang-label"> Česky</span></button>
         <button class="lang-btn" data-lang="en">🇬🇧<span class="lang-label"> English</span></button>
@@ -219,6 +221,42 @@
     </div>
   </div>
 
+  <!-- KARLOVO UVÍTÁNÍ – interaktivní scéna, viz js/karel.js.
+       Vlastní plátno kreslí celé pozadí, takže herní smyčka pod ním
+       může na tu dobu odpočívat. Text bubliny je schválně v DOM –
+       je ostrý, dá se označit a přečte ho i hlasová čtečka. -->
+  <div id="screen-karel" class="screen karel-screen" aria-hidden="true">
+    <canvas id="karel-canvas"></canvas>
+
+    <button id="karel-skip" class="btn round karel-skip" aria-label="Zavřít">✕</button>
+
+    <div id="karel-bubble" class="karel-bubble" hidden>
+      <p id="karel-text"></p>
+      <a id="karel-link" class="karel-link" target="_blank" rel="noopener" hidden></a>
+      <span id="karel-next" class="karel-next" aria-hidden="true">▸</span>
+    </div>
+
+    <p id="karel-hint" class="karel-hint" hidden></p>
+
+    <div id="karel-bar" class="karel-bar" hidden>
+      <div class="karel-actions">
+        <button id="karel-feed" class="btn">🥕 Nakrmit</button>
+        <button id="karel-say" class="btn">💬 Řekni něco</button>
+        <a id="karel-donate" class="btn buy" href="https://www.darujme.cz/vyzva/1205543" target="_blank" rel="noopener">🌾 Přispět na seno</a>
+      </div>
+      <div class="karel-links">
+        <a href="https://nechmerust.org" target="_blank" rel="noopener" data-i18n="karel.link.web">🌿 Web</a>
+        <a href="https://nechmerust.org/udalosti" target="_blank" rel="noopener" data-i18n="karel.link.events">📅 Akce</a>
+        <a href="https://nechmerust.org/novinky" target="_blank" rel="noopener" data-i18n="karel.link.news">📰 Novinky</a>
+        <a href="https://nechmerust.org/virtualni-adopce" target="_blank" rel="noopener" data-i18n="karel.link.adopt">🐾 Adopce</a>
+      </div>
+      <div class="karel-end">
+        <button id="karel-always" class="btn ghost" aria-pressed="false">😎 Ukazuj se pokaždé, jsi fešák</button>
+        <button id="karel-close" class="btn big">👋 Tak zatím, Karle</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast"></div>
 
   <!-- výzva k otočení telefonu (jen mobil na výšku) – dvojjazyčná -->
@@ -274,6 +312,7 @@
   <script src="js/gfx.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/platform.js"></script>
+  <script src="js/karel.js"></script>
   <script src="js/game.js"></script>
   <script>
     // HLÍDAČ SPUŠTĚNÍ

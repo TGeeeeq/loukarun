@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.7.1';
+  const GAME_VERSION = '1.8.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -357,6 +357,22 @@
     m.classList.add('fade-in');
     setTimeout(() => m.classList.remove('fade-in'), 800);
     showScreen('menu');
+    maybeGreet();
+  }
+
+  /* ---------- Karlovo uvítání ----------
+     Poprvé se otevře samo (poselství o azylu a o sbírce na seno má
+     vidět každý), pak už jen na přání – buď tlačítkem v menu, nebo
+     napořád, když si hráč zapne „fešák režim". */
+  function maybeGreet() {
+    if (typeof KAREL === 'undefined') return;
+    if (save.karelSeen && !save.karelAlways) return;
+    // menu se prolíná – ať se portál neotevře do rozjeté animace
+    setTimeout(() => {
+      if (S.mode === 'menu' && curScreen === 'menu' && !KAREL.isOpen()) {
+        KAREL.open({ lowFx: lowFx || reduceMotionMq.matches });
+      }
+    }, 620);
   }
 
   function renderIntro(px) {
@@ -2942,6 +2958,8 @@
      Vrací true, když jsme událost spotřebovali. false znamená „jsme na
      úvodní obrazovce“ – tam se aplikace na Androidu ukončí. */
   function goBack() {
+    // Karlova scéna leží nade vším – Zpět ji zavře jako první
+    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) { KAREL.close(); return true; }
     if (S.mode === 'intro') return true;   // během intra se nikam nechodí
     if (S.mode === 'run') { togglePause(); return true; }
     if (S.mode === 'paused') { togglePause(); return true; }
@@ -4366,6 +4384,27 @@
     // po zapnutí navázat tam, kde hráč je – na pauze zní stopa prostředí, ne menu
     if (save.music) AUDIO.playMusic(S.mode === 'paused' ? (S.lastEnvId || 'louka') : 'menu');
   }
+  /* ---------- Karel: tlačítko v menu a napojení scény ----------
+     Uložený stav drží hra (je v jednom saveu se vším ostatním), scéna
+     si o něj řekne přes hooks – js/karel.js sám do úložiště nesahá. */
+  $('btn-karel').addEventListener('click', () => {
+    AUDIO.play('click');
+    $('btn-karel').classList.remove('nudge');
+    KAREL.open({ lowFx: lowFx || reduceMotionMq.matches });
+  });
+  KAREL.init({
+    getAlways: () => !!save.karelAlways,
+    setAlways: (on) => { save.karelAlways = !!on; save.karelSeen = true; persist(); },
+    onSeen: () => {
+      if (save.karelSeen) return;
+      save.karelSeen = true;
+      persist();
+      // ať je po prvním setkání vidět, kde Karla příště najít
+      $('btn-karel').classList.add('nudge');
+      setTimeout(() => { if (!KAREL.isOpen()) toast(I18N.t('toast.karel')); }, 900);
+    },
+  });
+
   $('btn-sfx').addEventListener('click', toggleSfx);
   $('btn-music').addEventListener('click', toggleMusic);
   $('btn-pause-sfx').addEventListener('click', toggleSfx);
@@ -4454,6 +4493,13 @@
     const dt = Math.min(rawDt, 0.05);
     last = now;
     if (PERF) PERF.record(rawDt * 1000);
+    // Karlova scéna kreslí i vlastní pozadí, takže herní plátno pod ní
+    // není vidět – na tu dobu se svět neaktualizuje ani nekreslí a celý
+    // snímkový rozpočet zůstane portálu a postavě
+    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) {
+      requestAnimationFrame(frame);
+      return;
+    }
     autoQuality(rawDt);
     menuFxWatch(rawDt);
     update(dt);
