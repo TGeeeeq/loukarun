@@ -6,7 +6,10 @@
 
 const AUDIO = (() => {
   let ctx = null;
-  let sfxGain = null;
+  let sfxGain = null;   // efekty (řídí hlasitost i ztlumení na pauze)
+  let voiceGain = null; // hlasy zvířátek a Karlův smích – vlastní úroveň
+  let sfxComp = null;   // lepidlo na efekty
+  let master = null;    // pojistka proti přebuzení na výstupu
   let enabled = true;
   let musicEnabled = true;
   let lastKey = null;
@@ -23,14 +26,42 @@ const AUDIO = (() => {
     noc:     'assets/music/noc.mp3',
   };
 
+  const SFX_VOL = 0.35;
+  const VOICE_VOL = 0.9; // hlasy dřív šly rovnou na výstup a přebíjely všechno
+
+  /* Výstupní řetěz:
+       efekty → sfxGain → sfxComp ─┐
+       hlasy  → voiceGain ─────────┼→ master (pojistka) → výstup
+       hudba (jen v aplikaci) ─────┘
+     sfxComp lepí dohromady efekty – při dopadu se jich sejde pět naráz
+     (krok, dopad, sběr, tón řetězu, náraz) a součet špiček přebíjel hudbu.
+     Hlasy ani hudba přes něj nejdou, ty by dýchaly do rytmu skákání; drží
+     je až master, který sahá po zisku teprve těsně pod nulou. */
   function ensureCtx() {
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ctx = new AC();
+      master = ctx.createDynamicsCompressor();
+      master.threshold.value = -3;
+      master.knee.value = 3;
+      master.ratio.value = 20;
+      master.attack.value = 0.002;
+      master.release.value = 0.12;
+      master.connect(ctx.destination);
+      sfxComp = ctx.createDynamicsCompressor();
+      sfxComp.threshold.value = -20;
+      sfxComp.knee.value = 20;
+      sfxComp.ratio.value = 4;
+      sfxComp.attack.value = 0.004;
+      sfxComp.release.value = 0.2;
+      sfxComp.connect(master);
       sfxGain = ctx.createGain();
-      sfxGain.gain.value = 0.35;
-      sfxGain.connect(ctx.destination);
+      sfxGain.gain.value = SFX_VOL;
+      sfxGain.connect(sfxComp);
+      voiceGain = ctx.createGain();
+      voiceGain.gain.value = VOICE_VOL;
+      voiceGain.connect(master);
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
@@ -51,46 +82,52 @@ const AUDIO = (() => {
     osc.start(t0); osc.stop(t0 + dur + 0.05);
   }
 
-  // bílý šum se dřív generoval (alokace bufferu + Math.random smyčka) při
-  // každém volání – a land()/hit() padnou při každém dopadu, přesně v herně
-  // citlivý okamžik. Šum je nerozeznatelný, tak ho pro danou délku vyrobíme
-  // jednou a dál jen recyklujeme hotový buffer.
-  const noiseBufs = new Map();
-  function noiseBuffer(dur) {
-    let buf = noiseBufs.get(dur);
-    if (!buf) {
-      const len = Math.floor(ctx.sampleRate * dur);
-      buf = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
-      noiseBufs.set(dur, buf);
+  /* ---- šum ----
+     Jeden dlouhý plochý šum, ze kterého si každý zvuk bere náhodný výřez;
+     tvar mu dá až obálka v GainNode. Dřív měl každý zvuk vlastní krátký
+     buffer se zapečeným doběhem, takže se dvě přehrání lišila nula ku nule –
+     a série stejných transientů (kroky!) zní jako střelba, ne jako běh.
+     Plochý buffer navíc jde poctivě zasmyčkovat (vrstva rychlosti): ten se
+     zapečeným doběhem se každou otočku smyčky utnul z ticha na plný šum. */
+  const NOISE_SEC = 3;
+  let noiseBuf = null;
+  function noiseSrc() {
+    if (!noiseBuf) {
+      const len = Math.floor(ctx.sampleRate * NOISE_SEC);
+      noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    return buf;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    return src;
   }
 
-  function noise(dur, vol = 0.4, delay = 0) {
+  function noise(dur, vol = 0.4, delay = 0, atk = 0.004) {
     if (!enabled || !ensureCtx()) return;
     const t0 = ctx.currentTime + delay;
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuffer(dur);
+    const src = noiseSrc();
     const g = ctx.createGain();
-    g.gain.value = vol;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + atk);
+    g.gain.exponentialRampToValueAtTime(0.0005, t0 + dur);
     const f = ctx.createBiquadFilter();
-    f.type = 'lowpass'; f.frequency.value = 900;
+    f.type = 'lowpass'; f.frequency.value = 700 + Math.random() * 300;
     src.connect(f); f.connect(g); g.connect(sfxGain);
-    src.start(t0);
+    src.start(t0, Math.random() * (NOISE_SEC - dur - 0.05));
+    src.stop(t0 + dur + 0.05);
   }
 
-  // jednorázový zvukový soubor (např. Karlův smích) – respektuje vypnutí
-  // zvuků, přehrávače se cachují a přehrání se dá kdykoli spustit od začátku.
-  // V aplikaci (Capacitor) hrají vzorky přes WebAudio: <audio> element má na
-  // Androidu při zátěži herní smyčky latenci a umí zaškobrtnout; dekódované
-  // vzorky (pár vteřin) mixuje audio vlákno bez ohledu na hlavní vlákno.
+  /* Jednorázový zvukový soubor (Karlův smích, hlasy zvířátek). Vzorky jdou
+     přes WebAudio na všech platformách: ⟨audio⟩ má na Androidu při zátěži
+     herní smyčky latenci a umí zaškobrtnout, a hlavně jeho volume nelze
+     zvednout nad 1 – nejtišší nahrávku (Flíček) tak nešlo dorovnat na
+     úroveň ostatních. ⟨audio⟩ zbylo jen jako nouzovka bez WebAudia. */
   const samples = {};
   const sampleBufs = {};
   function sample(src, vol = 1) {
     if (!enabled) return;
-    if (WA && ensureCtx()) {
+    if (ensureCtx()) {
       if (!sampleBufs[src]) {
         sampleBufs[src] = fetch(src)
           .then((r) => r.arrayBuffer())
@@ -103,14 +140,15 @@ const AUDIO = (() => {
         s.buffer = buf;
         const g = ctx.createGain();
         g.gain.value = vol;
-        s.connect(g); g.connect(ctx.destination);
+        s.connect(g); g.connect(voiceGain);
         s.start();
       });
       return;
     }
     let el = samples[src];
     if (!el) { el = samples[src] = new Audio(src); el.preload = 'auto'; }
-    el.volume = vol;
+    // ⟨audio⟩ nemá voiceGain – stejnou úroveň i ztlumení dopočítáme sem
+    el.volume = Math.min(1, vol * VOICE_VOL * duckNow);
     try { el.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ }
     el.play().catch(() => {});
   }
@@ -118,17 +156,19 @@ const AUDIO = (() => {
   const SFX = {
     jump()   { tone(300, 0.18, 'square', 0.5, 620); },
     djump()  { tone(420, 0.16, 'square', 0.5, 820); },
-    land()   { noise(0.08, 0.25); },
-    slide()  { noise(0.22, 0.2); },
-    carrot() { tone(660, 0.09, 'sine', 0.7); tone(880, 0.12, 'sine', 0.7, null, 0.07); },
-    golden() { [660, 880, 1100, 1320].forEach((f, i) => tone(f, 0.14, 'sine', 0.7, null, i * 0.08)); },
-    coin()   { tone(1050, 0.08, 'triangle', 0.6); tone(1400, 0.1, 'triangle', 0.5, null, 0.06); },
-    clover() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.6, null, i * 0.06)); },
+    land()   { noise(0.09, 0.22, 0, 0.003); },
+    slide()  { noise(0.26, 0.16, 0, 0.05); }, // skluz se rozjíždí, neťukne
+    // sběry zní vždy zároveň s tónem řetězu (viz comboTone) – proto o něco
+    // tišeji, ať se dva melodické zvuky naráz nepobijí
+    carrot() { tone(660, 0.09, 'sine', 0.5); tone(880, 0.12, 'sine', 0.5, null, 0.07); },
+    golden() { [660, 880, 1100, 1320].forEach((f, i) => tone(f, 0.14, 'sine', 0.6, null, i * 0.08)); },
+    coin()   { tone(1050, 0.08, 'triangle', 0.45); tone(1400, 0.1, 'triangle', 0.38, null, 0.06); },
+    clover() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.5, null, i * 0.06)); },
     hit()    { tone(220, 0.25, 'sawtooth', 0.5, 90); noise(0.15, 0.3); },
     ram()    { tone(150, 0.2, 'sawtooth', 0.7, 60); noise(0.2, 0.5); },
     quote()  { tone(520, 0.07, 'sine', 0.35); tone(700, 0.08, 'sine', 0.3, null, 0.06); },
-    laugh()  { sample('assets/sfx/karel-smich.mp3', 0.7); },
-    bray()   { sample('assets/sfx/karel-hykani.mp3', 0.8); },
+    laugh()  { sample('assets/sfx/karel-smich.mp3', 1.02); }, // koeficienty viz VOICE_FILES
+    bray()   { sample('assets/sfx/karel-hykani.mp3', 0.58); },
     finish() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.3, 'triangle', 0.6, null, i * 0.13)); },
     click()  { tone(700, 0.05, 'sine', 0.4); },
     buy()    { [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', 0.55, null, i * 0.09)); },
@@ -146,27 +186,47 @@ const AUDIO = (() => {
     const semi = PENTA[i % PENTA.length] + 12 * Math.floor(i / PENTA.length);
     // po dvou oktávách už by to pískalo – dál se drží nahoře
     const f = 523.25 * Math.pow(2, Math.min(semi, 26) / 12);
-    tone(f, 0.11, 'triangle', 0.45);
+    tone(f, 0.11, 'triangle', 0.34);
   }
 
   /* ---- kroky podle povrchu ----
-     Krátký tlumený šum s filtrem podle prostředí: tráva šustí, dřevo dutě
-     klepe, polní cesta chrastí kamínky. Drží se hodně potichu – má to být
-     cítit, ne slyšet. */
-  const STEP_FILTER = { louka: 1400, sad: 1400, les: 900, vesnice: 2600, zapad: 1500, noc: 1100 };
+     Šustnutí, ne klepnutí. Původní verze pouštěla pořád tentýž 50ms výřez
+     šumu přes úzký pásmový filtr kolem 1,4 kHz s okamžitým náběhem – tedy
+     ostrý transient přesně v pásmu, kde ucho slyší nejcitlivěji, pětkrát
+     za vteřinu a pokaždé nota po notě stejný. To se neposlouchá jako běh,
+     ale jako dávka ze samopalu, a na telefonu to přebilo i hudbu.
+
+     Teď: dolní propust (žádné pásmové „ping“), měkký náběh přes 15 ms
+     (bez cvaknutí), pokaždé jiný výřez šumu, střídání levé a pravé nohy
+     jinou barvou i hlasitostí, a tvrdý strop na hustotu kroků, aby se při
+     nejvyšší rychlosti nesešly na hromadu. */
+  const STEP_FILTER = { louka: 950, sad: 950, les: 700, vesnice: 1500, zapad: 1000, noc: 800 };
+  const STEP_MIN_GAP = 0.14; // s – rychleji než tohle už to zní jako rachot
+  let stepFoot = 0;
+  let stepLast = -1;
   function step(envId, vol = 1) {
     if (!enabled || !ensureCtx()) return;
     const t0 = ctx.currentTime;
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuffer(0.05);
+    if (t0 - stepLast < STEP_MIN_GAP) return;
+    stepLast = t0;
+    stepFoot ^= 1;
+    const dur = 0.055 + Math.random() * 0.035;
+    const base = (STEP_FILTER[envId] || 950) * (stepFoot ? 1.1 : 0.9);
+    const src = noiseSrc();
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 260; // ať krok nedunív basech
     const f = ctx.createBiquadFilter();
-    f.type = 'bandpass';
-    f.frequency.value = STEP_FILTER[envId] || 1400;
-    f.Q.value = 0.8;
+    f.type = 'lowpass';
+    f.frequency.value = base * (0.9 + Math.random() * 0.2);
+    f.Q.value = 0.4;
     const g = ctx.createGain();
-    g.gain.value = 0.055 * vol;
-    src.connect(f); f.connect(g); g.connect(sfxGain);
-    src.start(t0);
+    const peak = 0.038 * vol * (stepFoot ? 1 : 0.8);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(peak, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(hp); hp.connect(f); f.connect(g); g.connect(sfxGain);
+    src.start(t0, Math.random() * (NOISE_SEC - 0.2));
+    src.stop(t0 + dur + 0.03);
   }
 
   /* ---- vrstva rychlosti ----
@@ -175,36 +235,43 @@ const AUDIO = (() => {
      každá své tempo, které neznáme, a nesynchronní bubny by se s nimi
      praly. Šum nemá tón ani rytmus, takže sedne na cokoli a hráč přesto
      slyší, že se rozjíždí. */
+  const WIND_VOL = 0.11;
   let wind = null;
   let windTarget = 0;
+  let windSet = -1; // poslední naplánovaná hodnota – smyčka volá 60×/s
   function ensureWind() {
     if (wind || !ensureCtx()) return;
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuffer(2); // dvě vteřiny šumu ve smyčce ucho nerozezná
+    const src = noiseSrc(); // plochý šum: smyčka je opravdu neslyšitelná
     src.loop = true;
     const f = ctx.createBiquadFilter();
-    f.type = 'bandpass';
+    f.type = 'lowpass'; // pásmový filtr syčel v řeči; vzduch má být pod ní
     f.frequency.value = 500;
-    f.Q.value = 0.5;
+    f.Q.value = 0.4;
     const g = ctx.createGain();
     g.gain.value = 0;
-    src.connect(f); f.connect(g); g.connect(ctx.destination);
+    // přes sfxGain, ať vrstvu rychlosti řídí hlasitost efektů i ztlumení
+    // na pauze stejně jako všechno ostatní (dřív šla rovnou na výstup)
+    src.connect(f); f.connect(g); g.connect(sfxGain);
     src.start();
     wind = { src, f, g };
   }
 
-  // v = 0 (stojí) … 1 (naplno) – volá se z herní smyčky
+  // v = 0 (stojí) … 1 (naplno) – volá se z herní smyčky každý snímek
   function setIntensity(v) {
     windTarget = Math.max(0, Math.min(1, v));
-    if (!enabled) { if (wind) wind.g.gain.value = 0; return; }
+    if (!enabled) { if (wind) { wind.g.gain.value = 0; windSet = -1; } return; }
     ensureWind();
     if (!wind) return;
+    // přeplánovat rampu 60×/s je zbytečná práce i drhnutí – stačí při změně
+    if (Math.abs(windTarget - windSet) < 0.02) return;
+    windSet = windTarget;
     const t = ctx.currentTime;
-    const g = 0.05 * windTarget * duckNow;
     wind.g.gain.cancelScheduledValues(t);
-    wind.g.gain.linearRampToValueAtTime(g, t + 0.25);
+    wind.g.gain.setValueAtTime(wind.g.gain.value, t);
+    wind.g.gain.linearRampToValueAtTime(WIND_VOL * windTarget, t + 0.25);
     wind.f.frequency.cancelScheduledValues(t);
-    wind.f.frequency.linearRampToValueAtTime(420 + 900 * windTarget, t + 0.25);
+    wind.f.frequency.setValueAtTime(wind.f.frequency.value, t);
+    wind.f.frequency.linearRampToValueAtTime(380 + 700 * windTarget, t + 0.25);
   }
 
   /* ---- ztlumení při pauze ----
@@ -220,9 +287,11 @@ const AUDIO = (() => {
     duckNow = to;
     if (sfxGain && ctx) {
       const t = ctx.currentTime;
-      sfxGain.gain.cancelScheduledValues(t);
-      sfxGain.gain.setValueAtTime(sfxGain.gain.value, t);
-      sfxGain.gain.linearRampToValueAtTime(0.35 * duckNow, t + DUCK_TIME);
+      for (const [node, base] of [[sfxGain, SFX_VOL], [voiceGain, VOICE_VOL]]) {
+        node.gain.cancelScheduledValues(t);
+        node.gain.setValueAtTime(node.gain.value, t);
+        node.gain.linearRampToValueAtTime(base * duckNow, t + DUCK_TIME);
+      }
     }
     if (WA && WA.active && ctx) {
       const t = ctx.currentTime;
@@ -232,30 +301,36 @@ const AUDIO = (() => {
       g.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + DUCK_TIME);
     }
     if (players) for (const el of players) el.volume = el._vol * duckNow;
-    setIntensity(windTarget);
+    // vrstva rychlosti i hlasy visí na sfxGain/voiceGain – ztlumí se s nimi
   }
 
   // hlas zvířátka při Zvířecím koncertu – každá postava má svůj soubor.
+  // Nahrávky přišly každá odjinud a lišily se o 12 dB (Flíček se ztrácel,
+  // Květa řvala). Přepisovat mp3 by znamenalo ztrátovou překódovací kolečku,
+  // tak se srovnávají tady: koeficient dorovná změřenou hlasitost souboru
+  // na společných −20 dBFS RMS.
   const VOICE_FILES = {
-    karel:  'voice-karel',   // osel – hýká
-    pogo:   'voice-pogo',    // ovečka – bečí
-    avala:  'voice-avala',   // kráva – bučí
-    flicek: 'voice-flicek',  // prasátko – chrochtá
-    yakul:  'voice-yakul',   // muflon – bečí
-    kveta:  'voice-kveta',   // kráva – bučí
+    karel:  ['voice-karel',  0.58], // osel – hýká
+    pogo:   ['voice-pogo',   0.75], // ovečka – bečí
+    avala:  ['voice-avala',  0.62], // kráva – bučí
+    flicek: ['voice-flicek', 1.60], // prasátko – chrochtá (plné dorovnání by špičkou drhlo o nulu)
+    yakul:  ['voice-yakul',  0.88], // muflon – bečí
+    kveta:  ['voice-kveta',  0.51], // kráva – bučí
   };
-  function voice(id) { sample('assets/sfx/' + (VOICE_FILES[id] || 'voice-karel') + '.mp3', 0.9); }
+  function voice(id) {
+    const [file, trim] = VOICE_FILES[id] || VOICE_FILES.karel;
+    sample('assets/sfx/' + file + '.mp3', trim);
+  }
 
   // hlasy a Karlův smích/hýkání se dřív dekódovaly líně až při 1. přehrání –
-  // uprostřed běhu to uměl být první zádrhel. V aplikaci (WA) je v klidu po
-  // unlocku předehřejeme do sampleBufs, ať jsou dekódované předem. Na webu
-  // jede sample() přes <audio preload="auto">, takže tam warm není potřeba.
+  // uprostřed běhu to uměl být první zádrhel. Po unlocku je v klidu
+  // předehřejeme do sampleBufs, ať jsou dekódované předem.
   let warmed = false;
   function warmSamples() {
-    if (warmed || !WA || !ensureCtx()) return;
+    if (warmed || !ensureCtx()) return;
     warmed = true;
     const list = ['assets/sfx/karel-smich.mp3', 'assets/sfx/karel-hykani.mp3'];
-    for (const id in VOICE_FILES) list.push('assets/sfx/' + VOICE_FILES[id] + '.mp3');
+    for (const id in VOICE_FILES) list.push('assets/sfx/' + VOICE_FILES[id][0] + '.mp3');
     for (const src of list) {
       if (sampleBufs[src]) continue;
       sampleBufs[src] = fetch(src)
@@ -327,7 +402,7 @@ const AUDIO = (() => {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + fade);
-    node.connect(gain); gain.connect(ctx.destination);
+    node.connect(gain); gain.connect(master);
     node.start(t);
     WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
     // dekódovaná skladba zabírá desítky MB – v cache drž jen tu hrající
@@ -466,7 +541,7 @@ const AUDIO = (() => {
 
   function setSfx(on) {
     enabled = on;
-    if (wind) wind.g.gain.value = on ? 0.05 * windTarget * duckNow : 0;
+    if (wind) { wind.g.gain.value = on ? WIND_VOL * windTarget : 0; windSet = on ? windTarget : -1; }
   }
   function setMusic(on) {
     musicEnabled = on;

@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.0';
+  const GAME_VERSION = '1.8.1';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -2190,9 +2190,12 @@
     compact(S.pickups, p => p.x > cut && !p.taken);
     compact(S.decor, d => d.x > cut - 1300); // pomalejší parallax = déle na obrazovce
 
-    // hudba podle prostředí
+    // Hudba podle prostředí. Přepíná se v půlce obrazového prolnutí, ne až
+    // na hranici – jinak kulisa doputuje do dalšího kraje o pár vteřin dřív
+    // než hudba a chvíli si nesedí.
     if (running) {
-      const envId = currentEnv().env.id;
+      const ce = currentEnv();
+      const envId = (ce.blend > 0.5 ? ce.nextEnv : ce.env).id;
       if (envId !== S.lastEnvId) { S.lastEnvId = envId; AUDIO.playMusic(envId); }
     }
 
