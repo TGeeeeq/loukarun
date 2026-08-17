@@ -77,8 +77,19 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ## Postup (kroky pro Claude Code)
 
+> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.11) skončil na
+> vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
+> `git pull origin main` by tedy stáhl starý kód a sestavil starý AAB. Nejnovější
+> je větev **`claude/google-play-display-issue-0m9evj`**; ověř si to podle
+> `versionName` v `android/app/build.gradle` (má být 1.0.11) a podle
+> `GAME_VERSION` v `js/game.js` (1.8.3). Až bude vydáno, stojí za to větev
+> sloučit do `main` a zbytečné `claude/*` větve na GitHubu smazat, aby tahle
+> past nečíhala i příště.
+
 ```bash
-git pull origin main
+git fetch origin
+git checkout claude/google-play-display-issue-0m9evj
+git pull
 # plné npm install, ne --omit=dev: `cap` je devDependency, a hlavně bez
 # nainstalovaných pluginů je `cap sync` mlčky vyhodí z gradle souborů
 # a vznikne AAB bez haptiky, tlačítka Zpět i zálohy postupu
@@ -95,7 +106,14 @@ cd android && ./gradlew bundleRelease && cd ..
 cp android/app/build/outputs/bundle/release/app-release.aab googleplay/
 git add googleplay/app-release.aab android/app/build.gradle
 git commit -m "chore: rebuild Play AAB vX.Y.Z (versionCode N)"
-git push origin main
+git push origin HEAD          # tedy do větve, na které stojíš (viz varování výš)
+```
+
+Ověřit, že v AAB je oprava zvětšeného písma (jinak nemá smysl ho nahrávat):
+
+```bash
+grep -c 'font-size: 16px' www/style.css        # ≥ 1
+grep -c 'setTextZoom' android/app/src/main/java/org/nechmerust/loukarun/MainActivity.java
 ```
 
 Pak ručně: **play.google.com/console → Louka Run → Production → Create new
