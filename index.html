@@ -24,6 +24,7 @@
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
   <link rel="preload" as="image" href="assets/logo.png">
+  <link rel="preload" as="image" href="assets/start.png" fetchpriority="high">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -291,6 +292,23 @@
   </div>
 
   <!-- AF signatura – filmová znělka autora před spuštěním hry -->
+  <!-- STARTOVNÍ OBRAZOVKA (jen web)
+       Prohlížeč pustí celou obrazovku i zvuk výhradně na uživatelské gesto.
+       Dokud hra na první ťuknutí čekala až u tlačítka BĚŽET, běželo intro i
+       menu v okně s adresním řádkem – na telefonu na výšku pak byla hra
+       otočená o 90° a zabírala jen výřez mezi lištami. Tahle obrazovka to
+       gesto vyžádá dřív, než se cokoli rozjede: ťuknutí zapne fullscreen se
+       zámkem na šířku, probudí WebAudio a teprve pak nastartuje znělku,
+       intro a hudbu. Vedlejší efekt: zvuky a písma se stáhnou, zatímco si
+       hráč čte úvodní obrázek, takže intro nejede přes prázdnou cache.
+       V appce z Google Play je fullscreen řešený nativně (MainActivity),
+       takže se tahle obrazovka vůbec neukáže – js/game.js ji zahodí. -->
+  <div id="start-gate">
+    <img src="assets/start.png" alt="Louka Run – hra azylu Nech mě růst" width="1600" height="960" fetchpriority="high">
+    <button id="start-go" class="btn big" data-i18n="start.go">▶ Spustit hru</button>
+    <p class="start-note" data-i18n="start.note">Spustí se na celou obrazovku naležato.</p>
+  </div>
+
   <div id="af-splash" role="img" aria-label="Antonín Figueroa — antoninfigueroa.cz">
     <div class="af-inner">
       <svg class="af-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">

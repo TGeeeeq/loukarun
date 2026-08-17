@@ -2,12 +2,16 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.11 (versionCode 12, hra 1.8.3) — AAB JE POTŘEBA PŘESTAVĚT.**
-  `googleplay/app-release.aab` v repozitáři je ještě stará v1.0.10 a
-  **neobsahuje opravu zvětšeného písma** — nenahrávej ho. Postup níž
-  („Postup (kroky pro Claude Code)“) je od kroku 2, verze v
-  `android/app/build.gradle` už zvednuté jsou.
+- **v1.0.12 (versionCode 13, hra 1.8.4) — AAB JE POTŘEBA PŘESTAVĚT.**
+  Přidaná startovní obrazovka (`#start-gate`) je **jen pro web**: prohlížeč
+  nepustí fullscreen ani zvuk bez uživatelského gesta, takže hra na webu do
+  prvního ťuknutí běžela v okně s adresním řádkem. V appce je fullscreen
+  nativní (`MainActivity.hideSystemBars`) a Capacitor zvuk bez gesta povoluje,
+  proto ji `js/game.js` v nativním běhu zahodí (`PLATFORM.native`) a spustí
+  znělku hned. V AAB tedy nesmí být vidět — ověřit po instalaci: po spuštění
+  jde rovnou černá znělka „AF“, žádné „▶ Spustit hru“.
 
+- **v1.0.11 (versionCode 12, hra 1.8.3) — vydáno spolu s 1.0.12.**
   Co v 1.0.11 přibylo:
   - **systémové zvětšení písma už hru nerozhodí.** Bez explicitní velikosti
     na `<html>` je 1rem „výchozí velikost písma prohlížeče“ a tu Android
@@ -77,12 +81,17 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ## Postup (kroky pro Claude Code)
 
+> **`googleplay/app-release.aab` v repozitáři je stará v1.0.10 — NENAHRÁVEJ HO.**
+> Nemá ani opravu zvětšeného písma, ani startovní obrazovku. Musí se
+> přestavět; verze v `android/app/build.gradle` už zvednuté jsou
+> (versionCode 13 / 1.0.12), takže postup níž začíná krokem 2.
+
 > **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.11) skončil na
 > vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
 > `git pull origin main` by tedy stáhl starý kód a sestavil starý AAB. Nejnovější
 > je větev **`claude/google-play-display-issue-0m9evj`**; ověř si to podle
-> `versionName` v `android/app/build.gradle` (má být 1.0.11) a podle
-> `GAME_VERSION` v `js/game.js` (1.8.3). Až bude vydáno, stojí za to větev
+> `versionName` v `android/app/build.gradle` (má být 1.0.12) a podle
+> `GAME_VERSION` v `js/game.js` (1.8.4). Až bude vydáno, stojí za to větev
 > sloučit do `main` a zbytečné `claude/*` větve na GitHubu smazat, aby tahle
 > past nečíhala i příště.
 
@@ -112,8 +121,9 @@ git push origin HEAD          # tedy do větve, na které stojíš (viz varován
 Ověřit, že v AAB je oprava zvětšeného písma (jinak nemá smysl ho nahrávat):
 
 ```bash
-grep -c 'font-size: 16px' www/style.css        # ≥ 1
+grep -c 'font-size: 16px' www/style.css        # ≥ 1  (pevný základ pro rem)
 grep -c 'setTextZoom' android/app/src/main/java/org/nechmerust/loukarun/MainActivity.java
+grep -c 'PLATFORM.native' www/js/game.js       # ≥ 1  (startovní obrazovka se v appce zahodí)
 ```
 
 Pak ručně: **play.google.com/console → Louka Run → Production → Create new
@@ -127,12 +137,21 @@ Webová (pozvánková) kopie hry žije v repozitáři **TGeeeeq/NMRStranky1.0**
 ve složce `web/public/loukarun/app/`. Aktualizace:
 
 ```bash
-cp js/audio.js js/data.js js/game.js js/gfx.js js/i18n.js ../nmrstranky1.0/web/public/loukarun/app/js/
-cp sw.js style.css ../nmrstranky1.0/web/public/loukarun/app/
-# index.html se NEkopíruje slepě — webová kopie nemá odkaz „Návod pro testery“;
-# při změně index.html přenést úpravy ručně.
-# pak v nmrstranky1.0: commit + push do main → Vercel nasadí sám
+W=../nmrstranky1.0/web/public/loukarun/app
+cp js/audio.js js/data.js js/game.js js/gfx.js js/i18n.js js/karel.js js/platform.js $W/js/
+cp style.css index.html $W/
+cp assets/start.png $W/assets/
+# sw.js se NEKOPÍRUJE — webová kopie schválně nemá v CORE adresu „./“ (na
+# nechmerust.org/loukarun/app/ končí přesměrováním pozvánkové brány, takže by
+# se uložila pod klíčem, na který se žádné načtení hry netrefí). Přenes ručně
+# jen číslo cache: sed -i "s/loukarun-v[0-9]*/loukarun-vNN/" $W/sw.js
+# a pokud přibyl nový soubor v assets, dopiš ho do CORE v obou sw.js.
+# Pak v nmrstranky1.0: commit + push do main → GitHub Actions nasadí na Azure.
 ```
+
+Po syncu se vyplatí porovnat, že se nezrušila žádná webová odchylka:
+`diff <(cat $W/index.html) index.html` má vyjít prázdný, `diff $W/sw.js sw.js`
+smí ukázat jedině tu adresu „./“.
 
 Nezapomenout: při každé změně js/css/html **zvednout verzi cache v `sw.js`**
 (`loukarun-vNN`), jinak hráči na webu uvidí starou verzi.

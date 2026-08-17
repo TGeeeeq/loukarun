@@ -1927,9 +1927,11 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
     radial-gradient(52% 42% at 50% 45%, rgba(212, 164, 90, 0.08), rgba(212, 164, 90, 0) 70%),
     #0a0908;
   transition: opacity 1s ease .35s; /* pozadí odchází jako poslední */
-  /* pojistka: kdyby JS selhal, znělka se po chvíli sama uklidí */
-  animation: afSafety 1s ease 9s forwards;
 }
+/* Pojistka: kdyby JS selhal, znělka se po chvíli sama uklidí. Běží teprve od
+   nasazení .af-armed – tedy až po ťuknutí na startovní obrazovku. Jinak by
+   devět sekund odtikalo ještě pod ní a hráč by znělku nikdy neviděl. */
+#af-splash.af-armed { animation: afSafety 1s ease 9s forwards; }
 @keyframes afSafety { to { opacity: 0; visibility: hidden; } }
 #af-splash.af-leave { opacity: 0; pointer-events: none; }
 #af-splash.af-leave .af-inner { animation: afInnerOut .85s ease forwards; }
@@ -2478,4 +2480,47 @@ html.low-fx .book-leaf { display: none; }
   .karel-bar.in,
   .karel-next,
   .karel-call.nudge { animation: none; }
+}
+
+/* =========================================================
+   STARTOVNÍ OBRAZOVKA (jen web) – gesto pro fullscreen
+
+   Prohlížeč nepustí celou obrazovku ani zvuk bez uživatelského gesta a hra
+   na první ťuknutí čekala až u tlačítka BĚŽET. Do té doby jelo intro i menu
+   v okně s adresním řádkem: na telefonu drženém na výšku se hra otočila
+   o 90° a vešla se jen do výřezu mezi lištami. Tahle obrazovka si gesto
+   vyžádá dřív, než se cokoli rozjede – a než hráč ťukne, stáhnou se na
+   pozadí písma i zvuky, takže intro nejede přes prázdnou cache.
+   Z-index je nad znělkou (200), aby ji překryla, dokud hráč neťukne.
+   ========================================================= */
+#start-gate {
+  position: fixed; inset: 0;
+  z-index: 260;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(10px, calc(3 * var(--gvh)), 24px);
+  padding: max(14px, var(--safe-top)) max(14px, var(--safe-right))
+           max(14px, var(--safe-bottom)) max(14px, var(--safe-left));
+  background: linear-gradient(180deg, #fffdf5 0%, #f2f8ea 62%, #dff0cd 100%);
+  cursor: pointer;
+  transition: opacity .45s ease;
+}
+#start-gate img {
+  /* obrázek se vejde vždy celý – rozhoduje ta těsnější osa displeje */
+  max-width: min(88%, 720px);
+  max-height: 56%;
+  width: auto; height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 26px rgba(85,161,60,0.18));
+}
+#start-gate .start-note {
+  font-size: 0.82rem; font-weight: 700; color: #5a6a48; text-align: center;
+  max-width: 26rem;
+}
+#start-gate.gate-leave { opacity: 0; pointer-events: none; }
+/* nízký displej naležato: obrázek ustoupí tlačítku, ať je pořád na dosah.
+   Druhá podmínka = vynucená šířka (hra otočená o 90°), stejně jako u obchodu. */
+@media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
+  #start-gate img { max-height: 46%; }
+  #start-gate .start-note { font-size: 0.74rem; }
 }
