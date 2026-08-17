@@ -367,7 +367,12 @@ const AUDIO = (() => {
      hraje i v aplikaci streamovaně přes <audio> (menu nemá herní smyčku,
      zádrhel tam nehrozí) a WebAudio se používá jen pro krátké běhové
      skladby – v paměti je vždy nanejvýš jedna. */
-  const WA = window.Capacitor ? { buffers: {}, active: null, watch: null } : null;
+  // POZOR: rozhoduje isNativePlatform(), ne pouhá přítomnost mostu. Capacitor
+  // runtime umí být přítomný i na webu a tam by se dlouhé skladby zbytečně
+  // dekódovaly do PCM (desítky MB) – cesta určená výhradně pro appku.
+  const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function'
+                    && window.Capacitor.isNativePlatform());
+  const WA = NATIVE ? { buffers: {}, active: null, watch: null } : null;
   let waSeq = 0; // pořadí požadavků – ať pozdě dodekódovaná stopa nepřebije novější
 
   // menu/intro sdílí dlouhý soubor – ten v aplikaci nikdy nedekódujeme

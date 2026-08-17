@@ -49,3 +49,29 @@ a sbírej `{text, x, y}`; pak lze assertovat, že se text kreslí uvnitř plátn
 (0 < y < výška hry). Globál `GFX` (js/gfx.js) je dosažitelný z `page.evaluate`,
 `GFX.rr` jde obalit pro záznam zaoblených obdélníků. Screenshot celé stránky
 ukáže hru otočenou (na výšku) – to je správně.
+
+## Audit viditelnosti (rozvržení na všech displejích)
+
+`audit-rozvrzeni.js` projde matici rozlišení × velikost systémového písma ×
+obrazovky a nahlásí, co je nedostupné, useknuté nebo přes sebe.
+
+```bash
+python3 -m http.server 8125 --directory . &
+npm install playwright-core   # mimo repo, např. do scratchpadu
+SCALES=100,130 OUT=./out.json node .claude/skills/verify/audit-rozvrzeni.js 2>&1 | grep hotovo
+node .claude/skills/verify/audit-report.js < out.json
+```
+
+Proměnné: `SCALES` (velikost písma v %, výchozí `100,130`), `ONLY` (názvy
+zařízení oddělené čárkou), `SCREENS`, `SHOOT=1` (snímky nálezů), `BASE`
+(adresa serveru), `PW_DIR` (cesta k playwright-core).
+
+**Systémové zvětšení písma na Androidu je hlavní spouštěč rozbitého
+rozvržení** — v `SCALES` musí zůstat aspoň jedna hodnota nad 100.
+
+Dvě pasti, na kterých detektor dřív lhal:
+- telefon na výšku má hru otočenou o 90°, takže `getBoundingClientRect` vrací
+  fyzické osy, ale `scrollHeight`/`overflow-y` herní → osy se musí přemapovat
+  (`gameAxis()`), jinak se jako nedostupné hlásí i to, k čemu jde dorolovat
+- překryv se počítá z viditelné části prvku (průnik se všemi ořezávajícími
+  předky), jinak „překrývá“ i text schovaný za okrajem stránky deníčku

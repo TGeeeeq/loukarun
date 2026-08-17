@@ -2,7 +2,7 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.9 (versionCode 10, hra 1.8.1)** — AAB přestavěn a podepsán
+- **v1.0.10 (versionCode 11, hra 1.8.2)** — AAB přestavěn a podepsán
   (`googleplay/app-release.aab`), čeká jen na nahrání do Play Console
   (Production → Create new release). V produkci je pořád v1.0.4
   (versionCode 5); verze 1.0.5–1.0.8 se do Play nikdy nenahrály, takže
@@ -14,6 +14,23 @@
     (haptika, tlačítko Zpět, zálohování postupu do Preferences)
   - **zvuk**: kroky přestaly znít jako střelba, vyrovnané hlasy zvířátek,
     kompresor na efektech a výstupní pojistka
+  - **viditelnost na malých displejích a při systémově zvětšeném písmu**:
+    nic se už neusekne ani nepřekryje (viz níž „Jak se to hlídá“)
+
+## Jak se hlídá viditelnost
+
+Rozvržení se měří strojově, ne od oka: headless Chromium projde 16 rozlišení
+(telefon na výšku i na šířku, tablet, počítač) × velikost písma 100 % a 130 %
+× 7 obrazovek a hlásí čtyři věci — prvek mimo obrazovku, ke kterému nejde
+dorolovat; prvek useknutý předkem, který se v té ose nedá odrolovat; text
+přetékající ze schránky s pozadím; a dva texty přes sebe.
+
+Skript i postup jsou v `.claude/skills/verify/`. **Pozor na dvě pasti**:
+telefon na výšku má hru otočenou o 90°, takže `getBoundingClientRect` vrací
+fyzické osy, ale `scrollHeight`/`overflow-y` patří k herním — bez přemapování
+os detektor hlásí jako nedostupné i to, k čemu se dá pohodlně dorolovat.
+A překryv se musí počítat z viditelné části prvku (průnik se všemi
+ořezávajícími předky), jinak „překrývá“ i text schovaný za okrajem stránky.
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.

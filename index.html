@@ -181,8 +181,14 @@
        drží panelu přesnou výšku, takže se při psaní nehýbe a pod textem
        nezůstává rezerva. -->
   <div id="screen-over" class="screen">
-    <div class="over-rays" aria-hidden="true"></div>
-    <div class="menu-fx over-fx" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <!-- Kulisa v odděleném ořezaném obalu: paprsky jsou 190vmax velké a bez
+         obalu by nafoukly rolovací plochu obrazovky natolik, že by se kvůli
+         nim musel vypnout posun a karta by se pak na nízkém displeji nedala
+         dorolovat (useknutý nadpis i spodní tlačítka). -->
+    <div class="over-backdrop" aria-hidden="true">
+      <div class="over-rays"></div>
+      <div class="menu-fx over-fx"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
     <div class="over-card">
       <div class="over-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <h2 id="over-title">CÍL DNEŠNÍHO BĚHU!</h2>

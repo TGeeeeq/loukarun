@@ -1128,7 +1128,8 @@ const KAREL = (() => {
   }
 
   function applyQuip(q, opts) {
-    const link = q.link ? { href: URL[q.link], cs: LINK_LABEL[q.link].cs, en: LINK_LABEL[q.link].en } : null;
+    const lbl = q.link ? LINK_LABEL[q.link] : null; // neznámý klíč → hláška bez odkazu
+    const link = lbl ? { href: URL[q.link], cs: lbl.cs, en: lbl.en } : null;
     say(q.text, { link });
     if (q.prop === 'shades') { st.props.shades = 999; }
     if (q.prop === 'hat') { st.props.hat = 6; }
@@ -1364,6 +1365,7 @@ const KAREL = (() => {
     const scr = $('screen-karel');
     if (!scr) return;
     cv = $('karel-canvas');
+    if (!cv) return;
     ctx = cv.getContext('2d', { alpha: false });
 
     // stav do výchozí polohy

@@ -144,7 +144,10 @@ html, body {
 .btn.tiny { font-size: 0.85rem; padding: 7px 16px; box-shadow: 0 3px 0 #d89b26, 0 5px 12px rgba(0,0,0,0.15); }
 .btn.round {
   width: 46px; height: 46px; padding: 0;
-  font-size: 1.3rem; line-height: 46px; text-align: center;
+  /* kolečko je v px, ale písmo v rem – při systémovém zvětšení písma na
+     Androidu glyf přerostl tlačítko, proto strop v px */
+  font-size: min(1.3rem, 21px); line-height: 1; text-align: center;
+  display: inline-grid; place-items: center;
 }
 .btn.buy { background: linear-gradient(180deg, #b0e89a, #7ac95e); box-shadow: 0 4px 0 #55a13c, 0 8px 18px rgba(0,0,0,0.18); color: #234a12; }
 .btn.cant { filter: grayscale(.55) brightness(.92); }
@@ -242,6 +245,13 @@ a.btn { text-decoration: none; display: inline-block; }
     transform var(--dur-base) var(--ease-out),
     visibility 0s linear var(--dur-base);
 }
+/* Kořenová příčina většiny „nevidím na to" chyb: panel je položka svislého
+   flexboxu, takže má výchozí `flex-shrink: 1`. Na nízkém displeji se stlačil
+   pod svůj obsah, ten z něj vytekl ven – a protože přetečení bylo mimo panel,
+   obrazovka o něm nevěděla a nešlo k němu ani odrolovat. Panel se prostě
+   nesmí zmenšit; když se nevejde, ať radši obrazovka roluje. */
+.screen > * { flex-shrink: 0; }
+
 .screen.visible {
   opacity: 1;
   visibility: visible;
@@ -266,12 +276,14 @@ a.btn { text-decoration: none; display: inline-block; }
    níže grid, kde levá polovina zůstane volná pro běžící zvířátko.
    ========================================================= */
 #screen-menu {
-  justify-content: center;
+  justify-content: safe center;
   gap: clamp(14px, calc(3 * var(--gvh)), 32px);
-  /* menu se z principu musí vejít bez rolování; navíc rozpínavý kroužek
-     kolem „Běžet“ přesahuje mimo tlačítko a bez tohohle by přidal
-     vodorovný posuvník přes celou obrazovku */
-  overflow: clip;
+  /* Vodorovně se ořezává schválně: rozpínavý kroužek kolem „Běžet“ přesahuje
+     mimo tlačítko a jinak by přidal posuvník přes celou obrazovku. Svisle se
+     ale ořezávat nesmí – na hodně nízkém displeji by se jinak nedalo dostat
+     k tlačítku „Běžet“. */
+  overflow-x: clip;
+  overflow-y: auto;
   background:
     radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,0.16), transparent 62%),
     linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0) 32%),
@@ -599,12 +611,18 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
    nový obsah, takže se nic nemusí kreslit dvakrát.
    ========================================================= */
 #screen-diary {
-  justify-content: center;
+  justify-content: safe center;
   background: radial-gradient(120% 100% at 50% 0%, rgba(58,44,26,0.72), rgba(18,24,20,0.9));
   backdrop-filter: blur(4px);
   padding-left: 12px; padding-right: 12px;
 }
-.book-stage { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; margin: auto 0; }
+/* `margin: auto 0` centrovalo knížku stejně zrádně jako `justify-content:
+   center`: jakmile se nevešla, horní okraj se odsunul mimo dosah. Centrování
+   obstará `justify-content: safe center` na #screen-diary. */
+.book-stage { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+/* obsah stránky se nesmí smrsknout – jinak vyteče z odstavce ven a stránka
+   o přetečení neví, takže se nedá dorolovat (viz .screen > *) */
+.book-page > * { flex-shrink: 0; }
 .book-head {
   display: flex; align-items: center; gap: 10px;
   width: min(940px, calc(94 * var(--gvw)));
@@ -638,7 +656,11 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   min-width: 0;
   display: flex; flex-direction: column;
   padding: clamp(12px, 2.6vmin, 26px) clamp(14px, 3vmin, 30px);
-  overflow: hidden;
+  /* Stránka má pevnou výšku podle knížky. Při systémově zvětšeném písmu se
+     text nevešel a `overflow: hidden` ho beze stopy usekl – teď se dá
+     dočíst odrolováním. Vodorovně se ořezává dál (vlepené výstřižky). */
+  overflow: hidden auto;
+  overscroll-behavior: contain;
   color: #4a3a26;
   font-family: Georgia, "Times New Roman", Times, serif;
   background:
@@ -779,7 +801,9 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 .task-mark {
   flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
   display: grid; place-items: center;
-  font: 700 0.78rem "Baloo 2", system-ui, sans-serif;
+  /* kolečko je v px, písmo v rem – bez stropu z něj při systémovém zvětšení
+     písma na Androidu emoji vyleze ven */
+  font: 700 min(0.78rem, 13px)/1 "Baloo 2", system-ui, sans-serif;
   background: rgba(122,98,60,0.14); color: #6b5433;
 }
 .task-row.done { color: #8791b3; }
@@ -1098,7 +1122,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 
 /* ---------- nastavení ----------
    Vysunuté z hlavní obrazovky, ať menu dýchá. Stejná karta jako pauza. */
-#screen-settings { justify-content: center; background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }
+#screen-settings { justify-content: safe center; background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }
 .settings-card { max-width: 400px; gap: 12px; }
 .settings-rows { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .settings-rows .btn { width: 100%; }
@@ -1134,7 +1158,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 /* obchod – karusel karet od nejlevnější (vlevo) po nejdražší (vpravo) */
 #screen-shop {
   background: linear-gradient(180deg, #7cc4b8, #dff3e8);
-  justify-content: center;
+  justify-content: safe center; /* viz #screen-over – při přetečení nesmí uříznout začátek */
   padding: max(12px, var(--safe-top)) 0 max(10px, var(--safe-bottom));
   overflow-y: auto;
 }
@@ -1144,7 +1168,12 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   gap: 12px;
   padding: 0 20px;
   flex: 0 0 auto;
+  /* při systémově zvětšeném písmu se nadpis a počítadlo mincí nevešly vedle
+     sebe a vylezly mimo obrazovku – nadpis se smrskne první */
+  min-width: 0;
 }
+.shop-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.shop-head .hud-chip { flex: 0 0 auto; }
 .shop-head h2 { color: #2d4a3a; font-size: 1.5rem; }
 .shop-note {
   margin: 4px 0 0; padding: 0 20px;
@@ -1159,9 +1188,17 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   max-width: 1040px;
   padding: 14px 28px 16px;
   overflow-x: auto;
-  overflow-y: hidden;
+  /* Karta se na hodně nízkém displeji nemusí vejít ani po všech úsporách
+     níž v @media. Dřív se prostě usekla (`overflow-y: hidden`) a tlačítko
+     „Vybrat / koupit“ zůstalo mimo dosah; teď se dá dorolovat. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   scroll-snap-type: x proximity;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
+  /* karty se roztahují na výšku karuselu (align-items: stretch), takže když
+     se karusel smrskne, obsah karet vyteče a nikdo o tom neví – karusel si
+     proto drží výšku podle obsahu a roluje až celá obrazovka */
+  flex-shrink: 0;
   cursor: grab;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 26px, #000 calc(100% - 26px), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 26px, #000 calc(100% - 26px), transparent);
@@ -1175,7 +1212,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 #shop-grid.dragging .char-card { pointer-events: none; }
 .char-card {
   flex: 0 0 auto;
-  width: min(70vw, 236px);
+  width: min(calc(70 * var(--gvw)), 236px);
   scroll-snap-align: center;
   background: rgba(255,255,255,0.94);
   border-radius: 20px;
@@ -1213,6 +1250,13 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 }
 /* celý popisek perku je vidět – žádné ořezávání */
 .char-card .perk-text { display: block; }
+/* Žádná položka karty se nesmí smrsknout pod svůj obsah. `h3` i `.perk`
+   mají vlastní `min-height`, což u položky flexboxu ruší ochranu
+   `min-height: auto` – na nízkém displeji se pak schránka stlačila pod text
+   a ten vytekl ven přes sousedy (jméno zvířátka přes popis schopnosti,
+   „energie.“ pod zeleným rámečkem). Roste jedině perk, ať karty lícují. */
+.char-card > * { flex-shrink: 0; }
+.char-card .perk { flex: 1 0 auto; }
 .char-card .btn { margin-top: auto; }
 /* portrét na trávě, cenovka v rohu */
 .portrait-wrap {
@@ -1268,9 +1312,25 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 }
 @media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
   .char-card .stat-rows { display: none; }
+  .char-card { gap: 4px; padding: 8px 10px 10px; }
+  .char-card h3 { font-size: 1rem; min-height: 1.25rem; }
   .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
+  .char-card .btn.small { padding: 5px 14px; font-size: 0.82rem; }
   .portrait-wrap canvas { height: 72px; }
-  .diary-entry { -webkit-line-clamp: 2; }
+  .diary { margin-top: 4px; padding: 5px 8px; }
+  .diary-entry { -webkit-line-clamp: 1; }
+}
+/* Nejnižší herní plocha (malý telefon na šířku): z deníčku zbude na kartě
+   jen nadpis s počtem – ukázka zápisku i řádek „otevřít“ by vytlačily
+   tlačítko koupit/vybrat mimo dosah. Celý deníček je pořád na ťuknutí. */
+@media (max-height: 360px), (orientation: portrait) and (pointer: coarse) and (max-width: 360px) {
+  .char-card .diary-entry, .char-card .diary-more { display: none; }
+  .char-card .diary { margin-top: 3px; }
+  .diary-title { margin-bottom: 0; }
+  .portrait-wrap canvas { height: 62px; }
+  .char-card .perk { font-size: 0.7rem; padding: 5px 8px; line-height: 1.3; }
+  .cta-card .cta-art { font-size: 2rem; }
+  .cta-card .cta-text { font-size: 0.74rem; line-height: 1.35; }
 }
 /* pozvánková karta na konci karuselu – ať zve poznat zvířata naživo */
 .cta-card {
@@ -1306,10 +1366,22 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
    .low-fx animace vypínají (viz POJISTKY POHYBU na konci souboru) –
    obrazovka pak naskočí rovnou hotová.
    ========================================================= */
-#screen-over, #screen-pause { justify-content: center; }
+/* Vystředění, které při přetečení neusekne horní okraj.
+   `justify-content: center` v odrolovatelném sloupci odsune obsah nad
+   začátek toku a tam se k němu nedá dorolovat – na telefonu na šířku tak
+   zmizel nadpis karty i spodní řada tlačítek. `safe center` středí jen
+   dokud se obsah vejde, pak se chová jako flex-start. Prohlížeč, který
+   `safe` neumí, zahodí celou deklaraci a zůstane mu flex-start – taky
+   správně, jen bez vystředění. Ze stejného důvodu je `safe center`
+   i u nastavení, deníčku a menu. */
+#screen-over, #screen-pause { justify-content: safe center; }
 #screen-pause { background: rgba(20, 30, 25, 0.45); backdrop-filter: blur(3px); }
 #screen-over {
-  overflow: clip; /* paprsky přesahují mimo obrazovku – bez tohohle by přidaly posuvník */
+  /* Vodorovně ořez (paprsky), svisle rolování – na nízkém displeji nebo při
+     systémově zvětšeném písmu se karta nevejde a musí se k ní dát dojet.
+     Kulisu drží v mezích .over-backdrop, jinak by rolovací plocha nabobtnala
+     na velikost paprsků. */
+  overflow: clip auto;
   background:
     radial-gradient(90% 60% at 50% 46%, rgba(255,214,120,0.20), transparent 62%),
     radial-gradient(120% 100% at 50% 50%, rgba(14,30,20,0.42), rgba(6,16,10,0.78) 78%);
@@ -1318,6 +1390,8 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 
 /* vějíř paprsků za kartou – jeden opakovaný conic gradient, doprostřed
    vymaskovaný, ať nevzniká ostrý střed */
+/* ořezaný obal kulisy – viz komentář u #screen-over */
+.over-backdrop { position: absolute; inset: 0; overflow: clip; pointer-events: none; }
 .over-rays {
   position: absolute;
   left: 50%; top: 50%;
@@ -1346,7 +1420,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   background: linear-gradient(180deg, #fffdf5, #f5ecd8);
   border-radius: 30px;
   padding: clamp(20px, 3.2vmin, 34px) clamp(22px, 4vmin, 44px) clamp(18px, 2.8vmin, 30px);
-  max-width: min(700px, 94vw);
+  max-width: min(700px, calc(94 * var(--gvw)));
   width: 100%;
   text-align: center;
   display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.8vmin, 20px);
@@ -1570,7 +1644,14 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 .ach-card { max-width: 460px; }
 .ach-head { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; }
 .ach-head h2 { margin: 0; font-size: 1.5rem; }
-#ach-list { display: flex; flex-direction: column; gap: 8px; width: 100%; max-height: 60vh; overflow-y: auto; }
+/* POZOR na jednotky: `60vh` je 60 % výšky FYZICKÉHO displeje, ale hra na
+   otočeném telefonu má osy prohozené – seznam pak vyšel vyšší než celá herní
+   plocha a odznaky přetekly ven z panelu. Herní výška je --gvh. */
+#ach-list {
+  display: flex; flex-direction: column; gap: 8px; width: 100%;
+  max-height: calc(58 * var(--gvh));
+  overflow-y: auto;
+}
 .ach-row {
   display: flex; align-items: center; gap: 12px;
   background: rgba(0,0,0,0.05);
@@ -1928,7 +2009,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   .btn { font-size: 0.92rem; padding: 8px 20px; }
   .btn.big { font-size: 1.15rem; padding: 10px 32px; }
   .btn.tiny { font-size: 0.76rem; padding: 6px 12px; }
-  .btn.round { width: 40px; height: 40px; line-height: 40px; font-size: 1.1rem; }
+  .btn.round { width: 40px; height: 40px; line-height: 1; font-size: min(1.1rem, 18px); }
   .hud-chip { padding: 4px 12px; font-size: 0.85rem; }
   .controls-hint { font-size: 0.7rem; }
 
@@ -1938,6 +2019,12 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   .daily-title { font-size: 0.7rem; margin-bottom: 3px; }
   .daily-row { font-size: 0.72rem; padding: 2px 0; gap: 6px; }
   .daily-alldone { font-size: 0.72rem; }
+
+  /* deníček na nízkém displeji – ať se vedle knížky vejde hlavička i lišta listování */
+  .book { height: min(540px, calc(62 * var(--gvh))); }
+  .book-head h2 { font-size: 1.1rem; }
+  .book-stage { gap: 6px; }
+  .book-nav { gap: 10px; }
 
   /* karta po doběhnutí – přeskládaná na šířku */
   #screen-over { padding: 8px 12px; }
@@ -1971,6 +2058,26 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
   /* pauza zůstává jednoduchá */
   .over-card.small { display: flex; padding: 16px 22px; gap: 10px; }
   .over-card.small h2 { font-size: 1.25rem; }
+
+}
+
+/* Nejnižší herní plocha: karta po doběhnutí se musí vejít celá i s tlačítky.
+   Portrét se zmenší (ne zruší – je to odměna za běh), statistiky a tlačítka
+   se stáhnou. Bez tohohle usekl displej spodní řadu „Pochlubit se / Zvířátka
+   / Menu“ a hráč se k nim dostal jen odrolováním. */
+@media (max-height: 360px), (orientation: portrait) and (pointer: coarse) and (max-width: 360px) {
+  .book { height: min(540px, calc(56 * var(--gvh))); }
+  .book-head h2 { font-size: 1rem; }
+  #screen-over { padding: 6px 10px; }
+  .over-card { gap: 4px 12px; padding: 8px 14px; }
+  .over-card h2 { font-size: 1.05rem; }
+  #over-portrait { width: 84px; }
+  .over-card .story { font-size: 0.86rem; line-height: 1.35; padding: 7px 10px 7px 24px; }
+  .over-card .story::before { font-size: 1.6rem; left: 5px; }
+  .stat { padding: 1px 7px; font-size: 0.8rem; }
+  .over-buttons { gap: 6px; }
+  .over-buttons .btn { font-size: 0.82rem; padding: 6px 14px; }
+  .over-buttons .btn.big { font-size: 0.95rem; padding: 7px 20px; }
 }
 
 /* úzký telefon na šířku – deck se stáhne, aby vlevo zbylo místo

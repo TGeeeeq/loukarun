@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.1';
+  const GAME_VERSION = '1.8.2';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -229,7 +229,10 @@
   // porovná pomalé kopce vzadu s letící trávou vpředu a scéna se „rozestoupí“.
   const FG_PARALLAX = 1.35;
 
-  function charById(id) { return CHARACTERS.find(c => c.id === id); }
+  /* Neznámé id (přejmenovaná postava, ručně upravený nebo cizí save) nesmí
+     shodit start – initMenu() běží dřív než první snímek, takže výjimka tady
+     znamenala trvale černou obrazovku až do smazání úložiště. */
+  function charById(id) { return CHARACTERS.find(c => c.id === id) || CHARACTERS[0]; }
 
   /* =========================================================
      INTRO – zvířátka pobíhají po louce, vykreslí se logo azylu
@@ -3148,8 +3151,11 @@
      dvě sousední stránky nemají stejnou čmáranici. Posun (slot) je
      odvozený od jména zvířátka, takže každý deník začíná jinde. */
   function pageExtras(page, num) {
-    const sc = bookChar && bookChar.scrap;
-    if (!sc || !page) return [];
+    const raw = bookChar && bookChar.scrap;
+    if (!raw || !page) return [];
+    // neúplný blok scrap (jen fotky, jen čmáranice…) nesmí shodit stránku
+    const sc = { photos: raw.photos || [], notes: raw.notes || [],
+                 doodles: raw.doodles || [], stain: raw.stain || null };
     if (page.type === 'cover' || page.type === 'end' || page.type === 'blank') return [];
     const seed = scrapHash(bookChar.id);
     const photoSlot = Math.floor(seed * 4);
@@ -3179,7 +3185,7 @@
         side: hasPhoto ? (out[0].side === 'l' ? 'r' : 'l') : (num % 2 ? 'l' : 'r'),
       });
     }
-    if (num % 5 === stainSlot) out.push({ kind: 'stain', name: sc.stain });
+    if (sc.stain && num % 5 === stainSlot) out.push({ kind: 'stain', name: sc.stain });
     return out;
   }
 
@@ -3387,7 +3393,8 @@
       const prize = document.createElement('p');
       prize.className = 'task-prize' + (charTrophy(bookChar) ? ' won' : '');
       prize.textContent = (charTrophy(bookChar) ? '🎁 ' : '🔒 ')
-        + I18N.t(charTrophy(bookChar) ? 'task.won' : 'task.prize', { prize: I18N.pick(bookChar.trophy.name) });
+        + I18N.t(charTrophy(bookChar) ? 'task.won' : 'task.prize',
+                 { prize: bookChar.trophy ? I18N.pick(bookChar.trophy.name) : '—' });
       el.appendChild(prize);
     } else if (page.type === 'end') {
       const mid = document.createElement('div');
@@ -4215,7 +4222,10 @@
   (() => {
     const grid = $('shop-grid');
     grid.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      // kolečko posouvá karusel do stran, ale jen dokud není co rolovat
+      // svisle – jinak by se na nízkém displeji nedalo dojet na tlačítko
+      const canScrollDown = grid.scrollHeight > grid.clientHeight + 2;
+      if (!canScrollDown && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         grid.scrollLeft += e.deltaY;
         e.preventDefault();
       }
@@ -4389,7 +4399,14 @@
   }
   /* ---------- Karel: tlačítko v menu a napojení scény ----------
      Uložený stav drží hra (je v jednom saveu se vším ostatním), scéna
-     si o něj řekne přes hooks – js/karel.js sám do úložiště nesahá. */
+     si o něj řekne přes hooks – js/karel.js sám do úložiště nesahá.
+
+     Celý blok je pod strážným: kdyby se karel.js nenačetl (zastaralá cache
+     service workeru, výpadek sítě), ReferenceError by tady utnul zbytek
+     souboru – tedy tlačítko Zpět, přepínač jazyka i samotný start hry. */
+  if (typeof KAREL === 'undefined') {
+    $('btn-karel').hidden = true;
+  } else {
   $('btn-karel').addEventListener('click', () => {
     AUDIO.play('click');
     $('btn-karel').classList.remove('nudge');
@@ -4407,6 +4424,7 @@
       setTimeout(() => { if (!KAREL.isOpen()) toast(I18N.t('toast.karel')); }, 900);
     },
   });
+  }
 
   $('btn-sfx').addEventListener('click', toggleSfx);
   $('btn-music').addEventListener('click', toggleMusic);
