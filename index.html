@@ -313,6 +313,32 @@
     </div>
   </div>
 
+  <!-- POJISTKA PROTI ZVĚTŠENÉMU PÍSMU
+       V style.css je 1rem přišpendlené na 16 px, což zastaví systémové
+       zvětšení písma ve WebView (to přenásobuje výchozí velikost písma).
+       Chrome na Androidu má ale ještě druhý mechanismus (Nastavení →
+       Přístupnost → Velikost textu): ten násobí už *spočítanou* velikost,
+       takže si pevných 16 px klidně přečte jako 20,8 px a rozvržení se
+       rozjede stejně jako dřív. Změříme tedy, co z 16 px opravdu vyšlo,
+       a o stejný díl písmo předem zmenšíme – výsledek je zpátky 16 px.
+       Měření je až tady (ne v <head>), protože násobitel vzniká při
+       rozvržení stránky, a to potřebuje <body>. -->
+  <script>
+    (function () {
+      try {
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:12em;font-size:16px;line-height:1';
+        probe.textContent = 'Louka Run';
+        document.body.appendChild(probe);
+        var got = parseFloat(getComputedStyle(probe).fontSize);
+        probe.parentNode.removeChild(probe);
+        var k = got / 16;
+        // strop 4× a podlaha 1,02×: kdyby měření selhalo, ať UI nezmenšíme
+        if (k > 1.02 && k < 4) document.documentElement.style.fontSize = (16 / k) + 'px';
+      } catch (e) { /* bez měření zůstane pevných 16 px – to je pořád správně */ }
+    })();
+  </script>
+
   <script src="js/i18n.js"></script>
   <script src="js/data.js"></script>
   <script src="js/gfx.js"></script>

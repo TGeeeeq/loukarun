@@ -2,11 +2,30 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.10 (versionCode 11, hra 1.8.2)** — AAB přestavěn a podepsán
-  (`googleplay/app-release.aab`), čeká jen na nahrání do Play Console
-  (Production → Create new release). V produkci je pořád v1.0.4
-  (versionCode 5); verze 1.0.5–1.0.8 se do Play nikdy nenahrály, takže
-  tenhle release nese jejich změny dohromady:
+- **v1.0.11 (versionCode 12, hra 1.8.3) — AAB JE POTŘEBA PŘESTAVĚT.**
+  `googleplay/app-release.aab` v repozitáři je ještě stará v1.0.10 a
+  **neobsahuje opravu zvětšeného písma** — nenahrávej ho. Postup níž
+  („Postup (kroky pro Claude Code)“) je od kroku 2, verze v
+  `android/app/build.gradle` už zvednuté jsou.
+
+  Co v 1.0.11 přibylo:
+  - **systémové zvětšení písma už hru nerozhodí.** Bez explicitní velikosti
+    na `<html>` je 1rem „výchozí velikost písma prohlížeče“ a tu Android
+    podle Nastavení → Displej → Velikost písma přenásobí. Text narostl o
+    15–30 %, obálky v px zůstaly a spodní tlačítka („Zvířátka & obchod“,
+    koupit zvířátko) skončila pod okrajem displeje — přesně to bylo na
+    snímcích od hráčů. Teď je 1rem pevně 16 px (`style.css`),
+    `setTextZoom(100)` je nativní pojistka (`MainActivity.java`) a
+    `index.html` navíc změří, jestli prohlížeč písmo nezvětšil jinou cestou.
+  - **obchod se vejde, místo aby se dal dorolovat.** Výška karty zvířátka se
+    dřív řídila skoky v `@media`, takže karta byla nejvyšší vždy těsně NAD
+    zlomem: 932×430 přetékalo o 110 px, zatímco 800×360 o 1 px. Portrét teď
+    škáluje spojitě podle herní výšky a na nejnižších displejích je karta
+    širší (méně řádků popisu = nižší karta).
+
+- **v1.0.10 (versionCode 11, hra 1.8.2)** — do Play se nikdy nenahrálo.
+  V produkci je pořád v1.0.4 (versionCode 5); verze 1.0.5–1.0.10 se do Play
+  nedostaly, takže nejbližší release nese jejich změny dohromady:
   - žádné náhodné hlášky zvířátek za běhu (zůstal jen Karlův tutoriál)
   - nové kulisy do pozadí (krtek, ježek, čáp na hnízdě, světlušky)
   - Karel se zjevuje portálem a má uvítací řeč o Louce, deníček
@@ -19,18 +38,30 @@
 
 ## Jak se hlídá viditelnost
 
-Rozvržení se měří strojově, ne od oka: headless Chromium projde 16 rozlišení
+Rozvržení se měří strojově, ne od oka: headless Chromium projde 19 rozlišení
 (telefon na výšku i na šířku, tablet, počítač) × velikost písma 100 % a 130 %
-× 7 obrazovek a hlásí čtyři věci — prvek mimo obrazovku, ke kterému nejde
+× 7 obrazovek a hlásí pět věcí — prvek mimo obrazovku, ke kterému nejde
 dorolovat; prvek useknutý předkem, který se v té ose nedá odrolovat; text
-přetékající ze schránky s pozadím; a dva texty přes sebe.
+přetékající ze schránky s pozadím; dva texty přes sebe; a obsah, který se na
+obrazovku nevejde a jde k němu jen dorolovat.
 
-Skript i postup jsou v `.claude/skills/verify/`. **Pozor na dvě pasti**:
+Skript i postup jsou v `.claude/skills/verify/`. **Pozor na čtyři pasti**:
 telefon na výšku má hru otočenou o 90°, takže `getBoundingClientRect` vrací
 fyzické osy, ale `scrollHeight`/`overflow-y` patří k herním — bez přemapování
 os detektor hlásí jako nedostupné i to, k čemu se dá pohodlně dorolovat.
-A překryv se musí počítat z viditelné části prvku (průnik se všemi
+Překryv se musí počítat z viditelné části prvku (průnik se všemi
 ořezávajícími předky), jinak „překrývá“ i text schovaný za okrajem stránky.
+
+Ty dvě zbývající stály jedno zbytečné kolečko:
+- **„dá se k tomu dorolovat“ není v herním menu totéž jako „je to vidět“.**
+  Audit kdysi prošel na zelenou na 224 kombinacích, a hráč přesto poslal
+  snímek s useknutými tlačítky: obsah byl formálně dosažitelný, jen o dvě
+  obrazovky níž — což v menu hry nikdo nezkouší. Od té doby je tu kontrola
+  „nevejde se, jen dorolovat“ pro obrazovky, které se vejít musí.
+- **zvětšené písmo se simuluje přes CDP `Page.setFontSizes`.** WebView ho
+  promítne do *výchozí* velikosti písma stránky; dřívější náhražka
+  (`documentElement.style.fontSize = '130%'`) navíc přepíše
+  `html { font-size: 16px }` — tedy přímo tu obranu, kterou má ověřit.
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.

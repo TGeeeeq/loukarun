@@ -4,11 +4,17 @@
      B) prvek useknutý předkem, který se v té ose nedá odrolovat
      C) text přetékající ze schránky, která má pozadí nebo rámeček
      D) dva texty přes sebe
+     E) obsah, který se na obrazovku nevejde a jde k němu jen dorolovat
+        (herní menu na šířku nikdo rolovat nezkouší – viz komentář u kontroly)
 */
 const path = require('path');
 const PW = process.env.PW_DIR || '/tmp/claude-1000/-home-tonyfg-Desktop-projekty-loukarun/657e5525-0662-42de-a5c1-961d908d80d9/scratchpad/node_modules/playwright-core';
 const { chromium } = require(PW);
 const BASE = process.env.BASE || 'http://127.0.0.1:8125';
+/* Chromium z předinstalovaného balíku: playwright-core z npm si žádá přesnou
+   revizi, a ta v /opt/pw-browsers bývá jiná („Executable doesn't exist"). Cestu
+   k prohlížeči proto jde předat v EXE, jinak si ji Playwright hledá sám. */
+const EXE = process.env.EXE || undefined;
 const SHOT_DIR = process.env.SHOT_DIR || path.join(__dirname, 'shots');
 const SHOOT = process.env.SHOOT === '1';
 
@@ -21,7 +27,12 @@ const DEVICES = [
   { n: 'iPhone14Max-portrait',  w: 430,  h: 932,  mobile: true },
   { n: 'foldCover-portrait',    w: 344,  h: 882,  mobile: true },
   { n: 'phone640x360-land',     w: 640,  h: 360,  mobile: true },
+  // hustý 6,7–6,8" displej (1220×2712 @ 3,5) dá naležato jen ~348 px herní
+  // výšky – nejtěsnější reálná kombinace, jakou jsme viděli
+  { n: 'phone720x320-land',     w: 720,  h: 320,  mobile: true },
+  { n: 'phone774x348-land',     w: 774,  h: 348,  mobile: true },
   { n: 'phone800x360-land',     w: 800,  h: 360,  mobile: true },
+  { n: 'phone872x393-land',     w: 872,  h: 393,  mobile: true },
   { n: 'phone844x390-land',     w: 844,  h: 390,  mobile: true },
   { n: 'phone915x412-land',     w: 915,  h: 412,  mobile: true },
   { n: 'phone932x430-land',     w: 932,  h: 430,  mobile: true },
@@ -201,6 +212,19 @@ const CHECK = (screenId) => {
       }
     }
   }
+
+  /* E) obsah se na obrazovku nevejde – jde k němu jen dorolovat.
+     Tohle je nález, který audit dřív neměl, a proto propustil přesně to,
+     na co si hráči stěžovali: obrazovka byla „v pořádku", protože se k
+     useknutým tlačítkům dalo dorolovat. Jenže herní menu na šířku nikdo
+     nezkouší rolovat – co je pod okrajem, to pro hráče neexistuje.
+     Seznam odznaků a stránka deníčku rolovat smí, ty jsou ze zásady dlouhé. */
+  const MUSI_SE_VEJIT = ['menu', 'shop', 'over', 'pause', 'settings'];
+  if (MUSI_SE_VEJIT.includes(screenId)) {
+    const over = root.scrollHeight - root.clientHeight;
+    if (over > 4) R.push({ kind: 'nevejde se, jen dorolovat', sel: sel(root), px: Math.round(over) });
+  }
+
   return R;
 };
 
@@ -273,7 +297,7 @@ const fs = require('fs');
    for (const scale of SCALES) {
     const d = { ...dev, n: dev.n + (scale === 100 ? '' : '@' + scale + '%') };
     // vlastní prohlížeč na každé zařízení – jeden pád nezruší celý audit
-    const browser = await chromium.launch({ headless: true, args: ['--autoplay-policy=no-user-gesture-required'] });
+    const browser = await chromium.launch({ headless: true, executablePath: EXE, args: ['--autoplay-policy=no-user-gesture-required'] });
     const ctx = await browser.newContext({
       viewport: { width: d.w, height: d.h },
       isMobile: d.mobile, hasTouch: d.mobile, deviceScaleFactor: 1,
@@ -283,12 +307,21 @@ const fs = require('fs');
     page.on('pageerror', (e) => errors.push(String(e.message).slice(0, 160)));
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
     try {
+      /* SYSTÉMOVÉ ZVĚTŠENÍ PÍSMA – věrný model, ne náhražka.
+
+         WebView na Androidu nastavení „Velikost písma" promítne tak, že
+         přenásobí VÝCHOZÍ velikost písma stránky (default_font_size); na
+         spočítané velikosti nesahá. V CDP je to přesně Page.setFontSizes.
+
+         Dřív to tenhle skript emuloval zápisem `documentElement.style
+         .fontSize = '130%'`. To se chová podobně jen do chvíle, než hra
+         výchozí velikost přepíše sama – a to je právě ta oprava, kterou
+         chceme ověřit: `html { font-size: 16px }`. Inline styl by ji přepsal
+         a audit by hlásil poruchu i na opravené hře. */
       if (scale !== 100) {
-        await page.addInitScript((sc) => {
-          document.addEventListener('DOMContentLoaded', () => {
-            document.documentElement.style.fontSize = sc + '%';
-          });
-        }, scale);
+        const cdp = await ctx.newCDPSession(page);
+        const px = Math.round(16 * scale / 100);
+        await cdp.send('Page.setFontSizes', { fontSizes: { standard: px, fixed: px } });
       }
       await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
       await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown'))).catch(() => {});
