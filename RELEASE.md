@@ -2,7 +2,17 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.12 (versionCode 13, hra 1.8.4) — AAB JE POTŘEBA PŘESTAVĚT.**
+- **v1.0.13 (versionCode 14, hra 1.8.5) — AAB JE POTŘEBA PŘESTAVĚT.**
+  Hra si sama bere zpátky celou obrazovku. Prohlížeč z fullscreenu vyhazuje,
+  kdykoli přes hru položí systémové okno — nejvíc to bilo do očí po
+  „Pochlubit se“: sdílecí list Androidu fullscreen zrušil a hra se vrátila do
+  okna s adresním řádkem. Vyžádat si ho zpátky nejde, `requestFullscreen`
+  chce uživatelské gesto a návrat ze sdílení jím není, takže se bere při
+  prvním dalším ťuknutí nebo klávese (`reclaimFullscreen` v `js/game.js`).
+  **Appky se to netýká** — tam immersive mód vrací nativně
+  `MainActivity.onWindowFocusChanged`, a to funguje i bez ťuknutí.
+
+- **v1.0.12 (versionCode 13, hra 1.8.4)** — vydáno spolu s 1.0.13.
   Přidaná startovní obrazovka (`#start-gate`) je **jen pro web**: prohlížeč
   nepustí fullscreen ani zvuk bez uživatelského gesta, takže hra na webu do
   prvního ťuknutí běžela v okně s adresním řádkem. V appce je fullscreen
@@ -84,14 +94,14 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 > **`googleplay/app-release.aab` v repozitáři je stará v1.0.10 — NENAHRÁVEJ HO.**
 > Nemá ani opravu zvětšeného písma, ani startovní obrazovku. Musí se
 > přestavět; verze v `android/app/build.gradle` už zvednuté jsou
-> (versionCode 13 / 1.0.12), takže postup níž začíná krokem 2.
+> (versionCode 14 / 1.0.13), takže postup níž začíná krokem 2.
 
-> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.11) skončil na
+> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13) skončil na
 > vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
 > `git pull origin main` by tedy stáhl starý kód a sestavil starý AAB. Nejnovější
 > je větev **`claude/google-play-display-issue-0m9evj`**; ověř si to podle
-> `versionName` v `android/app/build.gradle` (má být 1.0.12) a podle
-> `GAME_VERSION` v `js/game.js` (1.8.4). Až bude vydáno, stojí za to větev
+> `versionName` v `android/app/build.gradle` (má být 1.0.13) a podle
+> `GAME_VERSION` v `js/game.js` (1.8.5). Až bude vydáno, stojí za to větev
 > sloučit do `main` a zbytečné `claude/*` větve na GitHubu smazat, aby tahle
 > past nečíhala i příště.
 

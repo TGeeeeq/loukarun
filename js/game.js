@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.4';
+  const GAME_VERSION = '1.8.5';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -570,8 +570,19 @@
     AUDIO.play('slide');
   }
 
-  // fullscreen hned při prvním doteku – dřív to prohlížeč (bez gesta) nedovolí
-  window.addEventListener('pointerdown', () => goLandscapeFullscreen(), { once: true, capture: true });
+  /* Fullscreen na první dotek – dřív ho prohlížeč (bez gesta) nedovolí. Není
+     to `once`: stejná cesta hru do fullscreenu vrací i potom, co ji z něj
+     vyhodí sdílecí list nebo přepnutí do jiné aplikace. Dokud hra ve
+     fullscreenu je, je to jen dvě porovnání na ťuknutí. */
+  window.addEventListener('pointerdown', reclaimFullscreen, true);
+  window.addEventListener('keydown', reclaimFullscreen, true);
+  /* První ťuknutí ještě nemá `wantFs`, tam fullscreen chceme vždycky – tohle
+     je jediná cesta u buildu bez startovní obrazovky (appka z Google Play).
+     Podmínka pokrývá spuštění klávesou: startovní obrazovka bere i Enter,
+     takže fullscreen už může být vyžádaný, než přijde vůbec první ťuknutí. */
+  window.addEventListener('pointerdown', () => {
+    if (!wantFs) goLandscapeFullscreen();
+  }, { once: true, capture: true });
 
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
@@ -650,17 +661,41 @@
     S.special = null; S.lastSpecial = 0; S.speedAnchorX = 0;
   }
 
+  /* ---------- celá obrazovka ----------
+     `wantFs` si pamatuje, že hra ve fullscreenu být MÁ. Prohlížeč z něj totiž
+     vyhazuje sám, kdykoli přes hru položí systémové okno — a nejvíc to bije
+     do očí po „Pochlubit se“: sdílecí list Androidu fullscreen zruší a po
+     návratu hra běží v okně s adresním řádkem. Zpátky si ho vyžádat nemůžeme,
+     protože requestFullscreen chce uživatelské gesto, které návrat ze
+     sdílení není. Proto ho bereme při prvním dalším ťuknutí (nebo klávese),
+     ať už je to „Běžet znovu“, nebo skok za běhu. */
+  let wantFs = false;
+  let lastFsTry = 0;
+
+  function inFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
   function goLandscapeFullscreen() {
     // na mobilu při startu běhu: celá obrazovka + zámek na šířku
     if (!window.matchMedia('(pointer: coarse)').matches) return;
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (!req) return;
+    wantFs = true;
+    lastFsTry = performance.now();
     Promise.resolve(req.call(el)).then(() => {
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock('landscape').catch(() => {});
       }
     }).catch(() => {});
+  }
+
+  function reclaimFullscreen() {
+    if (!wantFs || inFullscreen()) return;
+    // odmítnutý požadavek nesmí zkoušet každý skok znovu
+    if (performance.now() - lastFsTry < 1200) return;
+    goLandscapeFullscreen();
   }
 
   function startRun() {
