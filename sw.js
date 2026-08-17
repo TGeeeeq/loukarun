@@ -18,7 +18,7 @@
      hudba, písma  z cache hned, na pozadí se nestahují znovu
    ========================================================= */
 
-const CACHE = 'loukarun-v43';
+const CACHE = 'loukarun-v46';
 
 const CORE = [
   './',
@@ -34,6 +34,7 @@ const CORE = [
   'js/karel.js',
   'js/game.js',
   'assets/logo.png',
+  'assets/start.png',
   'assets/icon-192.png',
   'assets/icon-512.png',
   'assets/icon-maskable-512.png',

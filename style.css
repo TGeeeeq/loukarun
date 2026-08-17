@@ -108,6 +108,30 @@ html.force-landscape body {
 /* hra už je naležato – výzva „otoč telefon“ není potřeba */
 html.force-landscape #rotate-overlay { display: none; }
 
+/* =========================================================
+   PEVNÁ VELIKOST PÍSMA – nejdůležitější řádek v tomhle souboru
+
+   Bez explicitní velikosti na <html> je 1rem = „výchozí velikost
+   písma prohlížeče“, a tu Android zvětšuje podle systémového
+   nastavení (Nastavení → Displej → Velikost písma). WebView to dělá
+   tak, že přenásobí default_font_size – tedy všechno v rem a em,
+   ale NE délky v px. Rozvržení hry se tím rozjede: písmo naroste
+   o 15–30 %, obálky v px zůstanou, obsah se nevejde a spodní
+   tlačítka („Zvířátka & obchod“, koupit zvířátko) zmizí pod okrajem.
+   Přesně to je na snímcích od hráčů.
+
+   Hra je na šířku, naskládaná na pixel a s vlastním škálováním podle
+   velikosti displeje (--gvw/--gvh) – systémové zvětšení písma tu
+   nemá co zlepšit, jen co rozbít. Proto je 1rem přišpendlené na
+   16 px a text-size-adjust vypíná dorovnávání písma v Chrome.
+   Nativní pojistka je setTextZoom(100) v MainActivity.java.
+   ========================================================= */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html, body {
   height: 100%;
   overflow: hidden;
@@ -1296,39 +1320,56 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
 .stat-fill.speed { background: linear-gradient(90deg, #ffb24a, #f28c28); }
 .stat-fill.jump { background: linear-gradient(90deg, #8fc7e8, #4a9fd8); }
 .stat-fill.stamina { background: linear-gradient(90deg, #b0e89a, #7ac95e); }
-/* nižší displeje (mobil na šířku) – karty se zkrátí, ať se nikam nescrolluje svisle */
-/* pozn.: druhá podmínka = vynucená šířka (hra otočená o 90°) – herní
-   výška tam odpovídá šířce fyzického viewportu */
-@media (max-height: 560px), (orientation: portrait) and (pointer: coarse) and (max-width: 560px) {
+/* NÍZKÉ DISPLEJE (telefon na šířku) – karta se musí VEJÍT, ne dát dorolovat.
+   pozn.: druhá podmínka = vynucená šířka (hra otočená o 90°) – herní
+   výška tam odpovídá šířce fyzického viewportu.
+
+   Proč je hranice až 620 px a proč portrét roste plynule: dokud výšku karty
+   určovaly jen skoky (@media 560 / 420 / 360), byla karta nejvyšší vždy
+   těsně NAD zlomem – každý zlom ušetřil 50–110 px naráz, takže o pixel výš
+   se karta o ty desítky pixelů nevešla. Nejhorší reálný případ nebyl malý
+   telefon, ale velký: 932×430 přetékalo o 110 px, zatímco 800×360 o 1 px.
+   Proto teď portrét (nejvyšší kus karty) škáluje spojitě podle herní výšky
+   a hranice je posunutá až na 700 px, aby těsně nad ní zůstala zásoba
+   (na 701 px se plná karta vejde s přehledem, na 621 px ne). Rozpočet karty
+   = herní výška minus hlavička obchodu (~40) minus odsazení obrazovky (22)
+   a karuselu (22). Tablet naležato (1024×768) plnou kartu pořád má. */
+@media (max-height: 700px), (orientation: portrait) and (pointer: coarse) and (max-width: 700px) {
   .shop-note { display: none; }
   .shop-head h2 { font-size: 1.2rem; }
   .char-card { width: min(calc(58 * var(--gvw)), 208px); gap: 5px; }
   .char-card .tagline { display: none; }
-  .portrait-wrap canvas { height: 88px; }
+  .portrait-wrap canvas { height: clamp(52px, calc(17 * var(--gvh)), 88px); }
   #shop-grid { padding: 10px 28px 12px; }
   .diary { margin-top: 5px; padding: 6px 8px; }
   .diary-title { font-size: 0.68rem; margin-bottom: 3px; }
   .diary-entry { font-size: 0.68rem; -webkit-line-clamp: 3; }
+  /* Ukázka zápisku z deníčku a řádek „otevřít“ jsou na kartě luxus, který
+     na telefonu naležato vytlačí tlačítko koupit/vybrat pod okraj displeje.
+     Zůstává nadpis s počtem („Deníček z azylu 3/5“) – informace se
+     neztratí a celý deníček je pořád na jedno ťuknutí. */
+  .char-card .diary-entry, .char-card .diary-more { display: none; }
+  .diary-title { margin-bottom: 0; }
 }
-@media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
+@media (max-height: 470px), (orientation: portrait) and (pointer: coarse) and (max-width: 470px) {
   .char-card .stat-rows { display: none; }
   .char-card { gap: 4px; padding: 8px 10px 10px; }
   .char-card h3 { font-size: 1rem; min-height: 1.25rem; }
   .char-card .perk { font-size: 0.72rem; padding: 6px 10px; }
   .char-card .btn.small { padding: 5px 14px; font-size: 0.82rem; }
-  .portrait-wrap canvas { height: 72px; }
   .diary { margin-top: 4px; padding: 5px 8px; }
-  .diary-entry { -webkit-line-clamp: 1; }
 }
-/* Nejnižší herní plocha (malý telefon na šířku): z deníčku zbude na kartě
-   jen nadpis s počtem – ukázka zápisku i řádek „otevřít“ by vytlačily
-   tlačítko koupit/vybrat mimo dosah. Celý deníček je pořád na ťuknutí. */
+/* Nejnižší herní plocha (malý telefon na šířku): z karty musí odejít i
+   nadpis deníčku, jinak tlačítko koupit/vybrat nezbyde místo.
+   Karta se tu zároveň ROZŠÍŘÍ: nejvyšší kus karty je popis schopnosti a jeho
+   výška je daná počtem řádků. Širší karta = méně řádků, takže o 36 px větší
+   šířka ubere z výšky bezmála 30 px. Na šířku je místa dost (na displeji
+   720 px jsou pořád vidět tři karty), na výšku ani pixel. */
 @media (max-height: 360px), (orientation: portrait) and (pointer: coarse) and (max-width: 360px) {
-  .char-card .diary-entry, .char-card .diary-more { display: none; }
-  .char-card .diary { margin-top: 3px; }
-  .diary-title { margin-bottom: 0; }
-  .portrait-wrap canvas { height: 62px; }
+  .char-card .diary { display: none; }
+  .char-card { width: min(calc(66 * var(--gvw)), 244px); }
   .char-card .perk { font-size: 0.7rem; padding: 5px 8px; line-height: 1.3; }
+  #shop-grid { padding: 6px 28px 8px; }
   .cta-card .cta-art { font-size: 2rem; }
   .cta-card .cta-text { font-size: 0.74rem; line-height: 1.35; }
 }
@@ -1886,9 +1927,11 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
     radial-gradient(52% 42% at 50% 45%, rgba(212, 164, 90, 0.08), rgba(212, 164, 90, 0) 70%),
     #0a0908;
   transition: opacity 1s ease .35s; /* pozadí odchází jako poslední */
-  /* pojistka: kdyby JS selhal, znělka se po chvíli sama uklidí */
-  animation: afSafety 1s ease 9s forwards;
 }
+/* Pojistka: kdyby JS selhal, znělka se po chvíli sama uklidí. Běží teprve od
+   nasazení .af-armed – tedy až po ťuknutí na startovní obrazovku. Jinak by
+   devět sekund odtikalo ještě pod ní a hráč by znělku nikdy neviděl. */
+#af-splash.af-armed { animation: afSafety 1s ease 9s forwards; }
 @keyframes afSafety { to { opacity: 0; visibility: hidden; } }
 #af-splash.af-leave { opacity: 0; pointer-events: none; }
 #af-splash.af-leave .af-inner { animation: afInnerOut .85s ease forwards; }
@@ -2437,4 +2480,47 @@ html.low-fx .book-leaf { display: none; }
   .karel-bar.in,
   .karel-next,
   .karel-call.nudge { animation: none; }
+}
+
+/* =========================================================
+   STARTOVNÍ OBRAZOVKA (jen web) – gesto pro fullscreen
+
+   Prohlížeč nepustí celou obrazovku ani zvuk bez uživatelského gesta a hra
+   na první ťuknutí čekala až u tlačítka BĚŽET. Do té doby jelo intro i menu
+   v okně s adresním řádkem: na telefonu drženém na výšku se hra otočila
+   o 90° a vešla se jen do výřezu mezi lištami. Tahle obrazovka si gesto
+   vyžádá dřív, než se cokoli rozjede – a než hráč ťukne, stáhnou se na
+   pozadí písma i zvuky, takže intro nejede přes prázdnou cache.
+   Z-index je nad znělkou (200), aby ji překryla, dokud hráč neťukne.
+   ========================================================= */
+#start-gate {
+  position: fixed; inset: 0;
+  z-index: 260;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(10px, calc(3 * var(--gvh)), 24px);
+  padding: max(14px, var(--safe-top)) max(14px, var(--safe-right))
+           max(14px, var(--safe-bottom)) max(14px, var(--safe-left));
+  background: linear-gradient(180deg, #fffdf5 0%, #f2f8ea 62%, #dff0cd 100%);
+  cursor: pointer;
+  transition: opacity .45s ease;
+}
+#start-gate img {
+  /* obrázek se vejde vždy celý – rozhoduje ta těsnější osa displeje */
+  max-width: min(88%, 720px);
+  max-height: 56%;
+  width: auto; height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 26px rgba(85,161,60,0.18));
+}
+#start-gate .start-note {
+  font-size: 0.82rem; font-weight: 700; color: #5a6a48; text-align: center;
+  max-width: 26rem;
+}
+#start-gate.gate-leave { opacity: 0; pointer-events: none; }
+/* nízký displej naležato: obrázek ustoupí tlačítku, ať je pořád na dosah.
+   Druhá podmínka = vynucená šířka (hra otočená o 90°), stejně jako u obchodu. */
+@media (max-height: 420px), (orientation: portrait) and (pointer: coarse) and (max-width: 420px) {
+  #start-gate img { max-height: 46%; }
+  #start-gate .start-note { font-size: 0.74rem; }
 }

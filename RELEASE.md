@@ -2,11 +2,45 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.10 (versionCode 11, hra 1.8.2)** — AAB přestavěn a podepsán
-  (`googleplay/app-release.aab`), čeká jen na nahrání do Play Console
-  (Production → Create new release). V produkci je pořád v1.0.4
-  (versionCode 5); verze 1.0.5–1.0.8 se do Play nikdy nenahrály, takže
-  tenhle release nese jejich změny dohromady:
+- **v1.0.13 (versionCode 14, hra 1.8.5) — AAB je sestavený a podepsaný,
+  čeká na nahrání do Play Console (`googleplay/app-release.aab`).**
+  Hra si sama bere zpátky celou obrazovku. Prohlížeč z fullscreenu vyhazuje,
+  kdykoli přes hru položí systémové okno — nejvíc to bilo do očí po
+  „Pochlubit se“: sdílecí list Androidu fullscreen zrušil a hra se vrátila do
+  okna s adresním řádkem. Vyžádat si ho zpátky nejde, `requestFullscreen`
+  chce uživatelské gesto a návrat ze sdílení jím není, takže se bere při
+  prvním dalším ťuknutí nebo klávese (`reclaimFullscreen` v `js/game.js`).
+  **Appky se to netýká** — tam immersive mód vrací nativně
+  `MainActivity.onWindowFocusChanged`, a to funguje i bez ťuknutí.
+
+- **v1.0.12 (versionCode 13, hra 1.8.4)** — vydáno spolu s 1.0.13.
+  Přidaná startovní obrazovka (`#start-gate`) je **jen pro web**: prohlížeč
+  nepustí fullscreen ani zvuk bez uživatelského gesta, takže hra na webu do
+  prvního ťuknutí běžela v okně s adresním řádkem. V appce je fullscreen
+  nativní (`MainActivity.hideSystemBars`) a Capacitor zvuk bez gesta povoluje,
+  proto ji `js/game.js` v nativním běhu zahodí (`PLATFORM.native`) a spustí
+  znělku hned. V AAB tedy nesmí být vidět — ověřit po instalaci: po spuštění
+  jde rovnou černá znělka „AF“, žádné „▶ Spustit hru“.
+
+- **v1.0.11 (versionCode 12, hra 1.8.3) — vydáno spolu s 1.0.12.**
+  Co v 1.0.11 přibylo:
+  - **systémové zvětšení písma už hru nerozhodí.** Bez explicitní velikosti
+    na `<html>` je 1rem „výchozí velikost písma prohlížeče“ a tu Android
+    podle Nastavení → Displej → Velikost písma přenásobí. Text narostl o
+    15–30 %, obálky v px zůstaly a spodní tlačítka („Zvířátka & obchod“,
+    koupit zvířátko) skončila pod okrajem displeje — přesně to bylo na
+    snímcích od hráčů. Teď je 1rem pevně 16 px (`style.css`),
+    `setTextZoom(100)` je nativní pojistka (`MainActivity.java`) a
+    `index.html` navíc změří, jestli prohlížeč písmo nezvětšil jinou cestou.
+  - **obchod se vejde, místo aby se dal dorolovat.** Výška karty zvířátka se
+    dřív řídila skoky v `@media`, takže karta byla nejvyšší vždy těsně NAD
+    zlomem: 932×430 přetékalo o 110 px, zatímco 800×360 o 1 px. Portrét teď
+    škáluje spojitě podle herní výšky a na nejnižších displejích je karta
+    širší (méně řádků popisu = nižší karta).
+
+- **v1.0.10 (versionCode 11, hra 1.8.2)** — do Play se nikdy nenahrálo.
+  V produkci je pořád v1.0.4 (versionCode 5); verze 1.0.5–1.0.10 se do Play
+  nedostaly, takže nejbližší release nese jejich změny dohromady:
   - žádné náhodné hlášky zvířátek za běhu (zůstal jen Karlův tutoriál)
   - nové kulisy do pozadí (krtek, ježek, čáp na hnízdě, světlušky)
   - Karel se zjevuje portálem a má uvítací řeč o Louce, deníček
@@ -19,18 +53,30 @@
 
 ## Jak se hlídá viditelnost
 
-Rozvržení se měří strojově, ne od oka: headless Chromium projde 16 rozlišení
+Rozvržení se měří strojově, ne od oka: headless Chromium projde 19 rozlišení
 (telefon na výšku i na šířku, tablet, počítač) × velikost písma 100 % a 130 %
-× 7 obrazovek a hlásí čtyři věci — prvek mimo obrazovku, ke kterému nejde
+× 7 obrazovek a hlásí pět věcí — prvek mimo obrazovku, ke kterému nejde
 dorolovat; prvek useknutý předkem, který se v té ose nedá odrolovat; text
-přetékající ze schránky s pozadím; a dva texty přes sebe.
+přetékající ze schránky s pozadím; dva texty přes sebe; a obsah, který se na
+obrazovku nevejde a jde k němu jen dorolovat.
 
-Skript i postup jsou v `.claude/skills/verify/`. **Pozor na dvě pasti**:
+Skript i postup jsou v `.claude/skills/verify/`. **Pozor na čtyři pasti**:
 telefon na výšku má hru otočenou o 90°, takže `getBoundingClientRect` vrací
 fyzické osy, ale `scrollHeight`/`overflow-y` patří k herním — bez přemapování
 os detektor hlásí jako nedostupné i to, k čemu se dá pohodlně dorolovat.
-A překryv se musí počítat z viditelné části prvku (průnik se všemi
+Překryv se musí počítat z viditelné části prvku (průnik se všemi
 ořezávajícími předky), jinak „překrývá“ i text schovaný za okrajem stránky.
+
+Ty dvě zbývající stály jedno zbytečné kolečko:
+- **„dá se k tomu dorolovat“ není v herním menu totéž jako „je to vidět“.**
+  Audit kdysi prošel na zelenou na 224 kombinacích, a hráč přesto poslal
+  snímek s useknutými tlačítky: obsah byl formálně dosažitelný, jen o dvě
+  obrazovky níž — což v menu hry nikdo nezkouší. Od té doby je tu kontrola
+  „nevejde se, jen dorolovat“ pro obrazovky, které se vejít musí.
+- **zvětšené písmo se simuluje přes CDP `Page.setFontSizes`.** WebView ho
+  promítne do *výchozí* velikosti písma stránky; dřívější náhražka
+  (`documentElement.style.fontSize = '130%'`) navíc přepíše
+  `html { font-size: 16px }` — tedy přímo tu obranu, kterou má ověřit.
 
 
 Rychlý tahák: co říct **Claude Code na počítači**, aby vydal novou verzi.
@@ -46,8 +92,24 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ## Postup (kroky pro Claude Code)
 
+> **`googleplay/app-release.aab` v repozitáři je v1.0.13 (versionCode 14).**
+> Obsahuje opravu zvětšeného písma i startovní obrazovku a je podepsaný
+> upload klíčem — do Play Console jde nahrát rovnou. Pro další verzi se
+> začíná krokem 1 (zvednout versionCode i versionName).
+
+> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13) skončil na
+> vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
+> `git pull origin main` by tedy stáhl starý kód a sestavil starý AAB. Nejnovější
+> je větev **`claude/google-play-display-issue-0m9evj`**; ověř si to podle
+> `versionName` v `android/app/build.gradle` (má být 1.0.13) a podle
+> `GAME_VERSION` v `js/game.js` (1.8.5). Až bude vydáno, stojí za to větev
+> sloučit do `main` a zbytečné `claude/*` větve na GitHubu smazat, aby tahle
+> past nečíhala i příště.
+
 ```bash
-git pull origin main
+git fetch origin
+git checkout claude/google-play-display-issue-0m9evj
+git pull
 # plné npm install, ne --omit=dev: `cap` je devDependency, a hlavně bez
 # nainstalovaných pluginů je `cap sync` mlčky vyhodí z gradle souborů
 # a vznikne AAB bez haptiky, tlačítka Zpět i zálohy postupu
@@ -64,7 +126,15 @@ cd android && ./gradlew bundleRelease && cd ..
 cp android/app/build/outputs/bundle/release/app-release.aab googleplay/
 git add googleplay/app-release.aab android/app/build.gradle
 git commit -m "chore: rebuild Play AAB vX.Y.Z (versionCode N)"
-git push origin main
+git push origin HEAD          # tedy do větve, na které stojíš (viz varování výš)
+```
+
+Ověřit, že v AAB je oprava zvětšeného písma (jinak nemá smysl ho nahrávat):
+
+```bash
+grep -c 'font-size: 16px' www/style.css        # ≥ 1  (pevný základ pro rem)
+grep -c 'setTextZoom' android/app/src/main/java/org/nechmerust/loukarun/MainActivity.java
+grep -c 'PLATFORM.native' www/js/game.js       # ≥ 1  (startovní obrazovka se v appce zahodí)
 ```
 
 Pak ručně: **play.google.com/console → Louka Run → Production → Create new
@@ -78,12 +148,21 @@ Webová (pozvánková) kopie hry žije v repozitáři **TGeeeeq/NMRStranky1.0**
 ve složce `web/public/loukarun/app/`. Aktualizace:
 
 ```bash
-cp js/audio.js js/data.js js/game.js js/gfx.js js/i18n.js ../nmrstranky1.0/web/public/loukarun/app/js/
-cp sw.js style.css ../nmrstranky1.0/web/public/loukarun/app/
-# index.html se NEkopíruje slepě — webová kopie nemá odkaz „Návod pro testery“;
-# při změně index.html přenést úpravy ručně.
-# pak v nmrstranky1.0: commit + push do main → Vercel nasadí sám
+W=../nmrstranky1.0/web/public/loukarun/app
+cp js/audio.js js/data.js js/game.js js/gfx.js js/i18n.js js/karel.js js/platform.js $W/js/
+cp style.css index.html $W/
+cp assets/start.png $W/assets/
+# sw.js se NEKOPÍRUJE — webová kopie schválně nemá v CORE adresu „./“ (na
+# nechmerust.org/loukarun/app/ končí přesměrováním pozvánkové brány, takže by
+# se uložila pod klíčem, na který se žádné načtení hry netrefí). Přenes ručně
+# jen číslo cache: sed -i "s/loukarun-v[0-9]*/loukarun-vNN/" $W/sw.js
+# a pokud přibyl nový soubor v assets, dopiš ho do CORE v obou sw.js.
+# Pak v nmrstranky1.0: commit + push do main → GitHub Actions nasadí na Azure.
 ```
+
+Po syncu se vyplatí porovnat, že se nezrušila žádná webová odchylka:
+`diff <(cat $W/index.html) index.html` má vyjít prázdný, `diff $W/sw.js sw.js`
+smí ukázat jedině tu adresu „./“.
 
 Nezapomenout: při každé změně js/css/html **zvednout verzi cache v `sw.js`**
 (`loukarun-vNN`), jinak hráči na webu uvidí starou verzi.

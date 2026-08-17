@@ -64,14 +64,26 @@ node .claude/skills/verify/audit-report.js < out.json
 
 Proměnné: `SCALES` (velikost písma v %, výchozí `100,130`), `ONLY` (názvy
 zařízení oddělené čárkou), `SCREENS`, `SHOOT=1` (snímky nálezů), `BASE`
-(adresa serveru), `PW_DIR` (cesta k playwright-core).
+(adresa serveru), `PW_DIR` (cesta k playwright-core), `EXE` (cesta k Chromiu –
+playwright-core z npm chce svou revizi a v `/opt/pw-browsers` bývá jiná).
 
 **Systémové zvětšení písma na Androidu je hlavní spouštěč rozbitého
 rozvržení** — v `SCALES` musí zůstat aspoň jedna hodnota nad 100.
 
-Dvě pasti, na kterých detektor dřív lhal:
+Čtyři pasti, na kterých detektor dřív lhal:
 - telefon na výšku má hru otočenou o 90°, takže `getBoundingClientRect` vrací
   fyzické osy, ale `scrollHeight`/`overflow-y` herní → osy se musí přemapovat
   (`gameAxis()`), jinak se jako nedostupné hlásí i to, k čemu jde dorolovat
 - překryv se počítá z viditelné části prvku (průnik se všemi ořezávajícími
   předky), jinak „překrývá“ i text schovaný za okrajem stránky deníčku
+- **„dá se k tomu dorolovat" není v herním menu totéž jako „je to vidět".**
+  Kvůli tomu audit kdysi prošel na zelenou, zatímco hráč posílal snímky s
+  useknutými tlačítky: obsah byl formálně dosažitelný, jen o dvě obrazovky
+  níž. Proto je tu kontrola E (`nevejde se, jen dorolovat`) a platí pro
+  obrazovky `menu, shop, over, pause, settings`; odznaky a deníček rolovat
+  smí, ty jsou ze zásady dlouhé.
+- **zvětšené písmo se simuluje přes CDP `Page.setFontSizes`, ne zápisem
+  `documentElement.style.fontSize`.** WebView systémové nastavení promítne do
+  *výchozí* velikosti písma stránky; inline styl na `<html>` navíc přepíše
+  `html { font-size: 16px }` ze `style.css`, tedy přímo tu obranu, kterou
+  chceme ověřit — audit by pak hlásil poruchu i na opravené hře.

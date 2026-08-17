@@ -7,7 +7,7 @@
   const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.2';
+  const GAME_VERSION = '1.8.5';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -251,7 +251,20 @@
   const AF_OUT = 1.4;    // délka prolnutí do hry (s)
   const afSplash = document.getElementById('af-splash');
   let afActive = !!afSplash;
-  const afAutoLeave = afActive ? setTimeout(leaveAfSplash, AF_HOLD * 1000) : null;
+  /* Znělka se nespustí při načtení stránky, ale teprve až startovní obrazovka
+     dostane ťuknutí (viz startGate() na konci souboru) – jinak by odešla
+     ještě pod ní a hráč by ji nikdy neviděl. */
+  let afAutoLeave = null;
+  let afArmedAt = 0;
+  function armAfSplash() {
+    if (!afActive) return;
+    afArmedAt = performance.now();
+    afAutoLeave = setTimeout(leaveAfSplash, AF_HOLD * 1000);
+    window.addEventListener('pointerdown', skipAfSplash, true);
+    window.addEventListener('keydown', skipAfSplash, true);
+    // pojistka pro případ, že by JS selhal, se rozjede taky teprve teď
+    afSplash.classList.add('af-armed');
+  }
 
   function leaveAfSplash() {
     if (!afActive) return;
@@ -264,11 +277,7 @@
   }
   function skipAfSplash() {
     // krátká prodleva, ať znělka při netrpělivém ťuknutí aspoň problikne
-    if (performance.now() > 700) leaveAfSplash();
-  }
-  if (afActive) {
-    window.addEventListener('pointerdown', skipAfSplash, true);
-    window.addEventListener('keydown', skipAfSplash, true);
+    if (performance.now() - afArmedAt > 700) leaveAfSplash();
   }
 
   const intro = {
@@ -561,8 +570,19 @@
     AUDIO.play('slide');
   }
 
-  // fullscreen hned při prvním doteku – dřív to prohlížeč (bez gesta) nedovolí
-  window.addEventListener('pointerdown', () => goLandscapeFullscreen(), { once: true, capture: true });
+  /* Fullscreen na první dotek – dřív ho prohlížeč (bez gesta) nedovolí. Není
+     to `once`: stejná cesta hru do fullscreenu vrací i potom, co ji z něj
+     vyhodí sdílecí list nebo přepnutí do jiné aplikace. Dokud hra ve
+     fullscreenu je, je to jen dvě porovnání na ťuknutí. */
+  window.addEventListener('pointerdown', reclaimFullscreen, true);
+  window.addEventListener('keydown', reclaimFullscreen, true);
+  /* První ťuknutí ještě nemá `wantFs`, tam fullscreen chceme vždycky – tohle
+     je jediná cesta u buildu bez startovní obrazovky (appka z Google Play).
+     Podmínka pokrývá spuštění klávesou: startovní obrazovka bere i Enter,
+     takže fullscreen už může být vyžádaný, než přijde vůbec první ťuknutí. */
+  window.addEventListener('pointerdown', () => {
+    if (!wantFs) goLandscapeFullscreen();
+  }, { once: true, capture: true });
 
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
@@ -641,17 +661,41 @@
     S.special = null; S.lastSpecial = 0; S.speedAnchorX = 0;
   }
 
+  /* ---------- celá obrazovka ----------
+     `wantFs` si pamatuje, že hra ve fullscreenu být MÁ. Prohlížeč z něj totiž
+     vyhazuje sám, kdykoli přes hru položí systémové okno — a nejvíc to bije
+     do očí po „Pochlubit se“: sdílecí list Androidu fullscreen zruší a po
+     návratu hra běží v okně s adresním řádkem. Zpátky si ho vyžádat nemůžeme,
+     protože requestFullscreen chce uživatelské gesto, které návrat ze
+     sdílení není. Proto ho bereme při prvním dalším ťuknutí (nebo klávese),
+     ať už je to „Běžet znovu“, nebo skok za běhu. */
+  let wantFs = false;
+  let lastFsTry = 0;
+
+  function inFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
   function goLandscapeFullscreen() {
     // na mobilu při startu běhu: celá obrazovka + zámek na šířku
     if (!window.matchMedia('(pointer: coarse)').matches) return;
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (!req) return;
+    wantFs = true;
+    lastFsTry = performance.now();
     Promise.resolve(req.call(el)).then(() => {
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock('landscape').catch(() => {});
       }
     }).catch(() => {});
+  }
+
+  function reclaimFullscreen() {
+    if (!wantFs || inFullscreen()) return;
+    // odmítnutý požadavek nesmí zkoušet každý skok znovu
+    if (performance.now() - lastFsTry < 1200) return;
+    goLandscapeFullscreen();
   }
 
   function startRun() {
@@ -4535,8 +4579,48 @@
   initMenu();
   initIntro();
   showScreen('intro'); // schová menu i HUD, vidět je jen canvas
-  // hudba běží od úplného začátku – když prohlížeč autoplay nedovolí,
-  // rozjede ji první dotek/klávesa (AUDIO si to pohlídá sám)
-  AUDIO.playMusic('intro');
-  requestAnimationFrame(frame);
+
+  /* ---------- start: znělka, intro a hudba až po gestu ----------
+     Fullscreen ani zvuk prohlížeč bez uživatelského gesta nepustí. Dokud hra
+     na první ťuknutí čekala až u tlačítka BĚŽET, jelo intro i menu v okně
+     s adresním řádkem – a telefon držený na výšku měl hru otočenou o 90°
+     v pásu mezi lištami. Startovní obrazovka si gesto vyžádá dřív, než se
+     cokoli rozjede.
+
+     V appce z Google Play je fullscreen nativní (MainActivity hideSystemBars)
+     a Capacitor zvuk bez gesta povoluje, takže tam by obrazovka byla jen
+     zdržení – zahodíme ji a nastartujeme hned. */
+  function boot() {
+    armAfSplash();
+    // hudba běží od úplného začátku – když prohlížeč autoplay nedovolí,
+    // rozjede ji první dotek/klávesa (AUDIO si to pohlídá sám)
+    AUDIO.playMusic('intro');
+    requestAnimationFrame(frame);
+  }
+
+  const gate = document.getElementById('start-gate');
+  const nativeApp = typeof PLATFORM !== 'undefined' && !!PLATFORM.native;
+  if (!gate || nativeApp) {
+    if (gate) gate.remove();
+    boot();
+  } else {
+    let gateDone = false;
+    const openGate = () => {
+      if (gateDone) return;
+      gateDone = true;
+      goLandscapeFullscreen(); // musí být v obsluze gesta, jinak to prohlížeč zamítne
+      AUDIO.ensureCtx();       // probudí WebAudio, ať hudba nastoupí se znělkou
+      gate.classList.add('gate-leave');
+      setTimeout(() => gate.remove(), 500);
+      /* boot() až na dalším tiku: kdyby se posluchači znělky navěsili ještě
+         během tohohle kliknutí, chytila by ho bublající fáze a znělku by to
+         přeskočilo dřív, než se vůbec objeví. */
+      setTimeout(boot, 0);
+    };
+    gate.addEventListener('click', openGate);
+    gate.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); openGate(); }
+    });
+    document.getElementById('start-go').focus({ preventScroll: true });
+  }
 })();

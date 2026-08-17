@@ -24,6 +24,7 @@
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin.woff2" crossorigin>
   <link rel="preload" as="font" type="font/woff2" href="assets/fonts/baloo2-latin-ext.woff2" crossorigin>
   <link rel="preload" as="image" href="assets/logo.png">
+  <link rel="preload" as="image" href="assets/start.png" fetchpriority="high">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -291,6 +292,23 @@
   </div>
 
   <!-- AF signatura – filmová znělka autora před spuštěním hry -->
+  <!-- STARTOVNÍ OBRAZOVKA (jen web)
+       Prohlížeč pustí celou obrazovku i zvuk výhradně na uživatelské gesto.
+       Dokud hra na první ťuknutí čekala až u tlačítka BĚŽET, běželo intro i
+       menu v okně s adresním řádkem – na telefonu na výšku pak byla hra
+       otočená o 90° a zabírala jen výřez mezi lištami. Tahle obrazovka to
+       gesto vyžádá dřív, než se cokoli rozjede: ťuknutí zapne fullscreen se
+       zámkem na šířku, probudí WebAudio a teprve pak nastartuje znělku,
+       intro a hudbu. Vedlejší efekt: zvuky a písma se stáhnou, zatímco si
+       hráč čte úvodní obrázek, takže intro nejede přes prázdnou cache.
+       V appce z Google Play je fullscreen řešený nativně (MainActivity),
+       takže se tahle obrazovka vůbec neukáže – js/game.js ji zahodí. -->
+  <div id="start-gate">
+    <img src="assets/start.png" alt="Louka Run – hra azylu Nech mě růst" width="1600" height="960" fetchpriority="high">
+    <button id="start-go" class="btn big" data-i18n="start.go">▶ Spustit hru</button>
+    <p class="start-note" data-i18n="start.note">Spustí se na celou obrazovku naležato.</p>
+  </div>
+
   <div id="af-splash" role="img" aria-label="Antonín Figueroa — antoninfigueroa.cz">
     <div class="af-inner">
       <svg class="af-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true">
@@ -312,6 +330,32 @@
       <p class="af-site">antoninfigueroa.cz</p>
     </div>
   </div>
+
+  <!-- POJISTKA PROTI ZVĚTŠENÉMU PÍSMU
+       V style.css je 1rem přišpendlené na 16 px, což zastaví systémové
+       zvětšení písma ve WebView (to přenásobuje výchozí velikost písma).
+       Chrome na Androidu má ale ještě druhý mechanismus (Nastavení →
+       Přístupnost → Velikost textu): ten násobí už *spočítanou* velikost,
+       takže si pevných 16 px klidně přečte jako 20,8 px a rozvržení se
+       rozjede stejně jako dřív. Změříme tedy, co z 16 px opravdu vyšlo,
+       a o stejný díl písmo předem zmenšíme – výsledek je zpátky 16 px.
+       Měření je až tady (ne v <head>), protože násobitel vzniká při
+       rozvržení stránky, a to potřebuje <body>. -->
+  <script>
+    (function () {
+      try {
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:12em;font-size:16px;line-height:1';
+        probe.textContent = 'Louka Run';
+        document.body.appendChild(probe);
+        var got = parseFloat(getComputedStyle(probe).fontSize);
+        probe.parentNode.removeChild(probe);
+        var k = got / 16;
+        // strop 4× a podlaha 1,02×: kdyby měření selhalo, ať UI nezmenšíme
+        if (k > 1.02 && k < 4) document.documentElement.style.fontSize = (16 / k) + 'px';
+      } catch (e) { /* bez měření zůstane pevných 16 px – to je pořád správně */ }
+    })();
+  </script>
 
   <script src="js/i18n.js"></script>
   <script src="js/data.js"></script>
