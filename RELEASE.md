@@ -2,7 +2,8 @@
 
 ## ⏳ Čeká na vydání
 
-- **v1.0.13 (versionCode 14, hra 1.8.5) — AAB JE POTŘEBA PŘESTAVĚT.**
+- **v1.0.13 (versionCode 14, hra 1.8.5) — AAB je sestavený a podepsaný,
+  čeká na nahrání do Play Console (`googleplay/app-release.aab`).**
   Hra si sama bere zpátky celou obrazovku. Prohlížeč z fullscreenu vyhazuje,
   kdykoli přes hru položí systémové okno — nejvíc to bilo do očí po
   „Pochlubit se“: sdílecí list Androidu fullscreen zrušil a hra se vrátila do
@@ -91,10 +92,10 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ## Postup (kroky pro Claude Code)
 
-> **`googleplay/app-release.aab` v repozitáři je stará v1.0.10 — NENAHRÁVEJ HO.**
-> Nemá ani opravu zvětšeného písma, ani startovní obrazovku. Musí se
-> přestavět; verze v `android/app/build.gradle` už zvednuté jsou
-> (versionCode 14 / 1.0.13), takže postup níž začíná krokem 2.
+> **`googleplay/app-release.aab` v repozitáři je v1.0.13 (versionCode 14).**
+> Obsahuje opravu zvětšeného písma i startovní obrazovku a je podepsaný
+> upload klíčem — do Play Console jde nahrát rovnou. Pro další verzi se
+> začíná krokem 1 (zvednout versionCode i versionName).
 
 > **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13) skončil na
 > vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
