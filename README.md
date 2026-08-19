@@ -33,7 +33,12 @@ příběhem – každé zvířátko má ty svoje.
   nechává třpytivou stopu, čáp občas upustí pírko a všichni sem tam něco zavolají.
 - Když energie dojde, běh **pozitivně končí** – zvířátko někam doběhne a stane se
   něco vtipného (náhodný příběh podle postavy).
-- **Mince** 🪙 se přičítají do peněženky a odemykají další zvířátka.
+- **Mince** 🪙 se přičítají do peněženky a odemykají další zvířátka — a v druhé
+  záložce obchodu **ozdoby do šatníku** (kšiltovka, rolnička, brýle, motýlek,
+  zimní čepice, korunka). Dalších šest ozdob se **vysluhuje** splněním tří
+  osobních úkolů zvířátka. Ozdoby jsou společné pro celou partičku a **čistě
+  na parádu** — na hraní nemají žádný vliv. Kdo co nosí, se vybírá v **šatníku**
+  na druhé dvoustraně deníčku každého zvířátka.
 - Vzácný **čtyřlístek pro štěstí** 🍀 na chvíli zdvojnásobí hodnotu sbíraných mincí
   (odpočet ukazuje zelený štítek v HUD).
 - Prostředí se plynule střídá po ~550 m: louka → sad → les → vesnice → západ slunce → noc.
@@ -45,6 +50,10 @@ příběhem – každé zvířátko má ty svoje.
   humorem představí mrkve, slepice, větve i bonusy; u každé novinky se čas zpomalí,
   dokud hráč nepředvede správnou akci. Ukáže se jen jednou; `?tutorial=1` v URL ho
   kdykoli vynutí znovu.
+- **Karel se zjevuje portálem** a povídá o Louce, akcích i sbírce na seno. Tu řeč
+  má vidět každý, ale **jen jednou**: kdo si v jeho liště zapne „😎 Ukazuj se
+  pokaždé", dostane při dalších spuštěních rovnou krátké osobní přivítání
+  a všechny akce (nakrmit, podrbat, odkazy, přispět na seno) hned aktivní.
 
 ## 🚀 Spuštění (lokálně)
 

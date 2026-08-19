@@ -42,16 +42,22 @@ const DEVICES = [
   { n: 'desktop1920x1080',      w: 1920, h: 1080, mobile: false },
 ];
 
-const SCREENS = (process.env.SCREENS || 'menu,shop,ach,settings,over,pause,diary').split(',');
+const SCREENS = (process.env.SCREENS || 'menu,shop,shopitems,ach,settings,over,pause,diary,wardrobe').split(',');
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 // Systémové zvětšení písma na Androidu (Nastavení → Displej → Velikost písma)
 // zvětší i text ve WebView. Přesně tohle rozhodilo rozvržení u uživatele.
 const SCALES = (process.env.SCALES || '100,130').split(',').map(Number);
 
+/* Některé položky v SCREENS nejsou samostatné obrazovky, ale stav uvnitř jiné:
+   `shopitems` je druhá záložka obchodu a `wardrobe` druhá dvoustrana deníčku.
+   Měří se tedy na obrazovce hostitele – jen se k nim GOTO musí doklikat.
+   Mapa je uvnitř CHECK schválně: celá funkce se posílá do prohlížeče přes
+   page.evaluate, takže na nic z tohohle souboru nedosáhne. */
 const CHECK = (screenId) => {
   const R = [];
   const vw = window.innerWidth, vh = window.innerHeight;
-  const root = document.getElementById('screen-' + screenId);
+  const host = { shopitems: 'shop', wardrobe: 'diary' }[screenId] || screenId;
+  const root = document.getElementById('screen-' + host);
   if (!root || !root.classList.contains('visible')) return [{ kind: 'obrazovka není vidět', sel: screenId }];
 
   const sel = (el) => {
@@ -218,8 +224,10 @@ const CHECK = (screenId) => {
      na co si hráči stěžovali: obrazovka byla „v pořádku", protože se k
      useknutým tlačítkům dalo dorolovat. Jenže herní menu na šířku nikdo
      nezkouší rolovat – co je pod okrajem, to pro hráče neexistuje.
-     Seznam odznaků a stránka deníčku rolovat smí, ty jsou ze zásady dlouhé. */
-  const MUSI_SE_VEJIT = ['menu', 'shop', 'over', 'pause', 'settings'];
+     Seznam odznaků a stránka deníčku rolovat smí, ty jsou ze zásady dlouhé.
+     Záložka s ozdobami je pořád obchod: karta má na spodku tlačítko koupit,
+     takže na ni platí stejný nárok jako na zvířátka. */
+  const MUSI_SE_VEJIT = ['menu', 'shop', 'shopitems', 'over', 'pause', 'settings'];
   if (MUSI_SE_VEJIT.includes(screenId)) {
     const over = root.scrollHeight - root.clientHeight;
     if (over > 4) R.push({ kind: 'nevejde se, jen dorolovat', sel: sel(root), px: Math.round(over) });
@@ -242,9 +250,21 @@ const toMenu = (page) => page.evaluate(() => {
 const GOTO = async (page, id) => {
   if (id === 'menu') { await toMenu(page); return true; }
   if (id === 'shop') { await click(page, 'btn-shop'); await page.waitForTimeout(350); return true; }
+  // druhá záložka obchodu – ozdoby za mince, vlastní mřížka karet
+  if (id === 'shopitems') {
+    await click(page, 'btn-shop');
+    await page.waitForTimeout(300);
+    await click(page, 'tab-items');
+    await page.waitForTimeout(350);
+    return true;
+  }
   if (id === 'ach') { await click(page, 'btn-ach'); await page.waitForTimeout(350); return true; }
   if (id === 'settings') { await click(page, 'btn-settings'); await page.waitForTimeout(350); return true; }
-  if (id === 'diary') {
+  /* Deníček se otevírá na první dvoustraně (titulní list + úkoly). Šatník
+     je hned za ní, a bez toho jednoho otočení by ho audit nikdy neviděl –
+     přitom je to jediná stránka knížky s mřížkou tlačítek, tedy ta, která
+     se na malém displeji a při zvětšeném písmu rozbije nejdřív. */
+  if (id === 'diary' || id === 'wardrobe') {
     await click(page, 'btn-shop');
     await page.waitForTimeout(300);
     const opened = await page.evaluate(() => {
@@ -254,6 +274,10 @@ const GOTO = async (page, id) => {
       return true;
     });
     await page.waitForTimeout(450);
+    if (opened && id === 'wardrobe') {
+      await click(page, 'btn-diary-next');
+      await page.waitForTimeout(900);   // otočka listu trvá 640 ms
+    }
     return opened;
   }
   if (id === 'pause') {

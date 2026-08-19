@@ -2,6 +2,30 @@
 
 ## ⏳ Čeká na vydání
 
+- **hra 1.8.6 — šatník, krámek s ozdobami a osobnější Karel.** AAB pro tuhle
+  verzi ještě sestavený není (viz krok 1 níž).
+  - **Karel se už nepředstavuje pokaždé znovu.** Kdo si zapne „ukazuj se
+    pokaždé“, dostane po portálu jednu krátkou hlášku místo celé sedmidílné
+    řeči o azylu (`QUIPS.hello` + milníky `hello_at` v `js/karel.js`, počítadlo
+    `save.karelHellos`). Odkazy na Louku i tlačítko na seno jsou v liště scény
+    natrvalo, takže se obsah řeči neztrácí. Hlášky se opírají o postup hráče
+    (mince, rekord, vybrané zvířátko) a Karel nosí ozdobu ze šatníku.
+  - **V deníčku se listuje jen šipkami.** Tažení prstem otáčelo list i tehdy,
+    když hráč chtěl jen posunout dlouhý text — zrušeno.
+  - **Šatník** je nová dvoustrana deníčku (zrcadlo + mřížka ozdob) a **krámek
+    s ozdobami** druhá záložka obchodu. Dvanáct ozdob je společných pro celou
+    partičku: šest se vysluhuje osobními úkoly, šest se kupuje za mince
+    (200–1800). Jsou **čistě na parádu**, na hraní nemají vliv.
+  - **Odznaky 🎩 a 🧣 se dál vážou na splněné úkoly, ne na koupené ozdoby** —
+    jinak by se daly koupit. Hlídá to `charTrophy()` vs `wornKind()` v
+    `js/game.js`; nepřepisovat jedno na druhé.
+  - **Starý save se nezmění**: dokud si hráč v šatníku nic nevybere, nosí
+    zvířátko svou vlastní vyslouženou trofej jako dřív.
+  - Drobnost, která je vidět: vložením dvou stránek šatníku se posunulo
+    číslování stránek deníčku, a podle něj se deterministicky vybírají vlepené
+    fotky a čmáranice. Každému hráči se proto rozložení těch drobností jednou
+    přeskládá. Text ani odemčené zápisky to nijak nemění.
+
 - **v1.0.13 (versionCode 14, hra 1.8.5) — AAB je sestavený a podepsaný,
   čeká na nahrání do Play Console (`googleplay/app-release.aab`).**
   Hra si sama bere zpátky celou obrazovku. Prohlížeč z fullscreenu vyhazuje,
@@ -55,7 +79,8 @@
 
 Rozvržení se měří strojově, ne od oka: headless Chromium projde 19 rozlišení
 (telefon na výšku i na šířku, tablet, počítač) × velikost písma 100 % a 130 %
-× 7 obrazovek a hlásí pět věcí — prvek mimo obrazovku, ke kterému nejde
+× 9 obrazovek (od 1.8.6 i záložka s ozdobami a šatník v deníčku — ten je až na
+druhé dvoustraně, takže si ho auditor musí odlistovat) a hlásí pět věcí — prvek mimo obrazovku, ke kterému nejde
 dorolovat; prvek useknutý předkem, který se v té ose nedá odrolovat; text
 přetékající ze schránky s pozadím; dva texty přes sebe; a obsah, který se na
 obrazovku nevejde a jde k němu jen dorolovat.
@@ -97,18 +122,19 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 > upload klíčem — do Play Console jde nahrát rovnou. Pro další verzi se
 > začíná krokem 1 (zvednout versionCode i versionName).
 
-> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13) skončil na
-> vývojových větvích `claude/*`, protože je vynutila session v prohlížeči.
-> `git pull origin main` by tedy stáhl starý kód a sestavil starý AAB. Nejnovější
-> je větev **`claude/google-play-display-issue-0m9evj`**; ověř si to podle
-> `versionName` v `android/app/build.gradle` (má být 1.0.13) a podle
-> `GAME_VERSION` v `js/game.js` (1.8.5). Až bude vydáno, stojí za to větev
-> sloučit do `main` a zbytečné `claude/*` větve na GitHubu smazat, aby tahle
-> past nečíhala i příště.
+> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13 a dál)
+> skončil na vývojových větvích `claude/*`, protože je vynutila session
+> v prohlížeči. `git pull origin main` by tedy stáhl starý kód a sestavil starý
+> AAB. Nejnovější je větev **`claude/karel-personalization-items-hlpgz2`**
+> (šatník, krámek s ozdobami, osobnější Karel); ověř si to podle
+> `GAME_VERSION` v `js/game.js` (má být 1.8.6) a `versionName`
+> v `android/app/build.gradle` (pořád 1.0.13 — pro 1.8.6 se AAB ještě
+> nestavěl). Až bude vydáno, stojí za to větev sloučit do `main` a zbytečné
+> `claude/*` větve na GitHubu smazat, aby tahle past nečíhala i příště.
 
 ```bash
 git fetch origin
-git checkout claude/google-play-display-issue-0m9evj
+git checkout claude/karel-personalization-items-hlpgz2
 git pull
 # plné npm install, ne --omit=dev: `cap` je devDependency, a hlavně bez
 # nainstalovaných pluginů je `cap sync` mlčky vyhodí z gradle souborů

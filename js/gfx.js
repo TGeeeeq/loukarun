@@ -2240,22 +2240,61 @@ const GFX = (() => {
       });
     }
 
-    // trofej za splněné osobní úkoly – kreslí se až nad ušima a rohy,
-    // takže klobouk sedí na hlavě a ne pod ní
-    if (p.trophy) drawTrophy(ctx, p.trophy, c, species);
+    // ozdoba ze šatníku – kreslí se až nad ušima a rohy, takže klobouk
+    // sedí na hlavě a ne pod ní
+    if (p.wear) drawWear(ctx, p.wear, c, species);
 
     ctx.restore(); // hlava
     ctx.restore(); // celá postava
   }
 
-  /* Trofeje – drobná ozdoba, kterou si zvířátko vysloužilo splněním svých
-     tří osobních úkolů. Kreslí se v souřadnicích HLAVY (střed hlavy je
-     kolem [6, −6], uši a rohy sedí kolem y = −16), takže stačí jedna sada
-     souřadnic pro všechna zvířátka. */
-  function drawTrophy(ctx, kind, c, species) {
+  /* ---------- ozdoby (šatník) ----------
+     Drobnost, kterou má zvířátko na sobě: buď si ji vysloužilo splněním
+     svých tří osobních úkolů, nebo si ji hráč koupil za mince. Kreslí se
+     v souřadnicích HLAVY – střed hlavy je kolem [6, −6], oko na [6, −10],
+     uši a rohy kolem y = −16, čumák míří do +x.
+
+     POZOR na tabulku níž. Dokud každé zvířátko nosilo jen svou vlastní
+     trofej, stačilo pár `species === …` ternárních operátorů rozesetých po
+     těle funkce. Od zavedení šatníku je ozdoba SPOLEČNÁ – každou z nich
+     může nosit každý – takže se ladí dvanáct ozdob krát šest zvířátek a
+     hledat ta čísla po funkci by bylo k nevydržení. Všechna posazení proto
+     bydlí na jednom místě; `_` je výchozí hodnota, jmenný klíč výjimka.
+     Klíč `kráva0` je Květa: je to `kráva` bez rohů (`colors.noHorns`), a
+     to samotný `species` nepozná. */
+  const WEAR_AT = {
+    // na hlavě, nad ušima
+    hat:    { osel: [4, -26], ovce: [4, -25], muflon: [3, -27], _: [4, -20] },
+    cap:    { osel: [4, -25], ovce: [4, -24], muflon: [2, -26], _: [4, -19] },
+    winter: { osel: [4, -26], ovce: [4, -26], muflon: [2, -27], _: [4, -20] },
+    crown:  { osel: [4, -25], ovce: [4, -26], muflon: [-4, -30], 'kráva': [4, -19], 'kráva0': [4, -18], _: [4, -20] },
+    // kolem čela
+    band:   { _: [4, -15] },
+    wreath: { ovce: [4, -20], muflon: [5, -17], _: [4, -15] },
+    // u hlavy
+    flower: { ovce: [-9, -23], _: [-9, -15] },
+    ribbon: { ovce: [-11, -22], _: [-13, -14] },
+    shades: { ovce: [6, -9], 'kráva0': [6, -9.5], _: [6, -10.5] },
+    // na krku. Ozdoba se kreslí až nakonec, takže hnědá hříva osla nebo
+    // vlna ovce pod ní zmizí – u obou proto sedí blíž k hrdlu (víc do +x),
+    // kde je čistá kůže. Spodek hlavy je kolem y = +9.
+    scarf:  { osel: [-8, 14], ovce: [-7, 12], 'kráva': [-12, 12], 'kráva0': [-12, 12], muflon: [-11, 12], _: [-15, 13] },
+    bell:   { osel: [-3, 11], ovce: [0, 9], _: [-6, 10] },
+    bowtie: { osel: [-2, 10], ovce: [1, 8], _: [-5, 9] },
+  };
+  function wearAt(kind, c, species) {
+    const row = WEAR_AT[kind];
+    if (!row) return null;
+    const key = species === 'kráva' && c.noHorns ? 'kráva0' : species;
+    return row[key] || row._;
+  }
+
+  function drawWear(ctx, kind, c, species) {
+    const at = wearAt(kind, c, species);
+    if (!at) return;                 // neznámá ozdoba se prostě nekreslí
     ctx.save();
+    ctx.translate(at[0], at[1]);
     if (kind === 'hat') {              // slaměný klobouk
-      ctx.translate(4, species === 'osel' ? -26 : -20);
       ctx.fillStyle = '#e8c579';
       ell(ctx, 0, 0, 21, 5.5); ctx.fill();        // krempa
       ctx.fillStyle = '#f2d694';
@@ -2265,25 +2304,31 @@ const GFX = (() => {
       ctx.strokeStyle = '#d0a755'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(-16, 0.5); ctx.lineTo(16, 0.5); ctx.stroke();
     } else if (kind === 'band') {      // sportovní čelenka
-      // ovce má nad čelem vlnu (koule kolem y ≈ −17) – čelenka do ní musí
-      // zajet, jinak nad hlavou visí jako svatozář
-      ctx.translate(4, species === 'ovce' ? -15 : -15);
+      // ovce má nad čelem vlnu (koule kolem y ≈ −17) – čelenka do ní
+      // schválně zajíždí, jinak nad hlavou visí jako svatozář
       ctx.fillStyle = '#3f8fd8';
       ell(ctx, 0, 0, 14, 4.2, -0.06); ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(-3.5, -3, 7, 2);
     } else if (kind === 'flower') {    // kopretina za uchem
-      ctx.translate(-9, -15);
+      // bílé plátky na bílé ovčí vlně by zmizely – proto má ovce kopretinu
+      // posazenou výš, nad vlnu, a pod plátky tenký zelený stonek
+      ctx.strokeStyle = '#6fae54'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(1, 3); ctx.lineTo(4, 9); ctx.stroke();
       ctx.fillStyle = '#fffaf0';
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2;
         ell(ctx, Math.cos(a) * 4.6, Math.sin(a) * 4.6, 3.2, 2.2, a); ctx.fill();
       }
+      ctx.strokeStyle = '#d9cdb4'; ctx.lineWidth = 0.8;   // obtažení pro kontrast
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        ell(ctx, Math.cos(a) * 4.6, Math.sin(a) * 4.6, 3.2, 2.2, a); ctx.stroke();
+      }
       ctx.fillStyle = '#ffcf3f';
       ctx.beginPath(); ctx.arc(0, 0, 2.6, 0, Math.PI * 2); ctx.fill();
     } else if (kind === 'scarf') {     // šátek na krku
       // prase nemá kreslený krk – šátek sedí na přechodu hlavy v tělo
-      ctx.translate(-15, 13);
       ctx.fillStyle = '#d8543f';
       ell(ctx, 0, 0, 13, 6, 0.5); ctx.fill();
       ctx.beginPath();                              // cípek
@@ -2293,14 +2338,12 @@ const GFX = (() => {
         ctx.beginPath(); ctx.arc(x, y, 1.3, 0, Math.PI * 2); ctx.fill();
       });
     } else if (kind === 'ribbon') {    // stužka uvázaná na rohu
-      ctx.translate(-13, -14);
       ctx.fillStyle = '#e0567f';
       ell(ctx, -4, 0, 4.6, 3.4, -0.4); ctx.fill();
       ell(ctx, 4, 0, 4.6, 3.4, 0.4); ctx.fill();
       ctx.fillStyle = '#b83c62';
       ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, Math.PI * 2); ctx.fill();
     } else if (kind === 'wreath') {    // věneček z kopretin
-      ctx.translate(4, -15);
       ctx.strokeStyle = '#6fae54'; ctx.lineWidth = 2.4;
       ctx.beginPath(); ctx.arc(0, 1, 13, Math.PI * 1.06, Math.PI * 1.94); ctx.stroke();
       for (let i = 0; i < 5; i++) {
@@ -2314,6 +2357,69 @@ const GFX = (() => {
         ctx.fillStyle = '#ffcf3f';
         ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
       }
+    } else if (kind === 'cap') {       // kšiltovka, kšilt míří dopředu (+x)
+      ctx.fillStyle = '#c8443a';                      // kšilt pod dýnko
+      ctx.beginPath(); ctx.ellipse(6, 0.4, 10, 3.4, 0, 0, Math.PI); ctx.fill();
+      ctx.fillStyle = '#e2564a';                      // dýnko
+      ctx.beginPath(); ctx.ellipse(0, 0.6, 11.5, 9, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f7f2e6';
+      ctx.beginPath(); ctx.arc(0, -8.4, 1.7, 0, Math.PI * 2); ctx.fill();  // knoflík
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      ctx.fillRect(-11.5, -0.6, 23, 1.6);             // šev nad kšiltem
+    } else if (kind === 'winter') {    // zimní čepice s bambulí
+      ctx.fillStyle = '#3f7fb0';
+      ctx.beginPath(); ctx.ellipse(0, 1.2, 11, 10.5, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f7f4ea';                      // bambule
+      ctx.beginPath(); ctx.arc(0, -12.8, 3.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f3ede0';                      // ohrnutý lem
+      ell(ctx, 0, 1, 12.5, 3.4); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ell(ctx, 0, 2.4, 12.5, 2); ctx.fill();
+    } else if (kind === 'crown') {     // korunka
+      ctx.fillStyle = '#f0c33c';
+      ctx.beginPath();
+      ctx.moveTo(-10, 2.4); ctx.lineTo(-10, -6); ctx.lineTo(-5, -1.4);
+      ctx.lineTo(0, -8.4); ctx.lineTo(5, -1.4); ctx.lineTo(10, -6);
+      ctx.lineTo(10, 2.4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#d9a521';
+      ctx.fillRect(-10, 0.2, 20, 2.6);                // obroučka
+      [['#e0567f', 0, -6.4], ['#5aa9e6', -7.4, -4.2], ['#7ac95e', 7.4, -4.2]]
+        .forEach(([col, x, y]) => {
+          ctx.fillStyle = col;
+          ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+        });
+    } else if (kind === 'shades') {    // brýle – postava je z profilu, čočka je jedna
+      ctx.fillStyle = '#2b2f36';
+      ctx.fillRect(5.2, -1.9, 5.6, 1.9);              // most k čumáku
+      ell(ctx, 0, 0, 6.2, 4.8, 0.12); ctx.fill();     // čočka
+      ctx.fillStyle = 'rgba(255,255,255,0.32)';
+      ell(ctx, -1.8, -1.7, 2.2, 1.3, 0.3); ctx.fill();  // odlesk
+      ctx.strokeStyle = '#2b2f36'; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
+      ctx.beginPath();                                 // nožička mizí pod uchem
+      ctx.moveTo(-5.4, -1.2); ctx.lineTo(-13, -3.4); ctx.stroke();
+    } else if (kind === 'bell') {      // obojek s rolničkou
+      /* Obojek leží NAPŘÍČ krkem – ten běží od hlavy (vpravo nahoře) k tělu
+         (vlevo dole), takže pásek musí být pootočený o 0.5 stejně jako
+         šátek. Rolnička visí na jeho předním, nejnižším konci; kdyby padala
+         od středu, vypadá to, že se vedle pásku vznáší zvlášť. */
+      ctx.strokeStyle = '#8b4a2f'; ctx.lineWidth = 4.4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-9, -5); ctx.lineTo(7, 4); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-8.5, -6.2); ctx.lineTo(6.5, 2.8); ctx.stroke();
+      ctx.fillStyle = '#eec24a';                       // rolnička
+      ctx.beginPath(); ctx.arc(7.4, 7.8, 3.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#c8992c';
+      ctx.fillRect(5.6, 9, 3.6, 1.7);                  // štěrbina
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.arc(6.2, 6.3, 1.2, 0, Math.PI * 2); ctx.fill();
+    } else if (kind === 'bowtie') {    // motýlek uvázaný pod hrdlem
+      ctx.fillStyle = '#c8443a';
+      ell(ctx, -4.6, -1.2, 4.8, 3.4, -0.35); ctx.fill();
+      ell(ctx, 4.6, 1.2, 4.8, 3.4, -0.35); ctx.fill();
+      ctx.fillStyle = '#9e3229';
+      ell(ctx, 0, 0, 2.4, 2.9, -0.35); ctx.fill();     // uzel
     }
     ctx.restore();
   }

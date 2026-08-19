@@ -4,10 +4,10 @@
    ========================================================= */
 
 (() => {
-  const { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
+  const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.5';
+  const GAME_VERSION = '1.8.6';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -375,14 +375,21 @@
   /* ---------- Karlovo uvítání ----------
      Poprvé se otevře samo (poselství o azylu a o sbírce na seno má
      vidět každý), pak už jen na přání – buď tlačítkem v menu, nebo
-     napořád, když si hráč zapne „fešák režim". */
+     napořád, když si hráč zapne „fešák režim".
+
+     `again` říká scéně, že se už známe: portál zůstane, ale místo celé
+     sedmidílné řeči přijde jedna krátká hláška (viz hello() v js/karel.js).
+     Nikdo nechce slyšet tu samou přednášku při každém spuštění – a nic se
+     tím neztrácí, protože odkazy na Louku i tlačítko na seno jsou v liště
+     scény natrvalo. */
   function maybeGreet() {
     if (typeof KAREL === 'undefined') return;
-    if (save.karelSeen && !save.karelAlways) return;
+    const again = !!save.karelSeen;
+    if (again && !save.karelAlways) return;
     // menu se prolíná – ať se portál neotevře do rozjeté animace
     setTimeout(() => {
       if (S.mode === 'menu' && curScreen === 'menu' && !KAREL.isOpen()) {
-        KAREL.open({ lowFx: lowFx || reduceMotionMq.matches });
+        KAREL.open({ lowFx: lowFx || reduceMotionMq.matches, again });
       }
     }, 620);
   }
@@ -793,11 +800,16 @@
       best: save.best,
       combo: S.comboBest,
     });
-    // nově splněné úkoly a odznaky oznámíme přes obrazovkou konce.
-    // Trofej má přednost – je to větší událost než jednotlivý úkol.
+    /* Nově splněné úkoly a odznaky oznámíme přes obrazovkou konce.
+       Vysloužená ozdoba má přednost – je to větší událost než jednotlivý úkol.
+       Hláška mluví o ŠATNÍKU, ne o tom, co má zvířátko na sobě: kdo si na
+       něj předtím vybral něco jiného, tomu se vzhled nezmění a „nosí
+       klobouk" by byla lež. Do truhly ale ozdoba padne vždycky. */
     if (wonTrophy) {
       setTimeout(() => {
-        toast(`🎁 ${I18N.pick(S.char.name)}: ${I18N.pick(S.char.trophy.name)}!`);
+        toast(I18N.t('toast.itemEarned', {
+          name: I18N.pick(S.char.name), item: I18N.pick(S.char.trophy.name),
+        }));
         PLATFORM.haptic('success');
       }, 900);
     } else {
@@ -2563,7 +2575,7 @@
           squash: S.squash,
           blink: S.blink > 0,
           sway: (S.vy - S.swayFollow) / 700,
-          trophy: charTrophy(ch),
+          wear: wornKind(ch),
         }, S.t);
       }
     }
@@ -3072,12 +3084,20 @@
     }
   }
 
-  /* ---------- portréty postav (mini canvasy) ---------- */
-  function drawPortrait(cv, ch, phase = 0.6) {
+  /* ---------- portréty postav (mini canvasy) ----------
+     `wear` je nepovinné: `undefined` znamená „nakresli, co má zvířátko
+     doopravdy na sobě", konkrétní klíč „nakresli ho v tomhle" (tak se
+     v krámku ukazuje ozdoba na vybraném zvířátku dřív, než se koupí)
+     a `null` znamená „bez ozdoby". Proto ta rozvětvená podmínka a ne
+     výchozí hodnota parametru – s ní by `null` nešlo od „auto" odlišit. */
+  function drawPortrait(cv, ch, phase = 0.6, wear) {
     const c2 = cv.getContext('2d');
     const s = cv.width / 190;
     c2.clearRect(0, 0, cv.width, cv.height);
-    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, { runPhase: phase, trophy: charTrophy(ch) }, 400);
+    GFX.drawCharacter(c2, ch, cv.width / 2 - 8 * s, cv.height * 0.82, s, {
+      runPhase: phase,
+      wear: wear === undefined ? wornKind(ch) : wear,
+    }, 400);
   }
 
   /* =========================================================
@@ -3097,15 +3117,51 @@
      Tři cíle na jeden běh u každého zvířátka. Vyhodnocují se ze stejné
      tabulky výsledků jako denní mise (dist/carrots/coins/combo/golden/
      clean), takže se za běhu nic nového neměří. Za všechny tři si
-     zvířátko vyslouží trofej, kterou od té chvíle nosí ve hře, na
-     portrétech i na kartičce ke sdílení – je to jediná odměna, která je
-     doopravdy vidět, a proto stojí za to o ni běhat. */
+     zvířátko vyslouží ozdobu, kterou od té chvíle nosí ve hře, na
+     portrétech i na kartičce ke sdílení – je to odměna, která je doopravdy
+     vidět, a proto stojí za to o ni běhat. Od zavedení šatníku ozdoba
+     navíc padne do společné truhly a může ji nosit kdokoli z partičky. */
   function charTasksDone(ch) {
     return (save.charTasks && save.charTasks[ch.id]) || [];
   }
   function charTrophy(ch) {
     if (!ch || !ch.trophy || !ch.tasks) return null;
     return charTasksDone(ch).length >= ch.tasks.length ? ch.trophy.kind : null;
+  }
+
+  /* ---------- šatník ----------
+     `charTrophy` výš znamená „tuhle ozdobu si zvířátko VYSLOUŽILO" a nesmí
+     začít znamenat nic jiného: stojí na něm odznaky 🎩 a 🧣 (viz
+     ACHIEVEMENTS) i řádek s cenou na stránce úkolů. Kdyby se přepsal na
+     „co má na sobě", šly by ty odznaky koupit za mince.
+
+     Co má zvířátko na sobě, říká `wornKind`. Když si hráč nikdy nic
+     nevybral, je to jeho vlastní vysloužená ozdoba – starý postup se tedy
+     nasazením šatníku nijak nezmění. */
+  function itemOwned(it) {
+    if (!it) return false;
+    if (it.from && it.from.task) {          // vysloužená splněnými úkoly
+      const ch = charById(it.from.task);
+      return charTasksDone(ch).length >= (ch.tasks || []).length;
+    }
+    return (save.items || []).includes(it.id);   // koupená za mince
+  }
+
+  /* Pozor: tahle funkce se volá v každém snímku běhu (viz pose u
+     drawCharacter), takže tu nesmí vznikat žádné pole ani objekt. Že hráč
+     na sobě má jen to, co mu patří, se hlídá při ZÁPISU – v šatníku a při
+     nákupu. Neznámý klíč navíc nic nerozbije: drawWear ho prostě nekreslí. */
+  function wornKind(ch) {
+    if (!ch) return null;
+    const w = save.worn && save.worn[ch.id];
+    if (w === undefined) return charTrophy(ch);
+    return w === 'none' ? null : w;         // 'none' = hráč se vědomě svlékl
+  }
+
+  function setWorn(ch, id) {
+    if (!save.worn) save.worn = {};
+    save.worn[ch.id] = id;
+    persist();
   }
   function checkCharTasks(ch, run) {
     if (!ch || !ch.tasks) return [];
@@ -3130,8 +3186,21 @@
     return Math.min((ch.diary || []).length, Math.floor(runs / DIARY_STEP));
   }
 
+  /* Šatník je hned za stránkou úkolů, tedy na druhé dvoustraně – první, co
+     hráč po jednom otočení uvidí. Zabírá ji CELOU: na jednu stránku se
+     nevešel. Portrét, nadpis a mřížka třinácti ozdob mají dohromady přes
+     500 px, kdežto stránka knížky je na telefonu naležato vysoká asi 390 –
+     mřížka skončila pod okrajem a hráč o ní nevěděl. Rozdělením na dvě
+     stránky se potřebná výška půlí a šířka zdvojnásobuje.
+
+     Vložením dvojice se posunulo číslování všech dalších stránek: podle něj
+     se deterministicky vybírají vlepené drobnosti (viz pageExtras), takže
+     se každému hráči rozložení fotek a čmáranic jednou přeskládá. Text ani
+     odemčené zápisky se nemění – save.factsRead a spol. se klíčují pořadím
+     v datech, ne číslem stránky. */
   function buildBookPages(ch) {
-    const pages = [{ type: 'cover' }, { type: 'tasks' }];
+    const pages = [{ type: 'cover' }, { type: 'tasks' },
+                   { type: 'wardrobe' }, { type: 'wardrobeGrid' }];
     const have = diaryUnlocked(ch);
     (ch.diary || []).forEach((entry, i) => {
       pages.push(i < have ? { type: 'entry', i, text: I18N.pick(entry) } : { type: 'locked', i });
@@ -3200,7 +3269,14 @@
     // neúplný blok scrap (jen fotky, jen čmáranice…) nesmí shodit stránku
     const sc = { photos: raw.photos || [], notes: raw.notes || [],
                  doodles: raw.doodles || [], stain: raw.stain || null };
-    if (page.type === 'cover' || page.type === 'end' || page.type === 'blank') return [];
+    /* Na šatník se nelepí nic: vrstva .page-extras je absolutní a leží nad
+       obsahem, takže by čmáranice nebo flek padly přes ozdoby k vybírání.
+       Ťuknout by se přes ni dalo (má pointer-events: none), ale vypadalo by
+       to rozbitě. Vyloučení patří sem, před počítání slotů – renderExtras
+       pak na prázdném seznamu skončí a fitExtras nemusí měřit mřížku,
+       jejíž výška závisí na tom, kolik ozdob se zalomí do řádku. */
+    if (page.type === 'cover' || page.type === 'end' || page.type === 'blank'
+        || page.type === 'wardrobe' || page.type === 'wardrobeGrid') return [];
     const seed = scrapHash(bookChar.id);
     const photoSlot = Math.floor(seed * 4);
     const noteSlot = Math.floor(seed * 97) % 3;
@@ -3320,11 +3396,132 @@
 
   // ke které části knížky stránka patří – barví popisek a přepíná sazbu
   const PAGE_SECTION = {
-    cover: 'cover', tasks: 'tasks',
+    cover: 'cover', tasks: 'tasks', wardrobe: 'tasks', wardrobeGrid: 'tasks',
     entry: 'notes', locked: 'notes',
     story: 'stories', storyLocked: 'stories',
     fact: 'facts', end: 'end',
   };
+
+  /* ---------- šatník (dvoustrana v deníčku) ----------
+     Jediné místo knížky, do kterého se dá ťukat. Vlevo zrcadlo (portrét
+     v aktuální ozdobě), vpravo mřížka ozdob. Čtyři věci, na kterých to
+     stojí a které se nedají obejít:
+
+     1. ŽÁDNÉ `id` uvnitř stránky. Otáčení listu (turnBook) kopíruje
+        `innerHTML` odcházející stránky do #leaf-front, takže na 640 ms
+        existují v dokumentu dvě sady stejných prvků. Klon je mrtvý
+        (#book-leaf má pointer-events: none a aria-hidden), ale `id` se
+        kopírují taky – hledat cokoli přes getElementById by byla ruleta.
+     2. Posluchače VĚSÍME PŘÍMO na čipy. `innerHTML` je nekopíruje, takže
+        klon žádné nemá, a čipy vznikají při každém renderu nové – nic
+        nezůstává viset. Delegování na #book by muselo pokaždé dohledávat,
+        jestli je zobrazená stránka pořád šatník.
+     3. Po ťuknutí se NEPŘEKRESLUJE dvoustrana. drawSpread() vyprázdní obě
+        stránky: rozeběhne se znovu nástupová animace písma, spadne
+        odrolování (na velkém systémovém písmu je stránka delší než papír),
+        zmizí zaměření pro klávesnici a u sousední stránky se zajímavostí by
+        se znovu zapsalo save.factsRead. Měníme proto jen portrét a stav čipů.
+     4. Zrcadlo a mřížka jsou na DVOU stránkách, ale kreslí se v jednom
+        drawSpread(). Odkazy na ně si proto přechováme tady a před každou
+        dvoustranou vynulujeme – překreslení pak funguje napříč stránkami,
+        aniž by se cokoli hledalo v dokumentu. */
+  let wardCv = null, wardGrid = null;
+
+  function paintWardrobe() {
+    const ch = bookChar;
+    if (!ch) return;
+    const now = wornKind(ch);
+    if (wardCv) drawPortrait(wardCv, ch, 0.5, now);
+    if (wardGrid) {
+      for (const chip of wardGrid.children) {
+        const on = chip.dataset.wear === (now === null ? 'none' : now);
+        chip.classList.toggle('on', on);
+        chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    }
+    // karta v obchodě je hotová bitmapa – bez tohohle by za deníčkem
+    // pořád svítila stará ozdoba, dokud se obchod nepostaví znovu
+    const card = shopPortraits.get(ch.id);
+    if (card) drawPortrait(card, ch);
+  }
+
+  function renderWardrobeMirror(el) {
+    const ch = bookChar;
+    el.appendChild(Object.assign(document.createElement('span'),
+      { className: 'page-kicker', textContent: I18N.t('wardrobe.title') }));
+    el.appendChild(Object.assign(document.createElement('h3'),
+      { className: 'page-head wardrobe-head',
+        textContent: I18N.t('wardrobe.head', { name: I18N.pick(ch.name) }) }));
+    wardCv = document.createElement('canvas');
+    wardCv.className = 'page-portrait wardrobe-portrait';
+    wardCv.width = 190; wardCv.height = 150;
+    el.appendChild(wardCv);
+    el.appendChild(Object.assign(document.createElement('p'),
+      { className: 'wardrobe-lead',
+        textContent: save.unlocked.includes(ch.id)
+          ? I18N.t('wardrobe.lead')
+          /* Hláška schválně jméno neobsahuje: dosazovalo by se v prvním pádě
+             („Nejdřív Kráva Avala přizvi…“) a česky by to nesedlo. Stejný
+             důvod má i vazba s dvojtečkou u toastů o nové ozdobě. */
+          : I18N.t('wardrobe.needChar') }));
+    paintWardrobe();
+  }
+
+  function renderWardrobeGrid(el) {
+    const ch = bookChar;
+    const owned = save.unlocked.includes(ch.id);
+    wardGrid = document.createElement('div');
+    wardGrid.className = 'wardrobe-grid';
+    el.appendChild(wardGrid);
+
+    /* Na čipu je JEDNOSLOVNÝ popisek (item.short), ne celé jméno. Dvouřádkové
+       „Věneček z kopretin" zvedá čip o polovinu a mřížka se pak na krátké
+       stránce nevejde – a útržek s třemi tečkami je horší než krátké slovo.
+       Plné jméno je v krámku a v bublině u zamčené ozdoby.
+       „Nic" je taky volba – bez ní by se ozdoba nedala sundat. */
+    const choices = [{ id: 'none', icon: '🚫', label: I18N.t('wardrobe.none') }].concat(
+      ITEMS.map((it) => ({
+        id: it.id, icon: it.icon,
+        label: I18N.pick(it.short || it.name), full: I18N.pick(it.name), item: it,
+      })));
+
+    for (const c of choices) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'wear-chip';
+      chip.dataset.wear = c.id;
+      const have = !c.item || itemOwned(c.item);
+      chip.appendChild(Object.assign(document.createElement('span'),
+        { className: 'wear-icon', textContent: have ? c.icon : '🔒' }));
+      chip.appendChild(Object.assign(document.createElement('span'),
+        { className: 'wear-name', textContent: c.label }));
+      if (!have) {
+        /* Zamčený čip zůstává ťukatelný a návod řekne bublinou. Vypsat ho
+           přímo do čipu („V obchodě za 300 🪙") sice zní lákavě, ale zvedlo
+           by to výšku mřížky o polovinu a ta se pak na telefonu nevejde. */
+        chip.classList.add('locked');
+        const how = c.item.from
+          ? I18N.t('wardrobe.lockedTask', { name: I18N.pick(charById(c.item.from.task).name) })
+          : I18N.t('wardrobe.lockedPrice', { n: c.item.price });
+        chip.title = `${c.full} — ${how}`;
+        chip.addEventListener('click', () => {
+          AUDIO.play('click');
+          toast(`🔒 ${c.full} — ${how}`);
+        });
+      } else if (!owned) {
+        chip.disabled = true;                 // deníček se otevírá i u nekoupených
+      } else {
+        chip.addEventListener('click', () => {
+          setWorn(ch, c.id);
+          AUDIO.play('click');
+          PLATFORM.haptic('light');
+          paintWardrobe();
+        });
+      }
+      wardGrid.appendChild(chip);
+    }
+    paintWardrobe();
+  }
 
   function renderPage(el, page, num) {
     el.innerHTML = '';
@@ -3440,6 +3637,10 @@
         + I18N.t(charTrophy(bookChar) ? 'task.won' : 'task.prize',
                  { prize: bookChar.trophy ? I18N.pick(bookChar.trophy.name) : '—' });
       el.appendChild(prize);
+    } else if (page.type === 'wardrobe') {
+      renderWardrobeMirror(el);
+    } else if (page.type === 'wardrobeGrid') {
+      renderWardrobeGrid(el);
     } else if (page.type === 'end') {
       const mid = document.createElement('div');
       mid.className = 'page-mid';
@@ -3459,6 +3660,9 @@
   }
 
   function drawSpread() {
+    // odkazy na zrcadlo a mřížku šatníku platí jen pro právě kreslenou
+    // dvoustranu – ať se po odlistování nepřekresluje do zahozených prvků
+    wardCv = null; wardGrid = null;
     renderPage($('book-left'), bookPages[bookSpread * 2], bookSpread * 2 + 1);
     renderPage($('book-right'), bookPages[bookSpread * 2 + 1], bookSpread * 2 + 2);
     const total = Math.ceil(bookPages.length / 2);
@@ -3891,7 +4095,7 @@
     c.globalAlpha = 0.24; c.fillStyle = '#000';
     GFX.ell(c, chX + 8, chY + 14, 148, 22); c.fill();
     c.restore();
-    GFX.drawCharacter(c, chr, chX, chY, chS, { runPhase: 0.6, trophy: charTrophy(chr) }, 400);
+    GFX.drawCharacter(c, chr, chX, chY, chS, { runPhase: 0.6, wear: wornKind(chr) }, 400);
 
     /* ---------- značka ---------- */
     c.font = '800 96px ' + SHARE_FONT;
@@ -4136,9 +4340,18 @@
     return { min: Math.min(...vals), max: Math.max(...vals) };
   });
 
+  /* Portréty na kartách obchodu jsou hotové bitmapy – nakreslí se jednou
+     při stavbě karuselu. Když si hráč v šatníku (v deníčku) zvířátko
+     převlékne, musí se ta jedna karta překreslit, jinak za sebou nechá
+     starou ozdobu. Znovu postavit celý obchod nejde: buildShop odroluje
+     karusel na vybrané zvířátko, takže by hráč po prohlížení pátého
+     deníčku skončil zpátky na začátku. */
+  const shopPortraits = new Map();
+
   function buildShop() {
     const grid = $('shop-grid');
     grid.innerHTML = '';
+    shopPortraits.clear();
     $('shop-coins').textContent = save.coins;
     let selectedCard = null;
     for (const ch of SHOP_ORDER) {
@@ -4228,6 +4441,7 @@
       card.appendChild(btn);
       grid.appendChild(card);
       drawPortrait(cv, ch);
+      shopPortraits.set(ch.id, cv);
       if (selected) selectedCard = card;
     }
 
@@ -4262,9 +4476,120 @@
     }
   }
 
-  // ovládání karuselu na počítači: kolečko myši a tažení
-  (() => {
-    const grid = $('shop-grid');
+  /* ---------- záložka Ozdoby ----------
+     Krámek s ozdobami je druhá polovina obchodu, ne vlastní obrazovka: mince
+     se tak utrácejí na jednom místě, znovu se použije zpětné tlačítko,
+     počítadlo mincí i karusel, a nepřibývá obrazovka do goBack() ani do
+     auditu rozvržení. */
+  let shopTab = 'animals';
+
+  function setShopTab(tab) {
+    shopTab = tab;
+    const animals = tab === 'animals';
+    $('shop-grid').hidden = !animals;
+    $('items-grid').hidden = animals;
+    for (const [id, on] of [['tab-animals', animals], ['tab-items', !animals]]) {
+      $(id).classList.toggle('on', on);
+      $(id).setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    const note = $('shop-note');
+    note.textContent = I18N.t(animals ? 'shop.note' : 'shop.note.items');
+    // i18n si při přepnutí jazyka řídí texty podle data-i18n
+    note.dataset.i18n = animals ? 'shop.note' : 'shop.note.items';
+    if (animals) buildShop(); else buildItems();
+  }
+
+  /* Kupované ozdoby jdou první, od nejlevnější. Podle pořadí v datech by
+     hráč otevřel krámek do šesti zamčených karet „splň úkoly“ a musel se
+     k něčemu koupitelnému prorolovat – v obchodě má být vidět, co se dá
+     koupit. Vysloužené zůstávají vzadu jako vitrína, co ještě jde získat. */
+  const ITEM_ORDER = [...ITEMS].sort((a, b) => (a.price ? 0 : 1) - (b.price ? 0 : 1)
+    || (a.price || 0) - (b.price || 0));
+
+  function buildItems() {
+    const grid = $('items-grid');
+    grid.innerHTML = '';
+    $('shop-coins').textContent = save.coins;
+    // ozdoba se ukazuje na zvířátku, se kterým hráč běhá – ať je vidět,
+    // jak to bude doopravdy vypadat, ještě než se za ni zaplatí
+    const on = charById(save.selected);
+    for (const it of ITEM_ORDER) {
+      const have = itemOwned(it);
+      const worn = wornKind(on) === it.id;
+      const card = document.createElement('div');
+      card.className = 'char-card item-card'
+        + (have ? ' owned' : ' locked') + (worn ? ' selected' : '');
+
+      const wrap = document.createElement('div');
+      wrap.className = 'portrait-wrap';
+      const cv = document.createElement('canvas');
+      cv.width = 190; cv.height = 150;
+      wrap.appendChild(cv);
+      const badge = document.createElement('div');
+      badge.className = 'card-badge';
+      if (worn) { badge.classList.add('sel'); badge.textContent = '✓'; }
+      else if (have) { badge.style.display = 'none'; }
+      else if (it.price) { badge.textContent = `🪙 ${it.price}`; }
+      else { badge.textContent = '🔒'; }
+      wrap.appendChild(badge);
+      card.appendChild(wrap);
+
+      card.appendChild(Object.assign(document.createElement('h3'),
+        { textContent: `${it.icon} ${I18N.pick(it.name)}` }));
+      card.appendChild(Object.assign(document.createElement('p'),
+        { className: 'tagline item-note', textContent: I18N.pick(it.note) }));
+
+      const btn = document.createElement('button');
+      btn.className = 'btn small';
+      if (worn) { btn.textContent = I18N.t('item.worn'); btn.disabled = true; }
+      else if (have) { btn.textContent = I18N.t('item.wear'); }
+      else if (it.from) {
+        // vysloužené ozdoby se nedají koupit – jinak by šly odznaky obejít
+        btn.textContent = I18N.t('item.lockedTask', { name: I18N.pick(charById(it.from.task).name) });
+        btn.disabled = true;
+      } else {
+        btn.textContent = `🪙 ${it.price}`;
+        btn.classList.add(save.coins >= it.price ? 'buy' : 'cant');
+      }
+      btn.addEventListener('click', () => onItemAction(it));
+      card.appendChild(btn);
+      grid.appendChild(card);
+      drawPortrait(cv, on, 0.6, it.id);
+    }
+  }
+
+  function onItemAction(it) {
+    AUDIO.play('click');
+    const ch = charById(save.selected);
+    if (itemOwned(it)) {                       // nasadit na vybrané zvířátko
+      setWorn(ch, it.id);
+      buildItems();
+      initMenu();
+      toast(I18N.t('toast.itemWorn', { name: I18N.pick(ch.name), item: I18N.pick(it.name) }));
+      return;
+    }
+    if (!it.price) return;                     // vysloužená úkolem – nekupuje se
+    if (save.coins < it.price) {
+      toast(I18N.t('toast.needCoins', { n: it.price - save.coins }));
+      return;
+    }
+    save.coins -= it.price;
+    if (!save.items) save.items = [];
+    save.items.push(it.id);
+    if (!save.worn) save.worn = {};
+    save.worn[ch.id] = it.id;                  // rovnou vyzkoušet, proto se kupovala
+    persist();
+    AUDIO.play('buy');
+    PLATFORM.haptic('success');
+    buildItems();
+    initMenu();
+    toast(I18N.t('toast.itemBought', { item: I18N.pick(it.name) }));
+  }
+
+  /* Ovládání karuselu na počítači: kolečko myši a tažení. Obě mřížky
+     obchodu ho potřebují, proto je z toho funkce a ne rovnou navěšené
+     posluchače – stav tažení je v uzávěru, takže se nepletou. */
+  const bindCarousel = (grid) => {
     grid.addEventListener('wheel', (e) => {
       // kolečko posouvá karusel do stran, ale jen dokud není co rolovat
       // svisle – jinak by se na nízkém displeji nedalo dojet na tlačítko
@@ -4289,7 +4614,9 @@
       if (drag && drag.moved) grid.classList.remove('dragging');
       drag = null;
     });
-  })();
+  };
+  bindCarousel($('shop-grid'));
+  bindCarousel($('items-grid'));
 
   function onCharAction(ch) {
     AUDIO.play('click');
@@ -4340,8 +4667,11 @@
     AUDIO.play('click');
     setTimeout(() => { menu.classList.remove('launching'); startRun(); }, LAUNCH_MS);
   });
-  $('btn-shop').addEventListener('click', () => { buildShop(); showScreen('shop'); AUDIO.play('click'); });
+  // obchod se vždy otevírá na zvířátkách – setShopTab si mřížku postaví sám
+  $('btn-shop').addEventListener('click', () => { setShopTab('animals'); showScreen('shop'); AUDIO.play('click'); });
   $('btn-shop-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
+  $('tab-animals').addEventListener('click', () => { if (shopTab !== 'animals') { AUDIO.play('click'); setShopTab('animals'); } });
+  $('tab-items').addEventListener('click', () => { if (shopTab !== 'items') { AUDIO.play('click'); setShopTab('items'); } });
   $('btn-ach').addEventListener('click', () => { buildAch(); showScreen('ach'); AUDIO.play('click'); });
   $('btn-ach-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   $('btn-settings').addEventListener('click', () => { showScreen('settings'); AUDIO.play('click'); });
@@ -4350,18 +4680,11 @@
   $('btn-diary-close').addEventListener('click', () => { AUDIO.play('click'); showScreen('shop'); });
   $('btn-diary-prev').addEventListener('click', () => turnBook(-1));
   $('btn-diary-next').addEventListener('click', () => turnBook(1));
-  // tažení prstem po knížce listuje jako v opravdové knize; v otočené
-  // hře nese vodorovnou osu clientY (stejně jako u pointerGameY)
-  const bookX = (e) => (forcedLandscape() ? e.clientY : e.clientX);
-  let bookDrag = null;
-  $('book').addEventListener('pointerdown', (e) => { bookDrag = bookX(e); });
-  $('book').addEventListener('pointerup', (e) => {
-    if (bookDrag === null) return;
-    const dx = bookX(e) - bookDrag;
-    bookDrag = null;
-    if (Math.abs(dx) > 42) turnBook(dx < 0 ? 1 : -1);
-  });
-  $('book').addEventListener('pointercancel', () => { bookDrag = null; });
+  /* Tažením se dřív listovalo jako v opravdové knize. Zrušeno schválně:
+     stránka se dá rolovat svisle (dlouhý zápisek, zvětšené systémové písmo)
+     a šikmý tah se pak vyhodnotil jako otočení listu – hráč chtěl posunout
+     text a přišel o stránku. Listuje se šipkami a klávesami, tam se nic
+     splést nedá. V šatníku by tah navíc kolidoval s ťukáním na ozdoby. */
   window.addEventListener('keydown', (e) => {
     if (curScreen !== 'diary') return;
     if (e.code === 'ArrowRight') { e.preventDefault(); turnBook(1); }
@@ -4372,7 +4695,7 @@
   $('btn-again').addEventListener('click', startRun);
   $('btn-share').addEventListener('click', shareRun);
   $('btn-over-menu').addEventListener('click', backToMenu);
-  $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); buildShop(); showScreen('shop'); });
+  $('btn-over-shop').addEventListener('click', () => { S.mode = 'menu'; S.demo = true; resetWorld(true); setShopTab('animals'); showScreen('shop'); });
   $('btn-pause').addEventListener('click', togglePause);
   $('btn-tut-continue').addEventListener('click', continueLesson);
   $('btn-resume').addEventListener('click', togglePause);
@@ -4454,11 +4777,27 @@
   $('btn-karel').addEventListener('click', () => {
     AUDIO.play('click');
     $('btn-karel').classList.remove('nudge');
-    KAREL.open({ lowFx: lowFx || reduceMotionMq.matches });
+    // i na vyžádání platí: kdo řeč slyšel, dostane krátké přivítání
+    KAREL.open({ lowFx: lowFx || reduceMotionMq.matches, again: !!save.karelSeen });
   });
   KAREL.init({
     getAlways: () => !!save.karelAlways,
     setAlways: (on) => { save.karelAlways = !!on; save.karelSeen = true; persist(); },
+    // po kolikáté se takhle vidíme – scéna z toho vybírá milníkové hlášky
+    bumpHello: () => {
+      save.karelHellos = (save.karelHellos || 0) + 1;
+      persist();
+      return save.karelHellos;
+    },
+    // čísla do hlášek, ať Karel mluví o TVÉM postupu a ne obecně
+    getStats: () => ({
+      coins: save.coins,
+      best: save.best || 0,
+      chars: save.unlocked.length,
+      name: I18N.pick(charById(save.selected).name),
+    }),
+    // ozdoba ze šatníku – Karel má na sobě to, co mu hráč vybral
+    getWorn: () => wornKind(charById('karel')),
     onSeen: () => {
       if (save.karelSeen) return;
       save.karelSeen = true;
@@ -4511,7 +4850,7 @@
   // po přepnutí jazyka obnovit texty, které skládá JS
   I18N.onChange(() => {
     initMenu();
-    if ($('screen-shop').classList.contains('visible')) buildShop();
+    if ($('screen-shop').classList.contains('visible')) setShopTab(shopTab);
   });
 
   /* =========================================================

@@ -97,9 +97,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'hat', name: { cs: 'Šéfovský klobouk', en: 'Boss’s straw hat' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'hat', icon: '👒', short: { cs: 'Klobouk', en: 'Straw hat' }, name: { cs: 'Šéfovský klobouk', en: 'Boss’s straw hat' },
+        note: { cs: 'Karlův. Nosí ho, aby bylo i z dálky jasné, kdo tu velí.',
+                en: 'Karel’s. He wears it so everyone can tell from afar who is in charge.' } },
       tasks: [
         { id: 'sef', stat: 'dist', goal: 1200, icon: '🏁',
           title: { cs: 'Doběhni 1 200 m. A ať je jasné, kdo tu velí.', en: 'Run 1,200 m. And make it clear who is in charge.' } },
@@ -235,9 +238,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'band', name: { cs: 'Sportovní čelenka', en: 'Sports headband' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'band', icon: '🎽', short: { cs: 'Čelenka', en: 'Headband' }, name: { cs: 'Sportovní čelenka', en: 'Sports headband' },
+        note: { cs: 'Pogova. Tvrdí, že bez ní skáče o dvacet procent hůř.',
+                en: 'Pogo’s. He claims he jumps twenty percent worse without it.' } },
       tasks: [
         { id: 'skok', stat: 'dist', goal: 1400, icon: '🏁',
           title: { cs: 'Doskákej 1 400 m. Pružina nezná únavu.', en: 'Bounce 1,400 m. Springs do not get tired.' } },
@@ -372,9 +378,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'flower', name: { cs: 'Kopretina za uchem', en: 'Daisy behind the ear' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'flower', icon: '🌼', short: { cs: 'Kopretina', en: 'Daisy' }, name: { cs: 'Kopretina za uchem', en: 'Daisy behind the ear' },
+        note: { cs: 'Avalina. Utrhla si ji sama a od té doby ji nosí každý den.',
+                en: 'Avala’s. She picked it herself and has worn one every day since.' } },
       tasks: [
         { id: 'mince', stat: 'coins', goal: 90, icon: '🪙',
           title: { cs: 'Nasbírej 90 mincí v jednom běhu. Šťastná kopyta, co říct.', en: 'Collect 90 coins in one run. Lucky hooves, what can I say.' } },
@@ -509,9 +518,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'scarf', name: { cs: 'Puntíkatý šátek', en: 'Polka-dot bandana' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'scarf', icon: '🧣', short: { cs: 'Šátek', en: 'Bandana' }, name: { cs: 'Puntíkatý šátek', en: 'Polka-dot bandana' },
+        note: { cs: 'Flíčkův. Puntíky si vybral podle sebe — prý se to k němu hodí.',
+                en: 'Flíček’s. He picked the dots to match himself — said it suits him.' } },
       tasks: [
         { id: 'mrkve', stat: 'carrots', goal: 60, icon: '🥕',
           title: { cs: 'Sněz 60 mrkví. Rypáček je magnet, ne ozdoba.', en: 'Eat 60 carrots. The snout is a magnet, not an ornament.' } },
@@ -646,9 +658,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'ribbon', name: { cs: 'Stužka na rohu', en: 'Ribbon on the horn' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'ribbon', icon: '🎀', short: { cs: 'Stužka', en: 'Ribbon' }, name: { cs: 'Stužka na rohu', en: 'Ribbon on the horn' },
+        note: { cs: 'Yakulova. Uvázala mu ji Maruška a on ji nechal být — což u něj znamená souhlas.',
+                en: 'Yakul’s. Maruška tied it on and he let it stay — which from him counts as approval.' } },
       tasks: [
         { id: 'daleko', stat: 'dist', goal: 1800, icon: '🏁',
           title: { cs: 'Doběhni 1 800 m. Beranidlo hlásí připravenost.', en: 'Run 1,800 m. Battering ram reports ready.' } },
@@ -783,9 +798,12 @@ const DATA = (() => {
       },
       /* Osobní úkoly zvířátka – tři cíle na jeden běh (stat + goal se
          porovnává s výsledkem běhu, viz checkCharTasks v js/game.js).
-         Za splnění všech tří si zvířátko vyslouží trofej, kterou pak
-         nosí ve hře i na portrétech. Kreslí ji GFX.drawTrophy. */
-      trophy: { kind: 'wreath', name: { cs: 'Věneček z kopretin', en: 'Daisy crown' } },
+         Za splnění všech tří si zvířátko vyslouží ozdobu, kterou pak nosí
+         ve hře i na portrétech (kreslí ji drawWear v js/gfx.js) a která
+         padne do společného šatníku – viz tabulka ITEMS na konci souboru. */
+      trophy: { kind: 'wreath', icon: '💮', short: { cs: 'Věneček', en: 'Daisy crown' }, name: { cs: 'Věneček z kopretin', en: 'Daisy crown' },
+        note: { cs: 'Květin. Uplete se za odpoledne a Květa u toho vydrží stát celý.',
+                en: 'Květa’s. It takes an afternoon to weave and she stands still for all of it.' } },
       tasks: [
         { id: 'vytrvalost', stat: 'dist', goal: 2200, icon: '🏁',
           title: { cs: 'Doběhni 2 200 m. Nespěchám. Ale dojdu.', en: 'Run 2,200 m. No rush. But I will get there.' } },
@@ -1379,5 +1397,64 @@ const DATA = (() => {
     ],
   };
 
-  return { CHARACTERS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL };
+  /* =========================================================
+     ŠATNÍK – ozdoby, které si zvířátka mohou vzít na sebe
+     =========================================================
+     `id` je zároveň klíč, pod kterým ozdobu kreslí GFX (viz drawWear
+     a tabulka posazení WEAR_AT v js/gfx.js) – žádné druhé pojmenování
+     tedy nikde neexistuje.
+
+     Ozdoby jsou SPOLEČNÉ pro celou partičku: co jednou odemkneš, může
+     nosit kdokoli. Získat se dají dvěma cestami:
+
+       from.task  vyslouží se splněním všech tří osobních úkolů toho
+                  zvířátka. Prvních šest se proto NEVYPISUJE ručně – jsou
+                  odvozené z `CHARACTERS[].trophy`, ať jméno ozdoby nežije
+                  ve dvou souborech a nemůže se rozejít.
+       price      koupí se za mince v obchodě, v záložce Ozdoby.
+
+     Ceny drží dvě pravidla: pod nejlevnějším zvířátkem (Pogo 800), aby
+     ozdoba nikdy nesoutěžila o mince s novým kamarádem, a nad výnosem
+     jednoho běhu, aby si o ni bylo potřeba zaběhat. Korunka je schválně
+     mimo tu řadu – je to trofej pro vytrvalé.
+
+     Ozdoby jsou ČISTĚ NA PARÁDU. Nic nepřidávají ani neubírají: perky
+     zvířátek se s nimi nesčítají a nikdo tak není nucený nosit ošklivou,
+     ale silnou čepici. */
+  const WEARABLES = [
+    { id: 'cap', icon: '🧢', price: 200, short: { cs: 'Kšiltovka', en: 'Cap' },
+      name: { cs: 'Kšiltovka', en: 'Baseball cap' },
+      note: { cs: 'Kšilt dozadu si nikdo z nich nasadit nenechá. Prý to není ono.',
+              en: 'None of them will wear it backwards. Says it just isn’t the same.' } },
+    { id: 'bell', icon: '🔔', price: 300, short: { cs: 'Rolnička', en: 'Bell' },
+      name: { cs: 'Obojek s rolničkou', en: 'Collar with a bell' },
+      note: { cs: 'Na Louce je slyšet, kdo se blíží k seníku. Většinou Karel.',
+              en: 'At the Louka you can hear who is nearing the hay barn. Usually Karel.' } },
+    { id: 'shades', icon: '🕶️', price: 450, short: { cs: 'Brýle', en: 'Shades' },
+      name: { cs: 'Sluneční brýle', en: 'Sunglasses' },
+      note: { cs: 'Fešák mód. Karel tvrdí, že je vynalezl on.',
+              en: 'Handsome mode. Karel claims he invented them.' } },
+    { id: 'bowtie', icon: '🎩', price: 600, short: { cs: 'Motýlek', en: 'Bow tie' },
+      name: { cs: 'Motýlek', en: 'Bow tie' },
+      note: { cs: 'Na slavnostní příležitosti. Třeba když přijede seno.',
+              en: 'For formal occasions. Such as a hay delivery.' } },
+    { id: 'winter', icon: '🧶', price: 900, short: { cs: 'Čepice', en: 'Winter hat' },
+      name: { cs: 'Zimní čepice', en: 'Winter hat' },
+      note: { cs: 'Upletená z ovčí vlny. Pogo o tom neví a my mu to neřekneme.',
+              en: 'Knitted from sheep’s wool. Pogo does not know and we will not tell him.' } },
+    { id: 'crown', icon: '👑', price: 1800, short: { cs: 'Korunka', en: 'Crown' },
+      name: { cs: 'Korunka', en: 'Little crown' },
+      note: { cs: 'Na Louce nikdo nevládne. Ale vypadat u toho dobře se nezakazuje.',
+              en: 'Nobody rules at the Louka. But looking regal is not forbidden.' } },
+  ];
+
+  const ITEMS = [
+    ...CHARACTERS.filter((c) => c.trophy).map((c) => ({
+      id: c.trophy.kind, icon: c.trophy.icon, short: c.trophy.short,
+      name: c.trophy.name, note: c.trophy.note, from: { task: c.id },
+    })),
+    ...WEARABLES,
+  ];
+
+  return { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL };
 })();

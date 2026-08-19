@@ -122,15 +122,29 @@
     </div>
   </div>
 
-  <!-- OBCHOD / VÝBĚR POSTAV -->
+  <!-- OBCHOD: ZVÍŘÁTKA + OZDOBY
+       Záložky jsou UVNITŘ hlavičky, na místě nadpisu, a to schválně:
+       obrazovka obchodu nesmí přetéct (karusel má flex-shrink: 0 a tlačítko
+       „koupit“ je na spodku karty), takže samostatný řádek nad karuselem by
+       na nízkém displeji vytlačil tlačítko pod okraj. Hlavička už má výšku
+       danou kruhovým tlačítkem Zpět, takže se do ní záložky vejdou zdarma.
+       Nadpis „Zvířecí obyvatelé“ je vedle nich beztak nadbytečný. -->
   <div id="screen-shop" class="screen">
     <div class="shop-head">
       <button id="btn-shop-back" class="btn round" aria-label="Zpět" data-i18n-label="a11y.back">←</button>
-      <h2 data-i18n="shop.title">Zvířecí obyvatelé</h2>
+      <div class="shop-tabs" role="tablist" aria-label="Zvířecí obyvatelé" data-i18n-label="shop.title">
+        <button id="tab-animals" class="btn tab on" type="button" role="tab"
+                aria-selected="true" data-i18n="shop.tab.animals">🐾 Zvířátka</button>
+        <button id="tab-items" class="btn tab" type="button" role="tab"
+                aria-selected="false" data-i18n="shop.tab.items">👒 Ozdoby</button>
+      </div>
       <div class="hud-chip">🪙 <span id="shop-coins">0</span></div>
     </div>
-    <p class="shop-note" data-i18n="shop.note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
+    <p class="shop-note" id="shop-note" data-i18n="shop.note">Všechna zvířátka doopravdy žijí v azylu Nech mě růst. 🐾</p>
     <div id="shop-grid"></div>
+    <!-- [hidden] samo nestačí: mřížka má z #shop-grid, #items-grid vlastní
+         display: flex, který by atribut přebil (stejná past jako .daily-pop) -->
+    <div id="items-grid" hidden></div>
   </div>
 
   <!-- DENÍČEK Z AZYLU – knížka přes celou obrazovku, dá se v ní listovat -->

@@ -167,6 +167,34 @@ const KAREL = (() => {
       { cs: 'Měj se. A běž rychle, ať mi děláš radost.', react: 'hop' },
       { cs: 'Portál mě odsud odveze. Nebo prostě odejdu. Uvidíme, jak se to vyvine.', react: 'nod' },
     ],
+    /* PŘIVÍTÁNÍ NA POTKÁNÍ – když už se známe (viz `hello()` níž).
+       Kdo si zapne „ukazuj se pokaždé“, nemá chuť slyšet při každém spuštění
+       tu samou sedmidílnou řeč o azylu, o akcích a o sbírce na seno. Ta má
+       smysl JEDNOU. Pak stačí jedna věta, která rychle řekne, že všechno je
+       na svém místě a může se začít dovádět. Odkazy na Louku i tlačítko na
+       seno zůstávají v liště pod bublinou natrvalo, takže se nic neztratí.
+       {coins}, {best} a {name} doplní stav hráče (viz hooks.getStats). */
+    hello: [
+      { cs: 'Íáá, jsi tu! Servis nezměněn: nakrmit, podrbat, poklábosit. Do toho.', react: 'hop' },
+      { cs: 'Nemusím ti nic vysvětlovat, viď. Mrkev máš pod sebou, odkazy na Louku taky.', react: 'nod' },
+      { cs: 'Ty už to tu znáš lépe než já. A já tu žiju.', react: 'laugh' },
+      { cs: 'Vidíš? Přišel jsem. Nikdo mi nemusel nic říkat. Jsem spolehlivý.', react: 'nod' },
+      { cs: 'Máš {coins} mincí. V obchodě jsou k mání i klobouky, jen tak mimochodem. 👒', react: 'nod' },
+      { cs: 'Tvůj rekord je {best} m. Já bych to nedal, ale já jsem osel.', react: 'laugh' },
+      // jméno se do hlášky dosazuje v prvním pádě, takže věta musí být
+      // postavená tak, aby ho nemusela skloňovat („s Osel Karel“ nejde)
+      { cs: 'Tvoje dnešní volba: {name}. Dobrá. Druhá nejlepší, ale dobrá.', react: 'ears' },
+      { cs: 'Šťouchej, krm, drbej. Nebo si běž běhat. Já mám čas, seno taky nikam nejde.', react: 'nod' },
+    ],
+    /* Stupňování podle toho, po kolikáté se takhle vidíme – stejný princip
+       jako `pokes`, jen počítadlo přežívá mezi spuštěními (save.karelHellos). */
+    hello_at: {
+      1: { cs: 'Fešák režim funguje. Jsem tady, jak jsem slíbil. Můžeš mě šťouchat i krmit, jako vždycky.', react: 'dance' },
+      3: { cs: 'Tři setkání. To už je v oslích kruzích přátelství.', react: 'nod' },
+      10: { cs: 'Desetkrát. Kdybych měl notýsek, měl bys tam svoje jméno a hvězdičku.', react: 'laugh' },
+      25: { cs: 'Pětadvacet spuštění. Přijeď na Louku, ať se konečně poznáme i naostro.', react: 'nod', link: 'udalosti' },
+      50: { cs: 'Padesát. Jestli tu jsi takhle často, uneseš i ranec sena, ne? 🌾', react: 'nod', link: 'seno' },
+    },
   };
 
   /* anglická znění hlášek – držená stranou, ať se česká verze čte v kuse */
@@ -250,6 +278,23 @@ const KAREL = (() => {
       'Take care. And run fast, it makes me happy.',
       'The portal will take me back. Or I\'ll just walk. We\'ll see how it develops.',
     ],
+    hello: [
+      'Hee-haw, you\'re here! Service unchanged: feed me, scratch me, chat with me. Go on.',
+      'I don\'t have to explain anything to you, do I. Carrot\'s below you, so are the Meadow links.',
+      'You know this place better than I do. And I live here.',
+      'See? I showed up. Nobody had to tell me. I am reliable.',
+      'You have {coins} coins. The shop also sells hats, just saying. 👒',
+      'Your record is {best} m. I couldn\'t do it, but then I\'m a donkey.',
+      'Today\'s pick: {name}. Good. Second best, but good.',
+      'Poke me, feed me, scratch me. Or go for a run. I have time, and so does the hay.',
+    ],
+    hello_at: {
+      1: 'Handsome mode works. I\'m here, just as promised. You can poke and feed me, same as ever.',
+      3: 'Three meetings. In donkey circles that counts as friendship.',
+      10: 'Ten times. If I kept a notebook, your name would be in it with a little star.',
+      25: 'Twenty-five launches. Come to the Meadow, so we finally meet for real.',
+      50: 'Fifty. If you\'re around this often, you can carry a bale of hay, right? 🌾',
+    },
   };
 
   /* ---------- koš na míchání ----------
@@ -291,6 +336,7 @@ const KAREL = (() => {
     phase: 'portal',      // portal | speech | play | leaving
     pt: 0,                // čas ve fázi (s)
     step: 0,              // kolikátá věta řeči
+    again: false,         // už se známe? pak žádná řeč, jen krátké přivítání
     // Karel
     kx: 0, ky: 0, sc: 1,  // kde stojí a jak je velký (CSS px plátna)
     face: 1,              // 1 = doprava, -1 = doleva
@@ -317,7 +363,13 @@ const KAREL = (() => {
 
   let cv = null, ctx = null, W = 0, H = 0, dpr = 1;
   let raf = 0, lastT = 0;
-  let hooks = { onSeen: () => {}, onAuto: () => {} };
+  /* Scéna sama do úložiště nesahá – všechno si podá hra přes hooks.
+     bumpHello vrátí, po kolikáté se takhle vidíme; getStats dá čísla do
+     hlášek; getWorn řekne, jakou ozdobu mu hráč v šatníku vybral. */
+  let hooks = {
+    onSeen: () => {}, onAuto: () => {},
+    bumpHello: () => 0, getStats: () => ({}), getWorn: () => null,
+  };
   let lowFx = false;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -780,7 +832,11 @@ const KAREL = (() => {
   /* Poloha a póza podle právě běžící reakce. Vrací posuny v místních
      jednotkách postavy, které se pak škálují spolu s ní. */
   function poseFor(tms) {
-    const pose = { runPhase: 0, blink: st.blink > 0, sway: 0, trophy: null, airborne: false };
+    /* Karel nosí to, co mu hráč vybral v šatníku – i tady, ve své vlastní
+       scéně. Je to drobnost, ale právě ta dělá uvítání osobním: hráč vidí
+       svého Karla, ne obecného osla. Ozdobu si scéna nepamatuje sama, řekne
+       jí ji hra (hooks.getWorn). */
+    const pose = { runPhase: 0, blink: st.blink > 0, sway: 0, wear: hooks.getWorn(), airborne: false };
     let ox = 0, oy = 0, rot = 0, sx = 1, sy = 1;
 
     // klidové dýchání
@@ -998,6 +1054,34 @@ const KAREL = (() => {
     else if (st.step === 3) react('hop');
     else if (st.step === 5) { react('nod'); hearts(3); }
     else if (st.step === 6) react('laugh');
+  }
+
+  /* ---------- krátké přivítání „už se známe" ----------
+     Sedmidílná řeč o azylu, akcích a sbírce na seno má smysl JEDNOU – to je
+     poselství, které má vidět každý. Kdo si zapne „ukazuj se pokaždé", už ji
+     slyšel, a poslouchat ji při každém spuštění je otrava. Dostane proto
+     jednu větu, která rychle řekne, že všechno funguje a může se dovádět,
+     a rovnou se odemkne lišta s akcemi. Nic se tím neztrácí: odkazy na web,
+     akce, novinky, adopci i tlačítko „Přispět na seno" jsou v liště pod
+     bublinou natrvalo, takže obsah těch zastávek je pořád na jedno ťuknutí.
+
+     Milník má přednost před hláškou z koše – stejně jako u pošťouchnutí. */
+  function fill(text, vars) {
+    const str = L(text) || '';
+    return str.replace(/\{(\w+)\}/g, (m, k) => (vars[k] === undefined ? m : String(vars[k])));
+  }
+
+  function hello() {
+    toPlay();                       // odemkne lištu; bublinu nepřepisuje
+    const n = hooks.bumpHello() || 0;
+    const mile = QUIPS.hello_at[n];
+    const q = mile
+      ? { text: { cs: mile.cs, en: QUIPS_EN.hello_at[n] || mile.cs }, react: mile.react, link: mile.link }
+      : quip('hello');
+    if (!q) return;
+    // čísla ze savu se doplní až tady, ať tabulka hlášek zůstala čitelná
+    const stats = hooks.getStats() || {};
+    applyQuip({ ...q, text: { cs: fill(q.text.cs, stats), en: fill(q.text.en, stats) } });
   }
 
   function advance() {
@@ -1311,10 +1395,14 @@ const KAREL = (() => {
       spawn(bodyCx(), st.ky + 4 * st.sc, 14, { ang: -0.6, spread: 3, sp: 120, g: 300, life: 0.6, r: 3.5 * st.sc * 0.7, col: ['#e6d7ae', '#ffe08a'] });
       AUDIO.play('bray');
     }
-    if (!st.arr.spoke && t > 2.35) {
+    /* Portál se nechává i pro známé – je to půvab scény a trvá dvě sekundy.
+       Mění se jen to, co Karel po dopadu řekne: poprvé celou řeč o azylu,
+       podruhé a dál jednu větu (viz hello()). */
+    if (!st.arr.spoke && t > (st.again ? 1.95 : 2.35)) {
       st.arr.spoke = true;
-      st.phase = 'speech';
       st.pt = 0;
+      if (st.again) { hello(); return; }
+      st.phase = 'speech';
       st.step = 0;
       speakStep();
     }
@@ -1325,8 +1413,10 @@ const KAREL = (() => {
     st.enterK = 1;
     st.arr = { spark: true, portal: true, landed: true, spoke: true };
     st.react = null;
+    st.pt = 0;
+    if (st.again) { hello(); return; }
     st.phase = 'speech';
-    st.pt = 0; st.step = 0;
+    st.step = 0;
     speakStep();
   }
 
@@ -1372,6 +1462,7 @@ const KAREL = (() => {
     st.open = true;
     st.t = 0; st.pt = 0; st.step = 0;
     st.phase = 'portal';
+    st.again = !!o.again;   // už se známe → po portálu jen krátké přivítání
     st.react = null; st.props = {}; st.parts.length = 0; st.portals.length = 0;
     st.crowd.length = 0; st.assembled = false;
     st.pokes = 0; st.carrots = 0; st.petT = 0; st.holding = false;
