@@ -2,8 +2,10 @@
 
 ## ⏳ Čeká na vydání
 
-- **hra 1.8.6 — šatník, krámek s ozdobami a osobnější Karel.** AAB pro tuhle
-  verzi ještě sestavený není (viz krok 1 níž).
+- **hra 1.8.6 — šatník, krámek s ozdobami a osobnější Karel.** Na webu je
+  nasazená, **AAB pro tuhle verzi ještě sestavený není** — čeká se, až si ji
+  Tomáš odzkouší na nechmerust.org/loukarun. Až to odkýve, začíná se krokem 1
+  níž (zvednout `versionCode` i `versionName`). Viz `CLAUDE.md`.
   - **Karel se už nepředstavuje pokaždé znovu.** Kdo si zapne „ukazuj se
     pokaždé“, dostane po portálu jednu krátkou hlášku místo celé sedmidílné
     řeči o azylu (`QUIPS.hello` + milníky `hello_at` v `js/karel.js`, počítadlo
@@ -122,19 +124,18 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 > upload klíčem — do Play Console jde nahrát rovnou. Pro další verzi se
 > začíná krokem 1 (zvednout versionCode i versionName).
 
-> **`main` NENÍ nejnovější.** Vývoj posledních verzí (1.0.5–1.0.13 a dál)
-> skončil na vývojových větvích `claude/*`, protože je vynutila session
-> v prohlížeči. `git pull origin main` by tedy stáhl starý kód a sestavil starý
-> AAB. Nejnovější je větev **`claude/karel-personalization-items-hlpgz2`**
-> (šatník, krámek s ozdobami, osobnější Karel); ověř si to podle
-> `GAME_VERSION` v `js/game.js` (má být 1.8.6) a `versionName`
-> v `android/app/build.gradle` (pořád 1.0.13 — pro 1.8.6 se AAB ještě
-> nestavěl). Až bude vydáno, stojí za to větev sloučit do `main` a zbytečné
-> `claude/*` větve na GitHubu smazat, aby tahle past nečíhala i příště.
+> **`main` UŽ JE nejnovější — past je zavřená.** Verze 1.0.5–1.0.13 kdysi
+> skončily na vývojových větvích `claude/*` (vynutila je session v prohlížeči)
+> a `main` zůstal roky pozadu, takže `git pull origin main` stáhl starý kód
+> a sestavil starý AAB. Od hry 1.8.6 je všechno sloučené do `main` a další
+> práce tam patří taky. Ověřit se to dá podle `GAME_VERSION` v `js/game.js`
+> (má být 1.8.6 nebo novější); `versionName` v `android/app/build.gradle` je
+> pořád 1.0.13, protože pro 1.8.6 se AAB ještě nestavěl — čeká se, až si
+> hru Tomáš odzkouší na webu (viz `CLAUDE.md`).
 
 ```bash
 git fetch origin
-git checkout claude/karel-personalization-items-hlpgz2
+git checkout main
 git pull
 # plné npm install, ne --omit=dev: `cap` je devDependency, a hlavně bez
 # nainstalovaných pluginů je `cap sync` mlčky vyhodí z gradle souborů
