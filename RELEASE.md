@@ -2,10 +2,28 @@
 
 ## ⏳ Čeká na vydání
 
-- **hra 1.8.6 — šatník, krámek s ozdobami a osobnější Karel.** Na webu je
-  nasazená, **AAB pro tuhle verzi ještě sestavený není** — čeká se, až si ji
-  Tomáš odzkouší na nechmerust.org/loukarun. Až to odkýve, začíná se krokem 1
-  níž (zvednout `versionCode` i `versionName`). Viz `CLAUDE.md`.
+- **hra 1.8.7 — hudba na sebe navazuje a scény žijí.** Na webu je nasazená,
+  **AAB pro tuhle verzi ještě sestavený není** — čeká se, až si ji Tomáš
+  odzkouší na nechmerust.org/loukarun. Až to odkýve, začíná se krokem 1 níž
+  (zvednout `versionCode` 14 → 15 a `versionName`). Jinak je pro sestavení
+  všechno připravené. Viz `CLAUDE.md`.
+  - **Každé prostředí má tři skladby** místo jedné třicetisekundové smyčky
+    (`MUSIC_TRACKS` v `js/audio.js`). Hrají za sebou v zamíchaném pořadí
+    a navázání používá stejné prolnutí jako dřív smyčka, takže hudba nikde
+    neutne ani necvakne. Menu zůstalo na své dlouhé skladbě.
+  - **Paměť to nezvedlo**: nová hudba se nepředkešuje a v aplikaci je
+    dekódovaná vždycky jen hrající skladba (následující ~5 s předem, pak se
+    uklidí). Když se další skladba nestihne stáhnout, prolne se ta hrající
+    do svého začátku jako dřív.
+  - **18 nových kulis** (trh, studna, děti s míčem, cyklista, lavička,
+    kočka na zídce, piknik, včelař, kachní rodinka, kobyla s hříbětem, sběr
+    jablek, veverka, liška, datel, houbař, vůz se senem, dítě u dalekohledu,
+    netopýři) — každá se hýbe. Vesnice je schválně nejrušnější (`dense`).
+  - **Hustota kulis ustupuje výkonu**: `decorGap()` v `js/game.js` zmenšuje
+    rozestupy jen dokud hra stíhá; při `dprStep > 0` je zpátky na původních.
+
+- **hra 1.8.6 — šatník, krámek s ozdobami a osobnější Karel.** Na webu
+  nasazená, do Play nešla samostatně — jde do stejného AAB jako 1.8.7.
   - **Karel se už nepředstavuje pokaždé znovu.** Kdo si zapne „ukazuj se
     pokaždé“, dostane po portálu jednu krátkou hlášku místo celé sedmidílné
     řeči o azylu (`QUIPS.hello` + milníky `hello_at` v `js/karel.js`, počítadlo
@@ -129,8 +147,8 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 > a `main` zůstal roky pozadu, takže `git pull origin main` stáhl starý kód
 > a sestavil starý AAB. Od hry 1.8.6 je všechno sloučené do `main` a další
 > práce tam patří taky. Ověřit se to dá podle `GAME_VERSION` v `js/game.js`
-> (má být 1.8.6 nebo novější); `versionName` v `android/app/build.gradle` je
-> pořád 1.0.13, protože pro 1.8.6 se AAB ještě nestavěl — čeká se, až si
+> (má být 1.8.7 nebo novější); `versionName` v `android/app/build.gradle` je
+> pořád 1.0.13, protože pro 1.8.6 ani 1.8.7 se AAB nestavěl — čeká se, až si
 > hru Tomáš odzkouší na webu (viz `CLAUDE.md`).
 
 ```bash
