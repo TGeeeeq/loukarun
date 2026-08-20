@@ -1605,7 +1605,19 @@
   // figurální kulisy (postavy a zvířata) – stejně jako lidé se nesmí objevit
   // dvakrát v jednom záběru; obyčejné rostliny/stavby se opakovat můžou
   const FIGURE_PROPS = new Set(['cowboy', 'cheersquad', 'grazingcow', 'catnap', 'scarecrow', 'gnome',
-                                'grazingsheep', 'chickens', 'deer', 'geese']);
+                                'grazingsheep', 'chickens', 'deer', 'geese',
+                                'market', 'kids', 'cyclist', 'benchchat', 'catwall',
+                                'picnic', 'beekeeper', 'squirrel', 'ducks', 'applepicker', 'foalplay',
+                                'fox', 'woodpecker', 'mushroomer', 'haycart', 'stargazer']);
+
+  /* Rozestup kulis u pěšiny. Na zdravém zařízení stojí hustěji – scéna pak
+     žije a je pořád na co se koukat. Jak hra začne škubat, sníží se DPR
+     (dprStep > 0) a rozestup se vrátí na původní, takže kreslení kulis
+     nikdy nesoutěží o snímky s vlastním běháním. */
+  function decorGap(env) {
+    const gap = dprStep === 0 ? 250 + Math.random() * 330 : 460 + Math.random() * 640;
+    return env && env.dense ? gap * 0.78 : gap; // vesnice je schválně rušnější
+  }
 
   // lidští obyvatelé Louky – objevují se vzácně a střídají se
   const HUMAN_PROPS = Object.keys(HUMANS);
@@ -1646,7 +1658,7 @@
         });
         lastDecorProp = hp;
       }
-      S.nextDecorX += 640 + Math.random() * 620;
+      S.nextDecorX += decorGap() * 1.5;
       return;
     }
     const env = currentEnv().env;
@@ -1656,7 +1668,7 @@
     const figuresOnScene = new Set(S.decor.filter(d => FIGURE_PROPS.has(d.prop)).map(d => d.prop));
     let pool = props.filter(pp => pp !== lastDecorProp && !(FIGURE_PROPS.has(pp) && figuresOnScene.has(pp)));
     if (!pool.length) pool = props.filter(pp => !(FIGURE_PROPS.has(pp) && figuresOnScene.has(pp)));
-    if (!pool.length) { S.nextDecorX += 460 + Math.random() * 640; return; } // vše blokováno – spawn vynech
+    if (!pool.length) { S.nextDecorX += decorGap(env); return; } // vše blokováno – spawn vynech
     const p = pool[Math.floor(Math.random() * pool.length)];
     lastDecorProp = p;
     const far = !NEAR_PROPS.has(p) || Math.random() < 0.4;
@@ -1669,7 +1681,7 @@
       s: isSign ? 0.95 + Math.random() * 0.2 : (far ? 0.55 + Math.random() * 0.25 : 0.75 + Math.random() * 0.3),
       extra: isSign ? I18N.pick(SIGNS[Math.floor(Math.random() * SIGNS.length)]) : null,
     });
-    S.nextDecorX += 460 + Math.random() * 640;
+    S.nextDecorX += decorGap(env);
   }
 
   /* ---------- letci kroužící na obloze ---------- */
@@ -2474,6 +2486,18 @@
     }
   }
 
+  /* Ztlumení kulis v pozadí. Kulisa nesmí vypadat jako překážka, ale
+     u figur a staveb se vyplatí jít výš – jinak se v pozadí ztratí a scéna
+     zas působí prázdně. Co v tabulce není, kreslí se nejtlumeněji (0,62). */
+  const DECOR_ALPHA = {
+    signpost: 0.85, cowboy: 0.85, farmhouse: 0.85, cheersquad: 0.85,
+    market: 0.84, well: 0.8, haycart: 0.82, kids: 0.82, cyclist: 0.82,
+    benchchat: 0.8, picnic: 0.8, beekeeper: 0.8, applepicker: 0.8,
+    mushroomer: 0.8, stargazer: 0.8, foalplay: 0.76, fox: 0.76,
+    grazingcow: 0.72, grazingsheep: 0.72, chickens: 0.72, deer: 0.72, geese: 0.72,
+    catwall: 0.72, squirrel: 0.72, ducks: 0.72, woodpecker: 0.72, bats: 0.7,
+  };
+
   /* =========================================================
      RENDER
      ========================================================= */
@@ -2504,10 +2528,7 @@
       if (!d.far) continue;
       const sx = (d.x - S.worldX) * FAR_PARALLAX + px;
       if (sx < -220 || sx > W + 220) continue;
-      ctx.globalAlpha = d.human ? 0.95
-        : (d.prop === 'signpost' || d.prop === 'cowboy' || d.prop === 'farmhouse' || d.prop === 'cheersquad') ? 0.85
-        : (d.prop === 'grazingcow' || d.prop === 'grazingsheep' || d.prop === 'chickens'
-           || d.prop === 'deer' || d.prop === 'geese') ? 0.72 : 0.62;
+      ctx.globalAlpha = d.human ? 0.95 : (DECOR_ALPHA[d.prop] || 0.62);
       GFX.drawProp(ctx, d.prop, sx, groundY - 10, d.s, d.extra, S.t);
       ctx.globalAlpha = 1;
     }

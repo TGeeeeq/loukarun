@@ -869,7 +869,8 @@ const DATA = (() => {
       hillFar: '#a8d8a0', hillNear: '#7cc276',
       ground: '#5aa84f', groundDark: '#4a9440', path: '#c9b485',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone', 'catnap', 'frogpond', 'cowboy', 'grazingcow', 'grazingsheep', 'geese', 'cheersquad', 'molehill', 'hedgehog', 'storknest'],
+      props: ['sunflower', 'flower', 'beehive', 'signpost', 'butterflyZone', 'catnap', 'frogpond', 'cowboy', 'grazingcow', 'grazingsheep', 'geese', 'cheersquad', 'molehill', 'hedgehog', 'storknest',
+                'picnic', 'beekeeper', 'ducks', 'foalplay', 'kids'],
       particles: 'petals',
     },
     {
@@ -878,7 +879,8 @@ const DATA = (() => {
       hillFar: '#b5d49a', hillNear: '#8cbf72',
       ground: '#6aab52', groundDark: '#589644', path: '#cdb489',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['appletree', 'ladder', 'basket', 'scarecrow', 'snail', 'cowboy', 'grazingsheep', 'geese', 'cheersquad', 'molehill', 'hedgehog'],
+      props: ['appletree', 'ladder', 'basket', 'scarecrow', 'snail', 'cowboy', 'grazingsheep', 'geese', 'cheersquad', 'molehill', 'hedgehog',
+                'applepicker', 'picnic', 'squirrel', 'ducks', 'foalplay'],
       particles: 'leaves',
     },
     {
@@ -887,7 +889,8 @@ const DATA = (() => {
       hillFar: '#5d9c72', hillNear: '#417d56',
       ground: '#3f7a4a', groundDark: '#356a3f', path: '#a8926b',
       sun: '#f5f0c0', clouds: '#eef7ee',
-      props: ['tree', 'mushroom', 'gnome', 'stump', 'owlbox', 'frogpond', 'snail', 'deer', 'cheersquad', 'hedgehog'],
+      props: ['tree', 'mushroom', 'gnome', 'stump', 'owlbox', 'frogpond', 'snail', 'deer', 'cheersquad', 'hedgehog',
+                'fox', 'woodpecker', 'mushroomer', 'squirrel'],
       particles: 'fireflies',
     },
     {
@@ -896,8 +899,10 @@ const DATA = (() => {
       hillFar: '#c2b7a0', hillNear: '#a8c684',
       ground: '#79a85e', groundDark: '#679250', path: '#d3bd93',
       sun: '#fff3b0', clouds: '#ffffff',
-      props: ['cottage', 'fencebg', 'tractor', 'laundry', 'dovecote', 'catnap', 'chickens', 'cheersquad', 'molehill', 'storknest'],
+      props: ['cottage', 'fencebg', 'tractor', 'laundry', 'dovecote', 'catnap', 'chickens', 'cheersquad', 'molehill', 'storknest',
+                'market', 'well', 'kids', 'cyclist', 'benchchat', 'catwall'],
       particles: 'none',
+      dense: true, // vesnice má být rušná – kulisy stojí blíž u sebe (viz decorGap)
     },
     {
       id: 'zapad', name: { cs: 'Zlatá hodinka', en: 'Golden Hour' },
@@ -905,7 +910,8 @@ const DATA = (() => {
       hillFar: '#c77b5a', hillNear: '#9c5f46',
       ground: '#8a6a45', groundDark: '#79593a', path: '#c9a06b',
       sun: '#ffce7a', clouds: '#ffd9b8',
-      props: ['haystack', 'sunflower', 'signpost', 'windmill', 'catnap', 'cowboy', 'grazingcow', 'grazingsheep', 'farmhouse', 'cheersquad', 'molehill', 'storknest'],
+      props: ['haystack', 'sunflower', 'signpost', 'windmill', 'catnap', 'cowboy', 'grazingcow', 'grazingsheep', 'farmhouse', 'cheersquad', 'molehill', 'storknest',
+                'haycart', 'benchchat', 'well', 'foalplay'],
       particles: 'petals',
     },
     {
@@ -914,7 +920,8 @@ const DATA = (() => {
       hillFar: '#2e3c63', hillNear: '#26334f',
       ground: '#2c4038', groundDark: '#24352e', path: '#5a5f6e',
       sun: '#f5f2d0', clouds: '#39466b',
-      props: ['tree', 'tent', 'campfire', 'owlbox', 'frogpond', 'deer', 'farmhouse', 'hedgehog', 'fireflies'],
+      props: ['tree', 'tent', 'campfire', 'owlbox', 'frogpond', 'deer', 'farmhouse', 'hedgehog', 'fireflies',
+                'stargazer', 'bats', 'fox'],
       particles: 'stars',
       night: true,
     },
