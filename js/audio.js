@@ -14,17 +14,75 @@ const AUDIO = (() => {
   let musicEnabled = true;
   let lastKey = null;
 
-  // mapování prostředí → soubor
-  const MUSIC_FILES = {
-    intro:   'assets/music/menu.mp3', // intro a menu sdílí soubor → přechod je plynulý
-    menu:    'assets/music/menu.mp3',
-    louka:   'assets/music/louka.mp3',
-    sad:     'assets/music/louka.mp3',
-    les:     'assets/music/les.mp3',
-    vesnice: 'assets/music/vesnice.mp3',
-    zapad:   'assets/music/zapad.mp3',
-    noc:     'assets/music/noc.mp3',
+  /* Mapování prostředí → seznam skladeb.
+     Každé prostředí má víc krátkých skladeb (~30 s) a hraje je za sebou
+     v zamíchaném pořadí. Navázání další skladby je stejné prolnutí jako
+     u smyčky (LOOP_FADE), takže hudba nikdy neutne, necvakne ani nenechá
+     pauzu – jen se po půlminutě nepozorovaně změní melodie.
+     Menu má schválně jedinou dlouhou skladbu; ta se nechává být.
+     Soubory se stahují po jednom, teprve až na ně přijde řada, takže delší
+     seznam nezdrží start hry ani nenaroste paměť (viz WA dál). */
+  const MUSIC_TRACKS = {
+    menu: ['assets/music/menu.mp3'],
+    louka: [
+      'assets/music/louka.mp3',
+      'assets/music/louka2.mp3',
+      'assets/music/louka3.mp3',
+    ],
+    les: [
+      'assets/music/les.mp3',
+      'assets/music/les2.mp3',
+      'assets/music/les3.mp3',
+    ],
+    vesnice: [
+      'assets/music/vesnice.mp3',
+      'assets/music/vesnice2.mp3',
+      'assets/music/vesnice3.mp3',
+    ],
+    zapad: [
+      'assets/music/zapad.mp3',
+      'assets/music/zapad2.mp3',
+      'assets/music/zapad3.mp3',
+    ],
+    noc: [
+      'assets/music/noc.mp3',
+      'assets/music/noc2.mp3',
+      'assets/music/noc3.mp3',
+    ],
   };
+
+  /* Prostředí, která sdílejí hudbu s jiným. Sdílený seznam znamená, že se
+     při přechodu (louka → sad, intro → menu) hudba vůbec nepřeruší –
+     dohraje rozehranou skladbu dál. */
+  const MUSIC_ALIAS = { intro: 'menu', sad: 'louka' };
+  const musicKey = (key) => MUSIC_ALIAS[key] || key;
+
+  /* Pořadí skladeb v prostředí. Zamíchá se vždy na začátku kolečka, aby
+     hráč neslyšel pořád tu samou trojici ve stejném sledu; první skladba
+     nového kolečka nesmí být ta, která právě dohrála. */
+  const musicOrder = {};   // key → { list: [...], i: 0 }
+
+  function shuffled(all, avoidFirst) {
+    const a = all.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    if (a.length > 1 && a[0] === avoidFirst) { const tmp = a[0]; a[0] = a[1]; a[1] = tmp; }
+    return a;
+  }
+
+  // další skladba prostředí; u jednoskladbových seznamů vrací pořád tu samou
+  function nextSrc(key) {
+    const all = MUSIC_TRACKS[key];
+    if (!all || !all.length) return null;
+    if (all.length === 1) return all[0];
+    let o = musicOrder[key];
+    if (!o || o.i >= o.list.length) {
+      o = musicOrder[key] = { list: shuffled(all, o ? o.list[o.list.length - 1] : null), i: 0 };
+    }
+    return o.list[o.i++];
+  }
 
   const SFX_VOL = 0.35;
   const VOICE_VOL = 0.9; // hlasy dřív šly rovnou na výstup a přebíjely všechno
@@ -341,18 +399,19 @@ const AUDIO = (() => {
   }
 
   /* ---- hudba: dva přehrávače a plynulé prolínání (jen mp3) ----
-     Změna skladby (nové prostředí) se prolne přes TRACK_FADE a stejně
-     tak návrat smyčky na začátek: kousek před koncem skladby ji druhý
+     Změna prostředí, návrat smyčky i navázání další skladby ze seznamu
+     prostředí se řeší stejně: kousek před koncem hrající skladby ji druhý
      přehrávač rozehraje od nuly a hlasitosti se prokříží, takže hudba
      nikdy tvrdě neusekne ani necvakne. */
   const MUSIC_VOL = 0.5;
-  const TRACK_FADE = 1.8;  // prolnutí mezi skladbami (s)
-  const LOOP_FADE = 1.4;   // prolnutí přes konec smyčky (s)
+  const TRACK_FADE = 1.8;  // prolnutí mezi prostředími (s)
+  const LOOP_FADE = 1.4;   // prolnutí na konci skladby (s)
   const TICK_MS = 90;      // krok prolínacího časovače
 
   let players = null;      // [Audio, Audio] – aktivní se střídá
   let active = 0;
-  let currentTrack = null;
+  let currentTrack = null; // soubor, který právě hraje
+  let currentKey = null;   // prostředí (už přes musicKey), jehož seznam se hraje
 
   /* ---- Capacitor (Android app): hudba během běhu přes WebAudio ----
      HTMLAudio se v Android WebView při zátěži herní smyčky zadrhává, i když
@@ -360,32 +419,48 @@ const AUDIO = (() => {
      v audio vlákně, které zásek hlavního vlákna nezastaví. Web zůstává
      u <audio> – tam hudba jede plynule ze service worker cache.
 
-     POZOR na paměť: dekódovaná skladba je surové PCM. Krátké běhové smyčky
-     (~45 s) zaberou ~16 MB, ale menu.mp3 má několik minut → přes 80 MB.
+     POZOR na paměť: dekódovaná skladba je surové PCM. Krátká běhová skladba
+     (~31 s) zabere ~11 MB, ale menu.mp3 má dva a půl minuty → přes 50 MB.
      Držet ji dekódovanou (a k tomu dekódovat další) posílalo WebView na
      slabších telefonech do OOM pádu přesně při startu běhu. Proto menu
      hraje i v aplikaci streamovaně přes <audio> (menu nemá herní smyčku,
      zádrhel tam nehrozí) a WebAudio se používá jen pro krátké běhové
-     skladby – v paměti je vždy nanejvýš jedna. */
+     skladby.
+
+     Delší seznam skladeb paměť nezvedá: dekódovaná je vždycky ta hrající
+     a jen po dobu předstihu (PREFETCH + LOOP_FADE, dohromady ~5 s) k ní
+     přibude ta následující – špička tedy sedí kolem 22 MB, ne víc.
+     Dekódovat až na poslední chvíli nejde, decodeAudioData trvá na slabém
+     telefonu klidně sekundu a prolnutí by nedojelo. */
   // POZOR: rozhoduje isNativePlatform(), ne pouhá přítomnost mostu. Capacitor
   // runtime umí být přítomný i na webu a tam by se dlouhé skladby zbytečně
   // dekódovaly do PCM (desítky MB) – cesta určená výhradně pro appku.
   const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function'
                     && window.Capacitor.isNativePlatform());
-  const WA = NATIVE ? { buffers: {}, active: null, watch: null } : null;
+  const WA = NATIVE ? { buffers: {}, ready: {}, active: null, queued: null, watch: null } : null;
   let waSeq = 0; // pořadí požadavků – ať pozdě dodekódovaná stopa nepřebije novější
+  const PREFETCH = 3.5; // o kolik sekund dřív (nad LOOP_FADE) začít dekódovat další skladbu
 
-  // menu/intro sdílí dlouhý soubor – ten v aplikaci nikdy nedekódujeme
-  const useWA = (src) => !!WA && src !== MUSIC_FILES.menu;
+  // menu hraje dlouhý soubor – ten v aplikaci nikdy nedekódujeme
+  const STREAMED = MUSIC_TRACKS.menu;
+  const useWA = (src) => !!WA && STREAMED.indexOf(src) < 0;
 
   function waBuffer(src) {
     if (!WA.buffers[src]) {
       WA.buffers[src] = fetch(src)
         .then((r) => r.arrayBuffer())
         .then((ab) => ctx.decodeAudioData(ab))
+        .then((buf) => { WA.ready[src] = buf; return buf; })
         .catch((e) => { delete WA.buffers[src]; throw e; });
     }
     return WA.buffers[src];
+  }
+
+  // dekódovaná skladba zabírá ~11 MB – v cache drž jen hrající a chystanou
+  function waPrune() {
+    for (const k in WA.buffers) {
+      if (k !== (WA.active && WA.active.src) && k !== WA.queued) { delete WA.buffers[k]; delete WA.ready[k]; }
+    }
   }
 
   function waStop(fade) {
@@ -403,30 +478,43 @@ const AUDIO = (() => {
     const t = ctx.currentTime;
     const node = ctx.createBufferSource();
     node.buffer = buf;
-    node.loop = true; // pojistka: kdyby prolnutí smyčky nestihlo, hraje dál postaru
+    node.loop = true; // pojistka: kdyby prolnutí nestihlo, hraje dál postaru
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + fade);
     node.connect(gain); gain.connect(master);
     node.start(t);
     WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
-    // dekódovaná skladba zabírá desítky MB – v cache drž jen tu hrající
-    for (const k in WA.buffers) {
-      if (k !== src) delete WA.buffers[k];
-    }
+    // uzel si buffer drží sám, takže odcházející stopa dohraje i po uklizení
+    waPrune();
   }
 
-  // hlídá konec smyčky a prolne stopu do jejího vlastního začátku
+  /* Hlídá konec skladby: s předstihem si nechá dekódovat další skladbu
+     prostředí a pak do ní prolne. Když se dekódovat nestihla (slabý telefon,
+     pomalá síť), prolne se skladba do svého vlastního začátku jako dřív –
+     hudba se v žádném případě nezastaví. */
   function waTick() {
     if (!WA.active || !ctx) return;
     const a = WA.active;
-    if (ctx.currentTime - a.t0 > a.dur - LOOP_FADE) waStart(a.src, a.buf, LOOP_FADE);
+    const left = a.dur - (ctx.currentTime - a.t0);
+    if (left > LOOP_FADE + PREFETCH) return;
+    if (!WA.queued) { WA.queued = nextSrc(currentKey) || a.src; waPrune(); }
+    if (left > LOOP_FADE) {
+      if (WA.queued !== a.src) waBuffer(WA.queued).catch(() => {});
+      return;
+    }
+    const buf = WA.ready[WA.queued];
+    const src = buf ? WA.queued : a.src;
+    WA.queued = null;
+    currentTrack = src;
+    waStart(src, buf || a.buf, LOOP_FADE);
   }
 
   function waPlay(src, fade) {
     if (!ensureCtx()) return;
     if (!WA.watch) WA.watch = setInterval(waTick, TICK_MS);
     if (WA.active && WA.active.src === src) return;
+    WA.queued = null;
     const seq = ++waSeq;
     waBuffer(src)
       .then((buf) => {
@@ -456,10 +544,23 @@ const AUDIO = (() => {
     el.volume = v * duckNow; // ztlumení při pauze se přičítá až tady, ať prolínání zůstane netknuté
   }
 
+  /* Nová skladba se stahuje až ve chvíli, kdy na ni přijde řada. Když se
+     nestáhne (hráč je offline a soubor ještě nikdy neměl v cache), musí
+     hudba pokračovat tou, která hrát umí – jinak by se scéna utišila. */
+  let lastGood = null;   // naposledy skutečně hrající soubor
+
+  function onPlayerError(el) {
+    if (el !== players[active]) return;          // chyba odcházející stopy nikoho nezajímá
+    if (!lastGood || lastGood === el._src) return; // není kam se vrátit
+    currentTrack = lastGood;
+    crossTo(lastGood, 0.6);
+  }
+
   function makePlayer() {
     const el = new Audio();
     el.preload = 'auto';
-    // pojistka: kdyby prolnutí smyčky nestihlo (uspaná karta apod.),
+    el.addEventListener('error', () => onPlayerError(el));
+    // pojistka: kdyby prolnutí nestihlo (uspaná karta apod.),
     // skladba aspoň skočí na začátek postaru
     el.loop = true;
     el._vol = 0;           // aktuální hlasitost (zdroj pravdy, viz setVol)
@@ -475,7 +576,7 @@ const AUDIO = (() => {
     setInterval(musicTick, TICK_MS);
   }
 
-  // klouzání hlasitostí + hlídání konce smyčky
+  // klouzání hlasitostí + hlídání konce skladby
   function musicTick() {
     const dt = TICK_MS / 1000;
     for (const el of players) {
@@ -486,10 +587,13 @@ const AUDIO = (() => {
         if (el._vol <= 0 && !el.paused) el.pause();
       }
     }
-    // blíží se konec aktivní skladby → prolnout do jejího vlastního začátku
     const cur = players[active];
+    if (!cur.paused && cur.currentTime > 0.2) lastGood = cur._src;
+    // blíží se konec skladby → prolnout do další skladby prostředí
     if (currentTrack && !cur.paused && isFinite(cur.duration) && cur.duration > 0
         && cur.currentTime > cur.duration - LOOP_FADE) {
+      // ⟨audio⟩ si soubor stahuje samo a rovnou z cache, předstih nepotřebuje
+      currentTrack = nextSrc(currentKey) || currentTrack;
       crossTo(currentTrack, LOOP_FADE);
     }
   }
@@ -508,38 +612,45 @@ const AUDIO = (() => {
     to.play().catch(() => {}); // autoplay zákaz dořeší unlock()
   }
 
+  function startTrack(src, fade) {
+    currentTrack = src;
+    if (useWA(src)) {
+      // menu (⟨audio⟩) doznívá, běhová skladba najíždí ve WebAudio
+      if (players) { for (const el of players) { el._target = 0; el._fade = TRACK_FADE; } }
+      waPlay(src, fade);
+    } else {
+      // návrat do menu: WebAudio doznívá, menu jede streamovaně přes ⟨audio⟩
+      if (WA) { waSeq++; WA.queued = null; if (ctx) waStop(TRACK_FADE); }
+      ensurePlayers();
+      crossTo(src, fade);
+    }
+  }
+
   function playMusic(key) {
     lastKey = key;
     if (!musicEnabled) return;
-    const src = MUSIC_FILES[key];
-    if (!src) { stopMusic(); return; }
+    const k = musicKey(key);
+    if (!MUSIC_TRACKS[k]) { stopMusic(); return; }
     const firstStart = !currentTrack;
-    if (currentTrack === src) {
-      // stejná skladba – jen pojistka, že opravdu hraje (návrat z pozadí apod.)
-      if (useWA(src)) { if (!WA.active) waPlay(src, 0.6); return; }
+    if (currentKey === k && currentTrack) {
+      // stejné prostředí – hudba jen pokračuje; tady je to čistě pojistka,
+      // že opravdu hraje (návrat z pozadí, zapnutí hudby v pauze apod.)
+      if (useWA(currentTrack)) { if (!WA.active) waPlay(currentTrack, 0.6); return; }
       ensurePlayers();
       const el = players[active];
       el._target = MUSIC_VOL;
       if (el.paused) el.play().catch(() => {});
       return;
     }
-    currentTrack = src;
-    if (useWA(src)) {
-      // menu (⟨audio⟩) doznívá, běhová skladba najíždí ve WebAudio
-      if (players) { for (const el of players) { el._target = 0; el._fade = TRACK_FADE; } }
-      waPlay(src, firstStart ? 0.6 : TRACK_FADE);
-    } else {
-      // návrat do menu: WebAudio doznívá, menu jede streamovaně přes ⟨audio⟩
-      if (WA) { waSeq++; if (ctx) waStop(TRACK_FADE); }
-      ensurePlayers();
-      // úplně první spuštění jen krátce naběhne, jinak plné prolnutí
-      crossTo(src, firstStart ? 0.6 : TRACK_FADE);
-    }
+    currentKey = k;
+    // úplně první spuštění jen krátce naběhne, jinak plné prolnutí
+    startTrack(nextSrc(k), firstStart ? 0.6 : TRACK_FADE);
   }
 
   function stopMusic() {
     currentTrack = null;
-    if (WA) { waSeq++; if (ctx) waStop(0.2); }
+    currentKey = null;
+    if (WA) { waSeq++; WA.queued = null; if (ctx) waStop(0.2); }
     if (!players) return;
     for (const el of players) { el.pause(); el._target = 0; setVol(el, 0); }
   }

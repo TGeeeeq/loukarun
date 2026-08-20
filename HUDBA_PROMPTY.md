@@ -9,6 +9,13 @@ nástrojích (Udio, Google MusicFX / Gemini…). Prompty jsou v angličtině, pr
 tyto nástroje pracují nejlépe. U každé skladby je uvedeno, **kam soubor uložit** –
 hra si ho pak sama načte a přehrává podle prostředí, ve kterém zrovna běžíš.
 
+**Každé prostředí má víc skladeb.** Kromě `menu.mp3` je u každého prostředí seznam
+souborů (`louka.mp3`, `louka2.mp3`, `louka3.mp3` …) a hra je hraje za sebou
+v zamíchaném pořadí. Přechod mezi nimi je stejné prolnutí jako u smyčky, takže
+hudba nikde neutne ani nenechá pauzu – jen se po půlminutě nepozorovaně změní
+melodie. Přidat další skladbu = uložit soubor a dopsat ho do seznamu
+`MUSIC_TRACKS` v `js/audio.js`. Menu má schválně jedinou dlouhou skladbu.
+
 **Formát:** MP3, ideálně 128–192 kbps (kvůli velikosti aplikace).
 **Důležité:** Všechny skladby musí být **instrumentální** (bez zpěvu) a **smyčkovatelné** –
 v Sunu přidej do stylu „seamless loop" a případně ustřihni konec tak, aby navazoval na začátek.
@@ -115,5 +122,9 @@ Hra má vestavěnou syntetizovanou fanfáru, ale pokud chceš vlastní:
 2. Vygeneruj 2–3 varianty a vyber tu, která nejlépe smyčkuje.
 3. Před exportem zkontroluj hlasitost – všechny skladby by měly znít podobně nahlas
    (hra je přehrává na 50 % hlasitosti).
-4. Po uložení souborů do `assets/music/` není potřeba nic nastavovat – hra si je
-   najde sama (mapování je v `js/audio.js`).
+4. Skladby jednoho prostředí by měly mít **stejnou náladu, tempo i hlasitost** –
+   hrají za sebou v jednom běhu a přechod nesmí být slyšet jako střih.
+5. Po uložení souboru do `assets/music/` ho dopiš do seznamu `MUSIC_TRACKS`
+   v `js/audio.js` (u prostředí, kam patří) a zvyš číslo cache v `sw.js`.
+   Nové skladby se schválně **nepředkešují** – stahují se teprve, až na ně
+   v běhu přijde řada, ať se hra spouští rychle a nesbírá data zbytečně.
