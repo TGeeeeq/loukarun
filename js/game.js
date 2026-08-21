@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.0';
+  const GAME_VERSION = '1.9.1';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -15,6 +15,8 @@
   const ctx = canvas.getContext('2d');
   let W = 0, H = 0, DPR = 1, groundY = 0;
   let vignette = null; // cachovaný gradient vinětace
+  let stageBand = null, stageBandH = 0;   // měkký okraj divadelní opony
+  let stageBeam = null, stageBeamY = -1;  // kužel reflektoru (mění se jen s výškou pódia)
 
   /* ---------- vynucená šířka (mobil na výšku) ----------
      iPhone neumí screen.orientation.lock() a se zapnutým zámkem otočení
@@ -133,6 +135,7 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     groundY = H * 0.78;
     vignette = null;
+    stageBand = null; stageBeam = null; stageBeamY = -1;
     measureMenuPanel();
   }
   window.addEventListener('resize', resize);
@@ -1306,12 +1309,18 @@
     S.obstacles = S.obstacles.filter(o => (o.x - S.worldX + px) < px);
     S.pickups = S.pickups.filter(p => (p.x - S.worldX + px) < px);
     S.milestone = null;      // ať oslavná cedule 2500 m nepřekrývá lištu koncertu
+    // řetěz se uzavře a vyplatí TEĎ, dokud svět ještě běží: výplata tak
+    // stihne odplout jako každá jiná a nezůstane viset přes lištu koncertu
+    endCombo();
     S.special = {
       phase: 'approach',     // approach (pódium najíždí) → intro (popis) → challenge (koncert) → done
       scale: 1, target: 1,   // za jízdy se nemrazí
       bubbleA: 0,
       bubble: EVENTS.concertIntro,
       resultT: 0,
+      lights: 0,             // 0 → 1 rozsvícení pódia (a zpět při odchodu)
+      lightT: 0,             // vteřiny od dosednutí pódia – řídí oponu i mrknutí reflektoru
+      barA: 0,               // průhlednost časovací lišty (naskočí až s výzvou)
       markX: S.worldX + (W + 60) - px, // pomyslný bod pódia připlouvá zprava
       total: CONCERT.total,
       // každý další koncert jede svižněji a má užší zónu
@@ -1359,6 +1368,34 @@
     SP.restT = CONCERT.restDur; // pauza – zvuk dozní, hráč vidí výsledek, pak přijde další nota
   }
 
+  /* ---------- „zhasíná se v sále" ----------
+     Přechod na koncert byl dřív holé přepnutí: svět se zmrazil a s ním
+     zmrzlo i všechno, co po něm zbylo. Zmrazený svět totiž znamená dt = 0
+     i pro plovoucí texty, takže poslední výplata řetězu zůstala viset přes
+     lištu koncertu až do jeho konce (a každá trefená nota k ní přidala další
+     notičku). Proto se v okamžiku, kdy pódium dosedne, scéna uklidí — a
+     zároveň to je ten správný moment na divadlo: světla dolů, opona dovnitř,
+     reflektor naskočí (viz drawStage). Řetěz je vyplacený už při příjezdu
+     pódia, takže hráč o nic nepřijde. */
+  function stageClear() {
+    S.combo = 0; S.comboT = 0; S.comboRing = 0; S.comboBreak = 0; S.comboPop = 0;
+    S.comboWaves.length = 0; S.comboFlash = 0;
+    // co ještě letí, ať odletí rychle a nahoru — jako by scénu někdo smetl
+    for (const f of S.floaters) { f.life = Math.min(f.life, 0.45); f.rise = 190; }
+    S.sideBubbles.length = 0;
+  }
+
+  /* Divadelní režim pro HUD: světla v sále jdou dolů i nad plátnem, ať
+     energie a mince nepřetahují pozornost z pódia. Třída se zapisuje jen
+     při změně — každý zápis do DOM za běhu je zbytečná práce navíc. */
+  let hudEl = null, stageMode = false;
+  function setStageMode(on) {
+    if (on === stageMode) return;
+    stageMode = on;
+    if (!hudEl) hudEl = document.getElementById('hud');
+    if (hudEl) hudEl.classList.toggle('stage', on);
+  }
+
   // tiká reálným (neškálovaným) dt – volá se před škálováním, jako updateEncounter
   function updateSpecial(dt) {
     const SP = S.special;
@@ -1367,6 +1404,16 @@
     SP.scale += (SP.target - SP.scale) * Math.min(1, dt * k);
     if (SP.target === 0 && SP.scale < 0.02) SP.scale = 0;
     SP.bubbleA += (((SP.phase === 'intro' || SP.phase === 'result') ? 1 : 0) - SP.bubbleA) * Math.min(1, dt * 8);
+    // světla v sále: naskočí, jakmile pódium dosedne, a zhasnou s posledním tónem
+    const wantLight = (SP.phase === 'approach' || SP.phase === 'done') ? 0 : 1;
+    SP.lights += (wantLight - SP.lights) * Math.min(1, dt * (wantLight ? 7 : 6));
+    if (SP.phase !== 'approach') SP.lightT += dt;
+    // časovací lišta patří k výzvě – během popisu ještě není a s výsledkem
+    // ustoupí bublině, ve které zvířátko řekne, jak koncert dopadl
+    const wantBar = SP.phase === 'challenge' ? 1 : 0;
+    SP.barA += (wantBar - SP.barA) * Math.min(1, dt * 9);
+    // komu vadí pohyb, tomu se pódium prostě rozsvítí – bez opony a bez mrkání
+    if (reduceMotionMq.matches) { SP.lights = wantLight; SP.barA = wantBar; SP.lightT = wantLight; }
     if (SP.phase === 'result' && SP.gateT > 0) SP.gateT = Math.max(0, SP.gateT - dt);
     if (SP.beatFlash > 0) SP.beatFlash = Math.max(0, SP.beatFlash - dt);
     else if (SP.beatFlash < 0) SP.beatFlash = Math.min(0, SP.beatFlash + dt);
@@ -1376,6 +1423,7 @@
       if ((SP.markX - S.worldX + px) <= px + 40) {
         SP.phase = 'intro';
         SP.target = 0; // teď se svět zmrazí (ease-out) a naběhne bublina
+        stageClear();
         AUDIO.play('quote');
       }
       return;
@@ -1916,7 +1964,7 @@
   }
 
   function floater(txt, x, y, color) {
-    S.floaters.push({ txt, x, y, life: 1, color });
+    S.floaters.push({ txt, x, y, life: 1, color, rise: 40 });
   }
 
   /* =========================================================
@@ -2167,8 +2215,11 @@
 
   function update(dt) {
     S.t += dt * 1000;
+    const realDt = dt;   // neškálovaný čas – zmrazený svět nesmí zmrazit dohasínání
     // třes musí odeznít i na obrazovkách mimo běh, jinak se menu klepe donekonečna
     S.shake = Math.max(0, S.shake - dt * 3);
+    // světla v sále dolů, jakmile pódium dosedne (a zpátky nahoru po koncertu)
+    setStageMode(S.mode === 'run' && !!S.special && S.special.phase !== 'approach');
 
     if (S.mode === 'paused' || S.mode === 'over') return;
     const running = S.mode === 'run';
@@ -2314,14 +2365,18 @@
       updateHud(false);
     }
 
+    /* Částice a plovoucí texty dohasínají REÁLNÝM časem, dokud stojí pódium.
+       Jinak by zmrazený svět (dt = 0) nechal poslední výplatu řetězu i každou
+       notičku z minihry viset přes lištu koncertu až do jeho konce. */
+    const fxDt = (S.special && S.special.target === 0) ? realDt : dt;
     // částice – zásobník má pevnou délku, mrtvé sloty se jen přeskočí
     for (const p of S.particles) {
       if (p.life <= 0) continue;
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.grav) p.vy += 500 * dt;
-      p.life -= dt;
+      p.x += p.vx * fxDt; p.y += p.vy * fxDt;
+      if (p.grav) p.vy += 500 * fxDt;
+      p.life -= fxDt;
     }
-    for (const f of S.floaters) { f.y -= 40 * dt; f.life -= dt * 0.55; }
+    for (const f of S.floaters) { f.y -= (f.rise || 40) * fxDt; f.life -= fxDt * 0.55; }
     compact(S.floaters, f => f.life > 0);
     for (const b of S.sideBubbles) b.t += dt;
     compact(S.sideBubbles, b => b.t < b.dur);
@@ -2632,10 +2687,10 @@
       drawFocusRing(S.enc.o, S.enc.scale, px);
     }
 
-    // pódium a časovací lišta koncertu (kreslí se přes zmrazenou scénu)
-    if (S.special && S.special.phase === 'challenge') {
-      drawConcert(S.special, px);
-    }
+    // pódium koncertu: potemnělý sál, opona a reflektor (přes zmrazenou scénu).
+    // Časovací lišta se kreslí až za částicemi a texty (viz drawConcertBar),
+    // aby přes ni nikdy nic nepřekáželo – dřív právě tohle kazilo začátek.
+    if (S.special && S.special.lights > 0.002) drawStage(S.special, px);
 
     // částice
     for (const p of S.particles) {
@@ -2668,6 +2723,9 @@
       ctx.fillText(f.txt, f.x, f.y);
     }
     ctx.globalAlpha = 1;
+
+    // časovací lišta koncertu – úplně nahoře, ať do ní nemluví ani jiskry
+    if (S.special && S.special.barA > 0.004) drawConcertBar(S.special);
 
     // BUBLINY se kreslí až úplně nakonec – nad částicemi i plovoucími čísly –
     // aby do nich nic nezasahovalo a text byl vždy čistý a čitelný.
@@ -2716,8 +2774,10 @@
 
     ctx.restore();
 
-    // řetěz sběrů – mimo třes, ať se počítadlo neklepe a jde přečíst
-    if (S.mode === 'run' || S.mode === 'paused') drawCombo(ctx);
+    // řetěz sběrů – mimo třes, ať se počítadlo neklepe a jde přečíst.
+    // Na rozsvíceném pódiu nemá co dělat: řetěz je vyplacený a lišta koncertu
+    // stojí přesně tam, kde by se kreslil.
+    if ((S.mode === 'run' || S.mode === 'paused') && !(S.special && S.special.lights > 0.02)) drawCombo(ctx);
 
     // Karlova lekce o HUD – pulzující rámeček kolem ukazatele mrkvové energie
     if (S.tut && S.tut.idx >= 0 && TUTORIAL.steps[S.tut.idx].hud
@@ -2795,29 +2855,94 @@
     ctx.restore();
   }
 
-  // pódium Zvířecího koncertu: reflektor, mikrofon a časovací lišta se zlatou zónou
-  function drawConcert(SP, px) {
-    const cx = W / 2;
-    const fade = SP.phase === 'done' ? Math.max(0, Math.min(1, SP.resultT / 1.2)) : 1;
-    ctx.save();
-    ctx.globalAlpha = fade;
+  /* Reflektor se nechytne napoprvé – schodová křivka, která dvakrát mrkne
+     a pak se ustálí. Bere vteřiny od okamžiku, kdy pódium dosedlo. */
+  function lampFlicker(t) {
+    if (t >= 0.64) return 1;
+    if (t < 0.10) return 0.20;
+    if (t < 0.17) return 0.86;
+    if (t < 0.25) return 0.12;
+    if (t < 0.36) return 0.96;
+    if (t < 0.43) return 0.38;
+    return 0.38 + (t - 0.43) * (0.62 / 0.21);
+  }
 
-    // jemné ztmavení scény, ať pódium vynikne
-    ctx.fillStyle = 'rgba(20, 12, 30, 0.28)';
+  /* Měkký okraj divadelní opony. Gradient se vyrábí v místních
+     souřadnicích (0..band) a na místo se dostane přes translate, takže
+     přežije celý koncert i s opnou v pohybu a nevzniká každý snímek. */
+  function bandGradient(band) {
+    if (stageBand && stageBandH === band) return stageBand;
+    const g = ctx.createLinearGradient(0, 0, 0, band);
+    g.addColorStop(0, 'rgba(16,9,24,0.94)');
+    g.addColorStop(0.55, 'rgba(16,9,24,0.60)');
+    g.addColorStop(1, 'rgba(16,9,24,0)');
+    stageBand = g; stageBandH = band;
+    return g;
+  }
+
+  /* PÓDIUM Zvířecího koncertu – světla v sále dolů, opona dovnitř,
+     reflektor naskočí. Kreslí se pod částicemi a texty; časovací lišta
+     má vlastní funkci a jde až nad ně. */
+  function drawStage(SP, px) {
+    const lit = Math.max(0, Math.min(1, SP.lights));
+    const lamp = lit * lampFlicker(SP.lightT || 0);
+    const spotY = groundY - S.py;
+    ctx.save();
+
+    // sál potemní
+    ctx.globalAlpha = 0.34 * lit;
+    ctx.fillStyle = '#140c1e';
     ctx.fillRect(0, 0, W, H);
 
-    // reflektor shora na zpěváka
-    const spotY = groundY - S.py;
-    const g = ctx.createLinearGradient(px, 0, px, spotY);
-    g.addColorStop(0, 'rgba(255,240,180,0.30)');
-    g.addColorStop(1, 'rgba(255,240,180,0)');
-    ctx.fillStyle = g;
+    // opona – dva pruhy shora a zdola dojedou za půl vteřiny
+    const band = Math.min(56, H * 0.13);
+    const q = 1 - Math.pow(1 - Math.min(1, (SP.lightT || 0) / 0.5), 3);
+    const off = band * (1 - q);
+    ctx.globalAlpha = lit;
+    ctx.fillStyle = bandGradient(band);
+    ctx.save();
+    ctx.translate(0, -off);
+    ctx.fillRect(0, 0, W, band);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(0, H + off);
+    ctx.scale(1, -1);
+    ctx.fillRect(0, 0, W, band);
+    ctx.restore();
+
+    // reflektor shora na zpěváka – gradient se mění jen s výškou pódia
+    if (!stageBeam || stageBeamY !== Math.round(spotY)) {
+      stageBeamY = Math.round(spotY);
+      stageBeam = ctx.createLinearGradient(0, 0, 0, Math.max(1, spotY));
+      stageBeam.addColorStop(0, 'rgba(255,240,180,0.34)');
+      stageBeam.addColorStop(1, 'rgba(255,240,180,0)');
+    }
+    ctx.globalAlpha = lamp;
+    ctx.save();
+    ctx.translate(px, 0);
+    ctx.fillStyle = stageBeam;
     ctx.beginPath();
-    ctx.moveTo(px - 16, 0); ctx.lineTo(px + 16, 0);
-    ctx.lineTo(px + 122, spotY); ctx.lineTo(px - 122, spotY);
+    ctx.moveTo(-16, 0); ctx.lineTo(16, 0);
+    ctx.lineTo(122, spotY); ctx.lineTo(-122, spotY);
     ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // prach v kuželu – jediné, co se ve zmrazené scéně hýbe (podle S.t, bez alokace)
+    if (lamp > 0.3 && dprStep < 2) {
+      ctx.fillStyle = '#fff3c8';
+      for (let i = 0; i < 9; i++) {
+        const d = ((S.t * 0.00007) + i * 0.7139) % 1;
+        const y = d * spotY;
+        const x = px + Math.sin(S.t * 0.0006 + i * 2.1) * (16 + 96 * d) * 0.8;
+        ctx.globalAlpha = lamp * Math.sin(d * Math.PI) * 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.6 + (i % 3) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     // mikrofon před zpěvákem
+    ctx.globalAlpha = lit;
     const mx = px + 76, my = groundY;
     ctx.strokeStyle = '#3a3340'; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, my - 96); ctx.stroke();
@@ -2825,10 +2950,24 @@
     ctx.beginPath(); ctx.ellipse(mx, my - 104, 11, 15, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#4a4652';
     ctx.beginPath(); ctx.ellipse(mx, my - 108, 8, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // časovací lišta se zelenou zónou, puntíkem a notami – kreslí se nad vším
+  function drawConcertBar(SP) {
+    const cx = W / 2;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, SP.barA * Math.max(0, SP.lights)));
 
     // časovací lišta – větší a jasnější, ať je vidět i na telefonu
     const bw = Math.min(W * 0.68, 470), bh = 34;
     const bx = cx - bw / 2, by = Math.max(84, groundY - S.py - 252);
+    // lišta stojí na vlastní tmavé podložce, ať je čitelná i nad světlou oblohou;
+    // podložka je vždycky aspoň tak široká jako nejdelší hláška pod lištou
+    const pw = Math.min(W - 12, Math.max(bw + 24, 468));
+    GFX.rr(ctx, cx - pw / 2, by - 50, pw, bh + 108, 22);
+    ctx.fillStyle = 'rgba(14, 8, 22, 0.42)';
+    ctx.fill();
     const running = SP.leadT <= 0; // puntík už jede
 
     // zbývající noty nad lištou: trefené (žlutá) / miny (červená) / čeká (bílá)
@@ -2866,10 +3005,10 @@
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke();
     }
 
-    // hláška pod lištou: odpočet / instrukce / výsledek noty / konec
-    let msg = null, col = '#ffffff';
-    if (SP.phase === 'done') { msg = SP.won ? 'VYPRODÁNO! 🎉' : 'Zkus to příště! 🎵'; col = SP.won ? '#ffe14a' : '#ffd0d0'; }
-    else if (SP.leadT > 0) { msg = 'PŘIPRAV SE… ' + Math.ceil(SP.leadT / 0.6); col = '#ffe14a'; }
+    // hláška pod lištou: odpočet / instrukce / výsledek noty
+    // (jak dopadl celý koncert, řekne zvířátko v bublině – lišta už je pryč)
+    let msg, col = '#ffffff';
+    if (SP.leadT > 0) { msg = 'PŘIPRAV SE… ' + Math.ceil(SP.leadT / 0.6); col = '#ffe14a'; }
     else if (SP.restT > 0) { msg = SP.lastHit ? 'Trefa! 🎶' : 'Vedle!'; col = SP.lastHit ? '#8ff0a0' : '#ff9a9a'; }
     else { msg = 'Ťukni, když je puntík v ZELENÉ!'; }
     if (msg) {

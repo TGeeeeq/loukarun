@@ -185,6 +185,14 @@ const KAREL = (() => {
       // postavená tak, aby ho nemusela skloňovat („s Osel Karel“ nejde)
       { cs: 'Tvoje dnešní volba: {name}. Dobrá. Druhá nejlepší, ale dobrá.', react: 'ears' },
       { cs: 'Šťouchej, krm, drbej. Nebo si běž běhat. Já mám čas, seno taky nikam nejde.', react: 'nod' },
+      { cs: 'Portál, dým, dramatický nástup — a vyleze osel. Promiň, na víc rozpočet nebyl.', react: 'bray' },
+      { cs: 'Vítej zpátky. Nic se tu nezměnilo, což je u nás vlastně dobrá zpráva.', react: 'nod' },
+      { cs: 'Zrovna jsem tu stál a předstíral, že mám co dělat. Dobře žes přišel.', react: 'laugh' },
+      { cs: 'Á, návštěva! Uklidil bych, ale je to louka.', react: 'ears' },
+      { cs: 'Slyšel jsem kroky a doufal, že je to seno. Ale tebe beru taky.', react: 'laugh' },
+      { cs: 'Vítej. Zkontroloval jsem to za tebe: tráva roste, mouchy otravují, všechno v pořádku.', react: 'nod' },
+      { cs: 'Tak jsi tady. Od minule jsem se nehnul, ale budu se tvářit, že jsem měl náročný den.', react: 'shake' },
+      { cs: 'Ahoj! Připravoval jsem si uvítací proslov a zapomněl jsem ho. Takže: ahoj.', react: 'hop' },
     ],
     /* Stupňování podle toho, po kolikáté se takhle vidíme – stejný princip
        jako `pokes`, jen počítadlo přežívá mezi spuštěními (save.karelHellos). */
@@ -287,6 +295,14 @@ const KAREL = (() => {
       'Your record is {best} m. I couldn\'t do it, but then I\'m a donkey.',
       'Today\'s pick: {name}. Good. Second best, but good.',
       'Poke me, feed me, scratch me. Or go for a run. I have time, and so does the hay.',
+      'A portal, smoke, a dramatic entrance — and out comes a donkey. Sorry, that was the whole budget.',
+      'Welcome back. Nothing here has changed, which around here counts as good news.',
+      'I was just standing here pretending to be busy. Good thing you turned up.',
+      'Ah, a visitor! I would tidy up, but it is a meadow.',
+      'I heard footsteps and hoped it was hay. But you will do nicely.',
+      'Welcome. I checked for you: the grass grows, the flies annoy, all in order.',
+      'There you are. I have not moved since last time, but I will act like it was a hard day.',
+      'Hello! I had a welcome speech prepared and then forgot it. So: hello.',
     ],
     hello_at: {
       1: 'Handsome mode works. I\'m here, just as promised. You can poke and feed me, same as ever.',
@@ -363,7 +379,7 @@ const KAREL = (() => {
       en: 'That last run was short even by donkey standards. Have another go, I will wait here.' },
     { id: 'almost', when: (c) => c.nextName && c.lack > 0 && c.lack <= 250,
       react: 'ears',
-      cs: 'Do {nextName} ti chybí {lack} mincí. To je jeden slušnej běh. Nebo dva mizerný.',
+      cs: 'Na další zvířátko ({nextName}) ti chybí {lack} mincí. To je jeden slušnej běh. Nebo dva mizerný.',
       en: 'You are {lack} coins short of {nextName}. That is one decent run. Or two bad ones.' },
     { id: 'canbuy', when: (c) => c.nextName && c.lack <= 0 && c.chars < c.charsTotal,
       react: 'hop',
@@ -375,7 +391,7 @@ const KAREL = (() => {
       en: 'You have got all of us. The whole gang. That is not a game any more, that is adoption.' },
     { id: 'worn', when: (c) => !!c.wornName,
       react: 'spin',
-      cs: 'Koukám, žes mi nasadil {wornName}. Chtěl jsem něco říct, ale radši se jdu podívat do kaluže.',
+      cs: 'Koukám na tu ozdobu: {wornName}. Chtěl jsem něco říct, ale radši se jdu podívat do kaluže.',
       en: 'I see you put {wornName} on me. I was going to say something, but I will go check a puddle first.' },
     { id: 'away', when: (c) => c.days >= 3,
       react: 'bray', warm: true,
@@ -437,6 +453,50 @@ const KAREL = (() => {
       react: 'nod',
       cs: 'Přečetl sis o nás {factsRead} zajímavostí. To je víc, než ví většina lidí, co sem přijedou.',
       en: 'You have read {factsRead} facts about us. That is more than most people who come here know.' },
+  ];
+
+  /* =========================================================
+     PŘIVÍTÁNÍ – druhá věta
+     =========================================================
+     Přivítání je přivítání. Když Karel vyjde z portálu, PRVNÍ věta je
+     vždycky pozdrav z pytlíku `hello` – vtipný, o ničem, o azylu. Nikdy
+     to není hláška o obchodě: „na Ovečku ti chybí dvě stě mincí" je věta
+     do pošťouchnutí, ne do dveří. (Právě tohle se dřív dělo: `hello()`
+     sáhl rovnou po kontextu a Karel místo pozdravu zahájil prodejem.)
+
+     Tady je jen KRÁTKÝ dovětek, který se za pozdrav přilepí, když se
+     opravdu stalo něco, co se hodí připomenout hned ve dveřích – rekord,
+     dlouhá nepřítomnost, první běhy, pozdní hodina. Pravidla mají stejná
+     `id` jako obsáhlejší dvojčata v CTX a použité `id` se rovnou zapíše
+     do `usedCtx`, aby Karel tutéž věc neomlel podruhé při pošťouchnutí. */
+  const GREET = [
+    { id: 'record', react: 'dance', when: (c) => c.newBest && c.lastDist > 0,
+      cs: 'A gratuluju k rekordu — {lastDist} metrů!',
+      en: 'And congratulations on that record — {lastDist} metres!' },
+    { id: 'away', react: 'bray', warm: true, when: (c) => c.days >= 3,
+      cs: 'A chyběls mi, {days} dní je dlouho i na osla.',
+      en: 'And I missed you, {days} days is long even for a donkey.' },
+    { id: 'shortrun', react: 'laugh', when: (c) => c.lastDist > 0 && c.lastDist < 300,
+      cs: 'Ten poslední běh byl krátkej i na mě, a to jsem osel.',
+      en: 'That last run was short even by donkey standards.' },
+    { id: 'lastrun', react: 'nod', when: (c) => c.lastDist >= 300,
+      cs: 'Ten poslední běh na {lastDist} metrů jsem viděl. Slušný.',
+      en: 'I saw that last run, {lastDist} metres. Respectable.' },
+    { id: 'newbie', react: 'hop', warm: true, when: (c) => c.runs > 0 && c.runs < 3,
+      cs: 'A že jsi tu takhle brzo, to mám rád.',
+      en: 'And I like that you came by this early on.' },
+    { id: 'veteran', react: 'nod', warm: true, when: (c) => c.runs >= 50,
+      cs: 'Po {runs} bězích už nejsi návštěva, ty sem patříš.',
+      en: 'After {runs} runs you are not a visitor, you belong here.' },
+    { id: 'worn', react: 'spin', when: (c) => !!c.wornName,
+      cs: 'A ozdoba pořád sedí: {wornName}. Nestěžuju si.',
+      en: 'And the accessory still fits: {wornName}. Not complaining.' },
+    { id: 'night', react: 'nod', warm: true, when: (c) => c.hour >= 22 || c.hour < 5,
+      cs: 'Takhle pozdě? Dobře, ale potichu, ostatní spí.',
+      en: 'This late? Fine, but quietly, the others are asleep.' },
+    { id: 'morning', react: 'ears', warm: true, when: (c) => c.hour >= 5 && c.hour < 9,
+      cs: 'A ještě k tomu ráno. To je nejlepší část dne.',
+      en: 'And in the morning, too. Best part of the day.' },
   ];
 
   /* =========================================================
@@ -1338,29 +1398,46 @@ const KAREL = (() => {
     return str.replace(/\{(\w+)\}/g, (m, k) => (vars[k] === undefined ? m : String(vars[k])));
   }
 
+  /* Krátký dovětek k pozdravu – první pravidlo z GREET, které teď platí.
+     Zapíše se i do `usedCtx`, ať Karel tutéž věc nezopakuje obsáhleji
+     při prvním pošťouchnutí. */
+  function greetTail(c) {
+    for (const r of GREET) {
+      if (usedCtx.has(r.id)) continue;
+      let ok = false;
+      try { ok = !!r.when(c); } catch (e) { ok = false; }
+      if (!ok) continue;
+      usedCtx.add(r.id);
+      return r;
+    }
+    return null;
+  }
+
   function hello() {
     toPlay();                       // odemkne lištu; bublinu nepřepisuje
     const n = hooks.bumpHello() || 0;
+    // čísla ze savu se doplní až tady, ať tabulky hlášek zůstaly čitelné
+    const stats = hooks.getStats() || {};
     const mile = QUIPS.hello_at[n];
     /* Pořadí je schválně tohle: milník návštěv (desátá, padesátá…) je
-       událost a má přednost před vším. Hned za ním je kontext – „viděl
-       jsem tě běžet, {lastDist} metrů" je při přivítání to nejlepší, co
-       Karel může říct. Náhodná hláška z pytlíku je až třetí v pořadí. */
+       událost a má přednost. Jinak VŽDYCKY zazní pozdrav z pytlíku – ve
+       dveřích se zdraví, neprodává. Teprve za pozdrav se může přilepit
+       jedna krátká věta z GREET (rekord, dlouhá pauza, pozdní hodina).
+       Kontextové hlášky o mincích a obchodě sem nesmí; ty patří až do
+       pošťouchnutí, kde se jich hráč doptal. */
     if (mile) {
-      const stats = hooks.getStats() || {};
       applyQuip({
         text: { cs: fill(mile.cs, stats), en: fill(QUIPS_EN.hello_at[n] || mile.cs, stats) },
         react: mile.react, link: mile.link,
       });
       return;
     }
-    const c = ctxQuip();
-    if (c) { applyQuip(c); return; }
     const q = quip('hello');
     if (!q) return;
-    // čísla ze savu se doplní až tady, ať tabulka hlášek zůstala čitelná
-    const stats = hooks.getStats() || {};
-    applyQuip({ ...q, text: { cs: fill(q.text.cs, stats), en: fill(q.text.en, stats) } });
+    const tail = greetTail(stats);
+    const cs = fill(q.text.cs, stats) + (tail ? ' ' + fill(tail.cs, stats) : '');
+    const en = fill(q.text.en, stats) + (tail ? ' ' + fill(tail.en, stats) : '');
+    applyQuip({ ...q, text: { cs, en }, react: tail ? tail.react : q.react, warm: tail ? tail.warm : q.warm });
   }
 
   function advance() {

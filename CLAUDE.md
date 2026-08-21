@@ -4,26 +4,29 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.0 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.1 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.0,
-> `sw.js` má cache `loukarun-v49` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.1,
+> `sw.js` má cache `loukarun-v50` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
-> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o čtyři verze starší než kód.
+> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o pět verzí starší než kód.
 >
-> **Co je v 1.9.0 nového:** deníček listuje jako opravdová kniha (rub listu
+> **Co je v 1.9.x nového:** deníček listuje jako opravdová kniha (rub listu
 > nese obsah cílové stránky, obsah se mění až v půlce otočky, dá se listovat
 > tažením prstu); karta v obchodě se na telefonu naležato překlopí do dvou
 > sloupců, takže se nic neskrývá; Karel reaguje na skutečný postup hráče
 > a jeho hlášky se dají v klidu dočíst; uvítací scéna má pečené pozadí
 > a portál bez `shadowBlur` — na „shromážděte se" spadl čas snímku
-> z ~50 ms na ~22 ms.
+> z ~50 ms na ~22 ms. V 1.9.1 navíc **Karel vždycky nejdřív pozdraví**
+> (obchod si nechá na pošťouchnutí) a **přechod na Zvířecí koncert je
+> divadlo**: světla v sále dolů, opona, reflektor — a hlavně se scéna uklidí,
+> takže přes lištu koncertu už neleží zmrazené texty z běhu.
 
 ## Vydání nové verze
 
@@ -128,6 +131,35 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   Ťuknutí na Karla během něj text nepřepíše, jen ho rozhýbe. Tlačítka ve spodní
   liště a ťuknutí na bublinu zámek ruší — jsou to vědomé požadavky. Kdyby zámek
   platil i na ně, tlačítko by chvílemi nedělalo nic, a to je horší.
+- **Přivítání je přivítání.** `hello()` vždycky sáhne po pozdravu z pytlíku
+  `QUIPS.hello` (nebo po milníku návštěv) a teprve za něj se může přilepit
+  jedna krátká věta z tabulky `GREET`. Kontextové hlášky z `CTX` — mince,
+  obchod, rozdělané mise — do přivítání **nesmí**: Karel se dřív místo
+  pozdravu ozval „na Ovečku ti chybí dvě stě mincí", a to je věta do
+  pošťouchnutí, ne do dveří. Pravidlo v `GREET` má stejné `id` jako jeho
+  obsáhlejší dvojče v `CTX` a použité se zapisuje do `usedCtx`, ať Karel
+  totéž neomele podruhé.
+- **Jména se do hlášek dosazují v 1. pádě.** `{name}`, `{nextName}`,
+  `{wornName}` přijdou tak, jak stojí v tabulkách (`Osel Karel`, `Kšiltovka`),
+  a nikdo je neskloňuje. Věta je proto musí přijmout v nominativu — po
+  dvojtečce, v závorce, nebo jako podmět („{nextName} stojí míň"). „Do
+  {nextName} ti chybí…" je chyba.
+- **Zmrazený svět nesmí zmrazit dohasínání.** Při Zvířecím koncertu (a jen
+  při něm) se částice a plovoucí texty posouvají **reálným** dt — `fxDt`
+  v `update()`. Dokud to tak nebylo, poslední výplata řetězu i každá notička
+  z minihry zůstaly viset přes lištu koncertu až do jeho konce (přesně to
+  bylo na hráčově snímku). K tomu se scéna v okamžiku, kdy pódium dosedne,
+  ještě uklidí (`stageClear()`), a řetěz se vyplácí už při příjezdu pódia,
+  aby výplata stihla odplout za běžícího světa.
+- **Lišta koncertu se kreslí nad všechno ostatní.** `drawStage()` (potemnělý
+  sál, opona, reflektor, prach) jde pod částice, `drawConcertBar()` až za ně.
+  Nic, co se kreslí dřív, tak nemůže lištu překrýt. Prach v kuželu je jediné,
+  co se ve zmrazené scéně hýbe — počítá se z `S.t` (ten tiká reálným časem)
+  a nic nealokuje.
+- **`#hud.stage` ztlumí jen ukazatele.** Divadelní režim (`setStageMode()`)
+  sráží opacitu `.hud-left/.hud-center/.hud-right`. Tlačítko `#btn-tut-continue`
+  je uvnitř `#hud` taky a **musí zůstat plné** — je to jediná cesta z popisu
+  koncertu dál.
 - **`?fx=full` v adrese vypne útlum efektů.** V headless prohlížeči (audit
   rozvržení, snímky) snímky vždycky padají a útlum by se zapnul do vteřiny,
   takže by nešlo vyfotit ani otáčení listu. Pro ověřování ho používej, pro

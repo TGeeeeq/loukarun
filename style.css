@@ -210,6 +210,17 @@ a.btn { text-decoration: none; display: inline-block; }
 #hud .hud-left, #hud .hud-right { display: flex; gap: 10px; align-items: center; }
 #hud button { pointer-events: auto; }
 
+/* DIVADELNÍ REŽIM – při Zvířecím koncertu jdou světla v sále dolů.
+   Ztlumí se jen ukazatele (energie, metry, mince, pauza); tlačítko
+   „Pokračovat" je uvnitř #hud taky, a to musí zůstat plné, protože je
+   to jediná cesta dál. Mění se výhradně opacity, takže se kvůli tomu
+   nepřepočítává rozvržení. */
+#hud .hud-left, #hud .hud-center, #hud .hud-right { transition: opacity .45s ease; }
+#hud.stage .hud-left, #hud.stage .hud-center, #hud.stage .hud-right { opacity: .3; }
+html.low-fx #hud .hud-left,
+html.low-fx #hud .hud-center,
+html.low-fx #hud .hud-right { transition: none; }
+
 #hud-energy { display: flex; align-items: center; gap: 8px; }
 .energy-icon { font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); }
 .energy-bar {
@@ -2905,6 +2916,9 @@ html.low-fx .book-leaf { display: none; }
   .karel-bar.in,
   .karel-next,
   .karel-call.nudge { animation: none; }
+  #hud .hud-left,
+  #hud .hud-center,
+  #hud .hud-right { transition: none; }
 }
 
 /* =========================================================
