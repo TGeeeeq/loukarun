@@ -694,10 +694,19 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
     0 2px 0 rgba(255,225,180,0.14) inset,
     0 34px 70px -18px rgba(0,0,0,0.62),
     0 10px 24px rgba(0,0,0,0.32);
+  /* Listuje se tažením do stran, rolovat se smí jen po stránce nahoru dolů.
+     POZOR: `touch-action` se počítá v OSÁCH VIEWPORTU, ne v osách otočeného
+     obsahu. Na telefonu na výšku je celé `<body>` otočené o 90°, takže tah
+     „do strany" je pro prohlížeč tah SVISLE — a s `pan-y` si ho vzal jako
+     rolování, poslal `pointercancel` a listování umřelo hned po tom, co se
+     list nadzvedl (přesně to hráč viděl jako „chvilkové seknutí").
+     V otočeném režimu proto gesto nedostane prohlížeč vůbec: obě osy si
+     obslouží `onBookMove()` sám, včetně rolování stránky. */
   touch-action: pan-y;
   /* prst listuje tažením do stran – výběr textu by tažení jen překážel */
   -webkit-user-select: none; user-select: none;
 }
+html.force-landscape .book { touch-action: none; }
 /* prošití po obvodu desek – dva pixely, a hned to je vázaná kniha */
 .book::before {
   content: ''; position: absolute; inset: 4px; border-radius: 9px 14px 14px 9px;
@@ -737,6 +746,9 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
      dočíst odrolováním. Vodorovně se ořezává dál (vlepené výstřižky). */
   overflow: hidden auto;
   overscroll-behavior: contain;
+  /* Stránka je vlastní rolovací schránka, takže o gestu rozhoduje ona, ne
+     desky nad ní – hodnotu si proto musí nést sama (viz .book). */
+  touch-action: pan-y;
   color: #4a3a26;
   font-family: Georgia, "Times New Roman", Times, serif;
   background: var(--paper);
@@ -752,6 +764,7 @@ button.diary:hover { background: rgba(0,0,0,0.075); }
     radial-gradient(58% 40% at 82% 88%, rgba(176,140,84,0.13), transparent 70%),
     radial-gradient(130% 90% at 22% 0%, #fffdf5, #f5e9cf 66%, #e7d5b0);
 }
+html.force-landscape .book-page { touch-action: none; }
 .book-page.left {
   border-radius: 7px 2px 2px 7px;
   box-shadow:

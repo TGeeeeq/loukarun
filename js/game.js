@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.1';
+  const GAME_VERSION = '1.9.2';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -4075,18 +4075,36 @@
      znatelně vodorovný. Souřadnice jdou přes pointerGameX/Y – při vynucené
      šířce je celá hra otočená o 90° a osy viewportu jsou prohozené. */
   function onBookDown(e) {
+    if (bookDrag) return;   // druhý prst do rozjetého tahu nemluví
     if (bookBusy || !bookChar || lowFx || reduceMotionMq.matches) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // stránka pod prstem – při otočeném rozvržení si ji odrolujeme sami
+    const page = e.target && e.target.closest ? e.target.closest('.book-page') : null;
     bookDrag = { id: e.pointerId, x: pointerGameX(e), y: pointerGameY(e),
-                 on: false, lx: pointerGameX(e), lt: performance.now(), v: 0 };
+                 on: false, lx: pointerGameX(e), lt: performance.now(), v: 0,
+                 page, scroll: null, top0: 0 };
   }
 
   function onBookMove(e) {
     if (!bookDrag || e.pointerId !== bookDrag.id) return;
     const gx = pointerGameX(e);
     const dx = gx - bookDrag.x, dy = pointerGameY(e) - bookDrag.y;
+    if (bookDrag.scroll) { bookDrag.scroll.scrollTop = bookDrag.top0 - dy; return; }
     if (!bookDrag.on) {
-      if (Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) { bookDrag = null; return; }
+      if (Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) {
+        /* Svislý tah patří rolování stránky (na velkém systémovém písmu se
+           text nevejde na papír). Na telefonu na výšku je celá hra otočená
+           o 90° a prohlížeč rolovací osu takového rámečku sám netrefí –
+           gesto proto v otočeném režimu vůbec nedostane (`touch-action:
+           none`) a stránku odroluje tahle větev. Naležato a na počítači
+           roluje prohlížeč jako vždycky a my ustoupíme. */
+        const el = bookDrag.page;
+        if (!forcedLandscape() || !el || el.scrollHeight <= el.clientHeight + 1) { bookDrag = null; return; }
+        bookDrag.scroll = el;
+        bookDrag.top0 = el.scrollTop;
+        el.scrollTop = bookDrag.top0 - dy;
+        return;
+      }
       if (Math.abs(dx) < 12) return;
       if (!beginTurn(dx < 0 ? 1 : -1)) { bookDrag = null; return; }
       bookDrag.on = true;

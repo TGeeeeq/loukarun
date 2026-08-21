@@ -4,14 +4,14 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.1 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.2 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.1,
-> `sw.js` má cache `loukarun-v50` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.2,
+> `sw.js` má cache `loukarun-v51` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
@@ -26,7 +26,9 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 > z ~50 ms na ~22 ms. V 1.9.1 navíc **Karel vždycky nejdřív pozdraví**
 > (obchod si nechá na pošťouchnutí) a **přechod na Zvířecí koncert je
 > divadlo**: světla v sále dolů, opona, reflektor — a hlavně se scéna uklidí,
-> takže přes lištu koncertu už neleží zmrazené texty z běhu.
+> takže přes lištu koncertu už neleží zmrazené texty z běhu. V 1.9.2 se
+> opravilo **listování deníčku prstem** — na telefonu na výšku si tah bral
+> prohlížeč a listování umřelo hned po nadzvednutí listu.
 
 ## Vydání nové verze
 
@@ -116,6 +118,17 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   poskočí. (3) Za běhu se zapisuje jen `transform` a `opacity` na pět pevných
   prvků; nic, co by nutilo přepočítat rozvržení. Ťuknutí i tažení prstem jedou
   přes stejnou funkci `leafApply(p)` — proto vypadají stejně.
+- **`touch-action` se počítá v osách VIEWPORTU, ne v osách otočené hry.**
+  Na telefonu na výšku je `<body>` otočené o 90°, takže tah „do strany"
+  (listování) je pro prohlížeč tah svisle. `.book { touch-action: pan-y }`
+  si ho proto vzal jako rolování, poslal `pointercancel` a listování umřelo
+  hned po tom, co se list nadzvedl — hráč viděl „chvilkové seknutí" a musel
+  použít šipky. V otočeném režimu proto `.book` i `.book-page` mají
+  `touch-action: none` a **obě osy si obslouží `onBookMove()` sám**, včetně
+  rolování dlouhé stránky (`bookDrag.scroll`). Naležato a na počítači roluje
+  dál prohlížeč. Pozor při ověřování: syntetické `page.mouse` události
+  gesta prohlížeče vůbec nespustí — tohle se pozná jedině skutečným dotykem
+  (`Input.dispatchTouchEvent` přes CDP), a pozná se podle `pointercancel`.
 - **Karta v obchodě se na nízkém displeji překlápí naležato.** Text karty žije
   v `.card-body`; naležato mu musí zůstat `min-width: 0` a `flex-shrink: 1`
   (`.char-card > .card-body`), jinak se nezalomí a vyteče na sousední kartu.
