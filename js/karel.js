@@ -328,6 +328,118 @@ const KAREL = (() => {
   }
 
   /* =========================================================
+     CO KAREL VÍ – kontextové hlášky
+     =========================================================
+     Náhodná hláška z pytlíku je vtipná jednou. Tohle je druhá vrstva:
+     pravidla, která se dívají na skutečný stav hry (hooks.getStats) a
+     mají PŘEDNOST před náhodou. Karel tak umí komentovat rekord, který
+     hráč právě uběhl, mince, které mu chybí na Květu, ozdobu, kterou mu
+     hráč nasadil, nebo to, že se týden neukázal.
+
+     Jak to funguje:
+       • pole je seřazené od nejzajímavějšího po nejobyčejnější,
+       • `when(c)` rozhodne, jestli hláška teď dává smysl,
+       • použité se pamatují po dobu jedné návštěvy (`usedCtx`), takže se
+         Karel neopakuje, a když dojdou, spadne se zpátky na pytlík.
+
+     Do textů se dosazují {závorky} přes fill(): {coins} {best} {name}
+     {chars} {runs} {lastDist} {lack} {nextName} {achDone} {achTotal}
+     {items} {itemsTotal} {days} {wornName}.
+
+     Pravidlo pro psaní hlášek: Karel mluví za azyl, ne za hru. Chválí
+     hráče, dělá si legraci sám ze sebe a nikdy nekomanduje. */
+  const CTX = [
+    { id: 'record', when: (c) => c.newBest && c.lastDist > 0,
+      react: 'dance',
+      cs: 'Počkej… {lastDist} metrů? To je novej rekord! Já bych do třetího kopce ani nedošel.',
+      en: 'Hold on… {lastDist} metres? That is a new record! I would not make it past the third hill.' },
+    { id: 'lastrun', when: (c) => c.lastDist >= 300 && !c.newBest,
+      react: 'nod',
+      cs: 'Viděl jsem tě běžet. {lastDist} metrů a ani jednou jsi nešlápl do kopřiv. Slušný.',
+      en: 'I watched you run. {lastDist} metres and not once into the nettles. Respectable.' },
+    { id: 'shortrun', when: (c) => c.lastDist > 0 && c.lastDist < 300,
+      react: 'laugh',
+      cs: 'Ten poslední běh byl krátkej i na mě, a to jsem osel. Dej si ještě jeden, počkám tu.',
+      en: 'That last run was short even by donkey standards. Have another go, I will wait here.' },
+    { id: 'almost', when: (c) => c.nextName && c.lack > 0 && c.lack <= 250,
+      react: 'ears',
+      cs: 'Do {nextName} ti chybí {lack} mincí. To je jeden slušnej běh. Nebo dva mizerný.',
+      en: 'You are {lack} coins short of {nextName}. That is one decent run. Or two bad ones.' },
+    { id: 'canbuy', when: (c) => c.nextName && c.lack <= 0 && c.chars < c.charsTotal,
+      react: 'hop',
+      cs: 'Máš {coins} mincí a {nextName} stojí míň. Neříkám nic. Jenom to říkám nahlas.',
+      en: 'You have {coins} coins and {nextName} costs less. I am not saying anything. Just saying it out loud.' },
+    { id: 'allchars', when: (c) => c.charsTotal > 1 && c.chars >= c.charsTotal,
+      react: 'dance',
+      cs: 'Máš nás všechny. Celou partu. To už není hra, to je adopce.',
+      en: 'You have got all of us. The whole gang. That is not a game any more, that is adoption.' },
+    { id: 'worn', when: (c) => !!c.wornName,
+      react: 'spin',
+      cs: 'Koukám, žes mi nasadil {wornName}. Chtěl jsem něco říct, ale radši se jdu podívat do kaluže.',
+      en: 'I see you put {wornName} on me. I was going to say something, but I will go check a puddle first.' },
+    { id: 'away', when: (c) => c.days >= 3,
+      react: 'bray', warm: true,
+      cs: 'Neviděli jsme se {days} dní. Nic ve zlým, ale seno se samo nesní. Teda… vlastně sní.',
+      en: 'It has been {days} days. No hard feelings, but hay does not eat itself. Well… actually it does.' },
+    { id: 'daily', when: (c) => c.dailyLeft > 0 && c.runs > 2,
+      react: 'nod',
+      cs: 'Dneska máš ještě {dailyLeft} rozdělaný mise. Nespěchám. Ale připomínám.',
+      en: 'You still have {dailyLeft} missions open today. No rush. Just reminding.' },
+    { id: 'dailydone', when: (c) => c.dailyTotal > 0 && c.dailyLeft === 0 && c.runs > 2,
+      react: 'dance',
+      cs: 'Všechny dnešní mise hotový. Kdybych uměl tleskat, tleskám.',
+      en: 'All of today’s missions done. If I could clap, I would be clapping.' },
+    { id: 'ach', when: (c) => c.achDone > 0 && c.achDone < c.achTotal,
+      react: 'nod',
+      cs: 'Odznaků máš {achDone} z {achTotal}. Ty zbylý nejsou schválně těžký. Jenom náhodou.',
+      en: 'You have {achDone} of {achTotal} badges. The rest are not hard on purpose. Just by accident.' },
+    { id: 'achall', when: (c) => c.achTotal > 0 && c.achDone >= c.achTotal,
+      react: 'bray',
+      cs: 'Všechny odznaky. Všechny! Já si za celej život vysloužil jenom přezdívku.',
+      en: 'Every badge. Every single one! In my whole life I earned nothing but a nickname.' },
+    { id: 'rich', when: (c) => c.coins >= 4000,
+      react: 'laugh',
+      cs: '{coins} mincí. Kdybych já měl {coins} mrkví, spal bych na nich.',
+      en: '{coins} coins. If I had {coins} carrots, I would sleep on them.' },
+    { id: 'items', when: (c) => c.items > 0 && c.items < c.itemsTotal,
+      react: 'ears',
+      cs: 'V šatníku máš {items} ozdob z {itemsTotal}. Korunku si schovej na mě, ať to má hlavu a patu.',
+      en: 'You own {items} of {itemsTotal} accessories. Save the crown for me, it only makes sense.' },
+    { id: 'veteran', when: (c) => c.runs >= 50,
+      react: 'nod', warm: true,
+      cs: '{runs} běhů. Ty už nejsi návštěva, ty sem patříš.',
+      en: '{runs} runs. You are not a visitor any more, you belong here.' },
+    { id: 'newbie', when: (c) => c.runs > 0 && c.runs < 3,
+      react: 'hop', warm: true,
+      cs: 'Teprve začínáš a už jsi tady u mě. To mám rád.',
+      en: 'You are just starting out and you already came to see me. I like that.' },
+    { id: 'best', when: (c) => c.best >= 1000,
+      react: 'nod',
+      cs: 'Tvůj rekord je {best} metrů. Já mám osobák na cestu ke krmelci a zpátky.',
+      en: 'Your record is {best} metres. Mine is to the feeder and back.' },
+    { id: 'morning', when: (c) => c.hour >= 5 && c.hour < 9,
+      react: 'ears', warm: true,
+      cs: 'Ráno. Nejlepší část dne — je ticho a nikdo po mně nechce, abych něco nesl.',
+      en: 'Morning. The best part of the day — quiet, and nobody wants me to carry anything.' },
+    { id: 'night', when: (c) => c.hour >= 22 || c.hour < 5,
+      react: 'nod', warm: true,
+      cs: 'Takhle pozdě? Já v tuhle dobu obvykle přemýšlím o mrkvi. Ale rád tě vidím.',
+      en: 'This late? At this hour I am usually thinking about carrots. But good to see you.' },
+    { id: 'fed', when: (c) => c.fed >= 12,
+      react: 'munch',
+      cs: 'Nakrmils mě už {fed}krát. Začínám mít podezření, že si mě chceš koupit. Funguje to.',
+      en: 'You have fed me {fed} times. I am starting to suspect you are buying my loyalty. It works.' },
+    { id: 'muted', when: (c) => c.musicOff,
+      react: 'no',
+      cs: 'Máš vypnutou hudbu. Chápu. Ale to já tam zpívám.',
+      en: 'You have the music off. Fair enough. But that is me singing in there.' },
+    { id: 'diary', when: (c) => c.factsRead >= 8,
+      react: 'nod',
+      cs: 'Přečetl sis o nás {factsRead} zajímavostí. To je víc, než ví většina lidí, co sem přijedou.',
+      en: 'You have read {factsRead} facts about us. That is more than most people who come here know.' },
+  ];
+
+  /* =========================================================
      STAV
      ========================================================= */
   const st = {
@@ -356,6 +468,7 @@ const KAREL = (() => {
     portals: [],
     // řeč
     bubble: null,         // { text, link, full, shown, done }
+    readUntil: 0,         // do kdy je hláška zamčená, ať se dá dočíst
     typeT: 0,
     // prostředí
     fire: [],             // světlušky
@@ -368,7 +481,7 @@ const KAREL = (() => {
      hlášek; getWorn řekne, jakou ozdobu mu hráč v šatníku vybral. */
   let hooks = {
     onSeen: () => {}, onAuto: () => {},
-    bumpHello: () => 0, getStats: () => ({}), getWorn: () => null,
+    bumpHello: () => 0, bumpFed: () => 0, getStats: () => ({}), getWorn: () => null,
   };
   let lowFx = false;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -389,9 +502,10 @@ const KAREL = (() => {
     // rozhoduje offsetWidth/Height prvku, ne obdélník na obrazovce
     W = cv.offsetWidth || r.width || window.innerWidth;
     H = cv.offsetHeight || r.height || window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, lowFx ? 1.25 : 2);
+    dpr = Math.min(window.devicePixelRatio || 1, lowFx ? 1.15 : DPR_STEPS[dprStep]);
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
+    bubbleDirty = true; bubLastX = null; bubLastY = null;
     layout();
   }
 
@@ -463,7 +577,14 @@ const KAREL = (() => {
     }
   }
 
+  const NOTE_FONTS = {};
+  function noteFont(r) {
+    const px = Math.round(r * 3.4);
+    return NOTE_FONTS[px] || (NOTE_FONTS[px] = px + 'px "Baloo 2", sans-serif');
+  }
+
   function drawParts() {
+    if (!st.parts.length) return;
     for (const p of st.parts) {
       const k = 1 - p.t / p.life;
       ctx.globalAlpha = Math.min(1, k * 1.6);
@@ -481,7 +602,10 @@ const KAREL = (() => {
         ctx.save();
         ctx.translate(p.x, p.y); ctx.rotate(Math.sin(p.rot) * 0.3);
         ctx.fillStyle = p.col;
-        ctx.font = `${p.r * 3.4}px "Baloo 2", sans-serif`;
+        // font jako řetězec se skládal pro každou notu v každém snímku
+        // a prohlížeč ho pokaždé znovu rozebíral; teď se velikost zaokrouhlí
+        // a hotové řetězce se recyklují z malé tabulky
+        ctx.font = noteFont(p.r);
         ctx.textAlign = 'center';
         ctx.fillText(p.r > 3 ? '♪' : '♫', 0, 0);
         ctx.restore();
@@ -504,28 +628,118 @@ const KAREL = (() => {
      Kreslí se celé, takže herní plátno pod scénou není vidět
      a hlavní smyčka může na tu dobu vypnout.
      ========================================================= */
-  let skyGrad = null, skyKey = '';
-  function drawBackdrop() {
-    const key = W + 'x' + H;
-    if (skyKey !== key) {
-      skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-      skyGrad.addColorStop(0, '#f7c46a');
-      skyGrad.addColorStop(0.42, '#ffd79a');
-      skyGrad.addColorStop(0.72, '#ffe9c4');
-      skyGrad.addColorStop(1, '#f3d59a');
-      skyKey = key;
-    }
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, W, H);
+  /* ---------- pečené vrstvy pozadí ----------
+     Louka, slunce, kopce, keře, tráva ani kvítky se v čase nemění – přesto
+     se dřív kreslily každý snímek znovu: dva plnoplošné přechody (obloha,
+     slunce), dvě křivkové vrstvy kopců, 18 elips keřů, ~60 oblouků trávy
+     a 42 oblouků kvítků. Na 0,5 vCPU a plátně 1688×780 to byl největší
+     jednotlivý náklad scény, a to se ani nic nehýbalo.
+
+     Teď se to jednou upeče do dvou plátek a každý snímek se jen složí:
+       bgFar  = obloha + slunce + kopce + keře (neprůhledná)
+       bgNear = tráva a kvítky v popředí (průhledná nad obzorem)
+     Mezi ně patří to, co se hýbe – mraky (nad kopci se nikdy nepotkají,
+     letí ve výšce 0,10–0,24 H) a stíny postav.
+
+     Plátky se pečou v ROZLIŠENÍ PLÁTNA (× dpr), takže složení je prostý
+     přenos pixelů bez převzorkování. Přepéct je potřeba při resize a při
+     změně kvality – jinak nikdy. */
+  let bgFar = null, bgNear = null, bakeKey = '';
+
+  function newLayer() {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(W * dpr));
+    c.height = Math.max(1, Math.round(H * dpr));
+    const k = c.getContext('2d');
+    k.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { c, k };
+  }
+
+  function bakeBackdrop() {
+    const key = W + 'x' + H + 'x' + dpr.toFixed(2) + 'x' + st.ky.toFixed(1) + (lowFx ? 'L' : '');
+    if (bakeKey === key && bgFar && bgNear) return;
+    bakeKey = key;
+    if (W < 2 || H < 2) return;
+
+    /* --- daleká vrstva --- */
+    const far = newLayer(); const f = far.k;
+    const sky = f.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#f7c46a');
+    sky.addColorStop(0.42, '#ffd79a');
+    sky.addColorStop(0.72, '#ffe9c4');
+    sky.addColorStop(1, '#f3d59a');
+    f.fillStyle = sky; f.fillRect(0, 0, W, H);
 
     // slunce nízko nad obzorem
     const sunX = W * 0.78, sunY = H * 0.44;
-    const g = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, H * 0.5);
-    g.addColorStop(0, 'rgba(255,255,225,0.85)');
-    g.addColorStop(0.25, 'rgba(255,224,138,0.35)');
-    g.addColorStop(1, 'rgba(255,224,138,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    const sg = f.createRadialGradient(sunX, sunY, 0, sunX, sunY, H * 0.5);
+    sg.addColorStop(0, 'rgba(255,255,225,0.85)');
+    sg.addColorStop(0.25, 'rgba(255,224,138,0.35)');
+    sg.addColorStop(1, 'rgba(255,224,138,0)');
+    f.fillStyle = sg; f.fillRect(0, 0, W, H);
+
+    // kopce – dvě vrstvy, jenom pár oblouků
+    const gy = st.ky;
+    f.fillStyle = '#9ccf7c';
+    f.beginPath();
+    f.moveTo(0, gy);
+    f.quadraticCurveTo(W * 0.2, gy - H * 0.16, W * 0.46, gy - H * 0.04);
+    f.quadraticCurveTo(W * 0.7, gy - H * 0.18, W, gy - H * 0.02);
+    f.lineTo(W, H); f.lineTo(0, H); f.fill();
+    f.fillStyle = '#7ac95e';
+    f.beginPath();
+    f.moveTo(0, gy + H * 0.02);
+    f.quadraticCurveTo(W * 0.34, gy - H * 0.05, W * 0.68, gy + H * 0.03);
+    f.quadraticCurveTo(W * 0.86, gy + H * 0.06, W, gy + H * 0.01);
+    f.lineTo(W, H); f.lineTo(0, H); f.fill();
+
+    // keříky na obzoru – jen siluety, dávají scéně hloubku
+    f.fillStyle = '#6bb851';
+    for (let i = 0; i < 6; i++) {
+      const bx = ((i * 0.19 + 0.06) * W) % W;
+      const by = gy - H * 0.012 + ((i * 37) % 9) - 4;
+      const s = H * (0.028 + (i % 3) * 0.009);
+      f.beginPath();
+      f.ellipse(bx, by, s * 1.5, s, 0, Math.PI, 0);
+      f.ellipse(bx - s, by, s * 0.9, s * 0.7, 0, Math.PI, 0);
+      f.ellipse(bx + s, by, s * 0.9, s * 0.7, 0, Math.PI, 0);
+      f.fill();
+    }
+    bgFar = far.c;
+
+    /* --- blízká vrstva --- */
+    const near = newLayer(); const n = near.k;
+    const gh = Math.max(10, H * 0.035);
+    n.fillStyle = '#55a13c';
+    n.beginPath();
+    n.moveTo(0, H);
+    for (let x = 0; x <= W + 30; x += 30) {
+      const h = gh * (0.7 + ((x * 7919) % 17) / 56);
+      n.quadraticCurveTo(x + 8, H - h * 1.25, x + 15, H - h * 0.95);
+      n.quadraticCurveTo(x + 22, H - h * 0.72, x + 30, H - h * 0.88);
+    }
+    n.lineTo(W, H); n.fill();
+    if (!lowFx) {
+      for (let i = 0; i < 7; i++) {
+        const fx = ((i * 0.143 + 0.05) * W) % W;
+        const fy = H - gh * 0.6 - ((i * 23) % 7);
+        n.fillStyle = i % 3 === 0 ? '#fffdf5' : i % 3 === 1 ? '#ffe08a' : '#ffb9cd';
+        for (let k = 0; k < 5; k++) {
+          const a = k / 5 * 6.2832;
+          n.beginPath();
+          n.arc(fx + Math.cos(a) * 3.2, fy + Math.sin(a) * 3.2, 2.4, 0, 6.2832);
+          n.fill();
+        }
+        n.fillStyle = '#ffc94a';
+        n.beginPath(); n.arc(fx, fy, 1.8, 0, 6.2832); n.fill();
+      }
+    }
+    bgNear = near.c;
+  }
+
+  function drawBackdrop() {
+    bakeBackdrop();
+    if (bgFar) ctx.drawImage(bgFar, 0, 0, W, H);
 
     // mraky – pár chomáčů, ať obloha není prázdná plocha. Kreslí se
     // z překrytých koleček, ne z jedné elipsy: placatý ovál na zlaté
@@ -544,34 +758,6 @@ const KAREL = (() => {
       ctx.fill();
     }
 
-    // kopce – dvě vrstvy, jenom pár oblouků, nic drahého
-    const gy = st.ky;
-    ctx.fillStyle = '#9ccf7c';
-    ctx.beginPath();
-    ctx.moveTo(0, gy);
-    ctx.quadraticCurveTo(W * 0.2, gy - H * 0.16, W * 0.46, gy - H * 0.04);
-    ctx.quadraticCurveTo(W * 0.7, gy - H * 0.18, W, gy - H * 0.02);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-    ctx.fillStyle = '#7ac95e';
-    ctx.beginPath();
-    ctx.moveTo(0, gy + H * 0.02);
-    ctx.quadraticCurveTo(W * 0.34, gy - H * 0.05, W * 0.68, gy + H * 0.03);
-    ctx.quadraticCurveTo(W * 0.86, gy + H * 0.06, W, gy + H * 0.01);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
-
-    // keříky na obzoru – jen siluety, dávají scéně hloubku
-    ctx.fillStyle = '#6bb851';
-    for (let i = 0; i < 6; i++) {
-      const bx = ((i * 0.19 + 0.06) * W) % W;
-      const by = gy - H * 0.012 + ((i * 37) % 9) - 4;
-      const s = H * (0.028 + (i % 3) * 0.009);
-      ctx.beginPath();
-      ctx.ellipse(bx, by, s * 1.5, s, 0, Math.PI, 0);
-      ctx.ellipse(bx - s, by, s * 0.9, s * 0.7, 0, Math.PI, 0);
-      ctx.ellipse(bx + s, by, s * 0.9, s * 0.7, 0, Math.PI, 0);
-      ctx.fill();
-    }
-
     // stín pod Karlem – ať nestojí ve vzduchu
     ctx.fillStyle = 'rgba(60,90,40,0.2)';
     ctx.beginPath();
@@ -583,38 +769,13 @@ const KAREL = (() => {
       ctx.fill();
     }
 
-    // tráva v popředí – oblá stébla, ne pilka; k tomu pár kvítků
-    const gh = Math.max(10, H * 0.035);
-    ctx.fillStyle = '#55a13c';
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (let x = 0; x <= W + 30; x += 30) {
-      const h = gh * (0.7 + ((x * 7919) % 17) / 56);
-      ctx.quadraticCurveTo(x + 8, H - h * 1.25, x + 15, H - h * 0.95);
-      ctx.quadraticCurveTo(x + 22, H - h * 0.72, x + 30, H - h * 0.88);
-    }
-    ctx.lineTo(W, H); ctx.fill();
-    if (!lowFx) {
-      for (let i = 0; i < 7; i++) {
-        const fx = ((i * 0.143 + 0.05) * W) % W;
-        const fy = H - gh * 0.6 - ((i * 23) % 7);
-        ctx.fillStyle = i % 3 === 0 ? '#fffdf5' : i % 3 === 1 ? '#ffe08a' : '#ffb9cd';
-        for (let k = 0; k < 5; k++) {
-          const a = k / 5 * 6.2832;
-          ctx.beginPath();
-          ctx.arc(fx + Math.cos(a) * 3.2, fy + Math.sin(a) * 3.2, 2.4, 0, 6.2832);
-          ctx.fill();
-        }
-        ctx.fillStyle = '#ffc94a';
-        ctx.beginPath(); ctx.arc(fx, fy, 1.8, 0, 6.2832); ctx.fill();
-      }
-    }
+    if (bgNear) ctx.drawImage(bgNear, 0, 0, W, H);
 
     // pyl / světlušky ve vzduchu
     if (!lowFx) {
+      ctx.fillStyle = '#fff6d0';
       for (const f of st.fire) {
         ctx.globalAlpha = 0.25 + Math.sin(st.t * f.s + f.p) * 0.2;
-        ctx.fillStyle = '#fff6d0';
         ctx.beginPath();
         ctx.arc(f.x + Math.sin(st.t * 0.4 + f.p) * 14, f.y + Math.cos(st.t * 0.3 + f.p) * 10, f.r, 0, 6.2832);
         ctx.fill();
@@ -625,17 +786,27 @@ const KAREL = (() => {
 
   /* Ztlumení okrajů. Během příchodu je nejsilnější – funguje to jako
      „zhasnutí v sále": zlatý portál na zlaté obloze by se jinak ztratil.
-     Pak povolí na jemnou vinětaci, která drží oko na Karlovi. */
+     Pak povolí na jemnou vinětaci, která drží oko na Karlovi.
+
+     Přechod se staví jednou a sílu řídí globalAlpha. Dřív se skládal
+     každý snímek včetně dvou `toFixed` a dvou skládaných řetězců –
+     tedy tři objekty a dvě čísla na text v každém jediném snímku. */
+  let vigGrad = null, vigKey = '';
   function drawVignette() {
-    const arrival = st.phase === 'portal' ? 1 : Math.max(0, 1 - st.pt / 1.2);
-    const a = 0.15 + 0.3 * arrival;
     const cx = bodyCx(), cy = st.ky - 55 * st.sc;
-    const g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.12, cx, cy, Math.max(W, H) * 0.62);
-    g.addColorStop(0, 'rgba(40,26,12,0)');
-    g.addColorStop(0.55, `rgba(40,26,12,${(a * 0.35).toFixed(3)})`);
-    g.addColorStop(1, `rgba(40,26,12,${a.toFixed(3)})`);
-    ctx.fillStyle = g;
+    const key = W + ':' + H + ':' + cx.toFixed(0) + ':' + cy.toFixed(0);
+    if (vigKey !== key) {
+      vigGrad = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.12, cx, cy, Math.max(W, H) * 0.62);
+      vigGrad.addColorStop(0, 'rgba(40,26,12,0)');
+      vigGrad.addColorStop(0.55, 'rgba(40,26,12,0.35)');
+      vigGrad.addColorStop(1, 'rgba(40,26,12,1)');
+      vigKey = key;
+    }
+    const arrival = st.phase === 'portal' ? 1 : Math.max(0, 1 - st.pt / 1.2);
+    ctx.globalAlpha = 0.15 + 0.3 * arrival;
+    ctx.fillStyle = vigGrad;
     ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
   }
 
   function seedFireflies() {
@@ -679,7 +850,44 @@ const KAREL = (() => {
     }
   }
 
+  /* Nitro portálu a jeho záře jsou dva pevné obrázky, které se jednou
+     nakreslí do malých plátek a pak už jen přenášejí (drawImage se
+     zvětšením). Dřív to byl přechod skládaný pro KAŽDÝ portál v KAŽDÉM
+     snímku – a při „shromážděte se" jich je na scéně šest naráz.
+
+     Záře se dřív dělala přes shadowBlur na každém tahu prstence. To je
+     nejdražší operace, jakou canvas má: 184 rozmazaných tahů na portál,
+     tedy přes tisíc na snímek, když Karel svolá partu. Přesně tam se obraz
+     sekal. Teď je záře jeden přenesený kotouč a tahy jdou bez stínu. */
+  let sprInner = null, sprGlow = null;
+  const SPR = 128;
+  function bakeSprites() {
+    if (sprInner) return;
+    const mk = (paint) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = SPR;
+      paint(c.getContext('2d'));
+      return c;
+    };
+    sprInner = mk((k) => {
+      const g = k.createRadialGradient(SPR / 2, SPR / 2, 0, SPR / 2, SPR / 2, SPR / 2);
+      g.addColorStop(0, 'rgba(255,247,214,0.92)');
+      g.addColorStop(0.55, 'rgba(255,201,74,0.42)');
+      g.addColorStop(1, 'rgba(216,155,38,0)');
+      k.fillStyle = g; k.fillRect(0, 0, SPR, SPR);
+    });
+    sprGlow = mk((k) => {
+      const g = k.createRadialGradient(SPR / 2, SPR / 2, SPR * 0.24, SPR / 2, SPR / 2, SPR / 2);
+      g.addColorStop(0, 'rgba(255,214,110,0.55)');
+      g.addColorStop(0.52, 'rgba(255,201,74,0.3)');
+      g.addColorStop(1, 'rgba(255,201,74,0)');
+      k.fillStyle = g; k.fillRect(0, 0, SPR, SPR);
+    });
+  }
+
   function drawPortals() {
+    if (!st.portals.length) return;
+    bakeSprites();
     for (const p of st.portals) {
       const k = Math.max(0, Math.min(1, p.k));
       const R = p.r * (0.3 + 0.7 * k);
@@ -687,36 +895,35 @@ const KAREL = (() => {
       ctx.translate(p.x, p.y);
       ctx.globalAlpha = k;
 
-      // vnitřek – teplý průhled „někam jinam"
-      const ig = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
-      ig.addColorStop(0, 'rgba(255,247,214,0.92)');
-      ig.addColorStop(0.55, 'rgba(255,201,74,0.42)');
-      ig.addColorStop(1, 'rgba(216,155,38,0)');
-      ctx.fillStyle = ig;
-      ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.2832); ctx.fill();
+      // záře kolem prstence a teplý průhled „někam jinam"
+      if (!lowFx) ctx.drawImage(sprGlow, -R * 1.85, -R * 1.85, R * 3.7, R * 3.7);
+      ctx.drawImage(sprInner, -R, -R, R * 2, R * 2);
 
-      // prstenec z jisker – čtyři obruče, každá jinou rychlostí a směrem.
-      // Záře (shadowBlur) je jediné drahé místo scény, proto se na
-      // slabším zařízení vynechá a zůstanou jen čáry.
-      if (!lowFx) { ctx.shadowColor = 'rgba(255,201,74,0.9)'; ctx.shadowBlur = 14 * Math.max(0.7, st.sc * 0.6); }
+      /* Prstenec z jisker – čtyři obruče, každá jinou rychlostí a směrem.
+         Hustota segmentů se řídí POLOMĚREM: na portálu o poloměru 20 px
+         (ty malé, kterými přicházejí kamarádi) je 58 čárek k nerozeznání
+         od 14, jen stojí čtyřikrát víc. */
+      const dens = Math.max(0.32, Math.min(1, R / 78));
       for (let ring = 0; ring < 4; ring++) {
         const rr = R * (0.8 + ring * 0.075);
-        const seg = lowFx ? 16 : 34 + ring * 8;
+        const full = lowFx ? 16 : 34 + ring * 8;
+        const seg = Math.max(10, Math.round(full * dens));
         const off = p.spin * (1 + ring * 0.42) * (ring % 2 ? -1 : 1);
         ctx.lineWidth = (3.8 - ring * 0.7) * Math.max(0.7, st.sc * 0.8);
         ctx.lineCap = 'round';
         ctx.strokeStyle = ring === 0 ? 'rgba(255,253,245,0.98)'
           : ring === 1 ? 'rgba(255,224,138,0.92)'
             : ring === 2 ? 'rgba(255,201,74,0.8)' : 'rgba(216,155,38,0.55)';
+        // jedna cesta na obruč místo jednoho tahu na čárku
+        ctx.beginPath();
         for (let i = 0; i < seg; i++) {
           const a0 = off + (i / seg) * 6.2832;
           const len = (0.45 + Math.sin(i * 2.3 + p.t * 7) * 0.45) * (6.2832 / seg) * 0.8;
-          ctx.beginPath();
+          ctx.moveTo(rr * Math.cos(a0), rr * Math.sin(a0));
           ctx.arc(0, 0, rr, a0, a0 + len);
-          ctx.stroke();
         }
+        ctx.stroke();
       }
-      ctx.shadowBlur = 0;
       ctx.restore();
       ctx.globalAlpha = 1;
     }
@@ -831,12 +1038,18 @@ const KAREL = (() => {
 
   /* Poloha a póza podle právě běžící reakce. Vrací posuny v místních
      jednotkách postavy, které se pak škálují spolu s ní. */
+  const POSE = { runPhase: 0, blink: false, sway: 0, wear: null, airborne: false };
+  const XF = { pose: POSE, ox: 0, oy: 0, rot: 0, sx: 1, sy: 1 };
   function poseFor(tms) {
     /* Karel nosí to, co mu hráč vybral v šatníku – i tady, ve své vlastní
        scéně. Je to drobnost, ale právě ta dělá uvítání osobním: hráč vidí
        svého Karla, ne obecného osla. Ozdobu si scéna nepamatuje sama, řekne
        jí ji hra (hooks.getWorn). */
-    const pose = { runPhase: 0, blink: st.blink > 0, sway: 0, wear: hooks.getWorn(), airborne: false };
+    // Pozice i póza se recyklují: byly to dva nové objekty v každém snímku
+    // (a poseFor běží 60× za vteřinu po celou dobu, co je scéna otevřená).
+    const pose = POSE;
+    pose.runPhase = 0; pose.blink = st.blink > 0; pose.sway = 0;
+    pose.wear = hooks.getWorn(); pose.airborne = false;
     let ox = 0, oy = 0, rot = 0, sx = 1, sy = 1;
 
     // klidové dýchání
@@ -951,7 +1164,8 @@ const KAREL = (() => {
       pose.sway = Math.sin(tms * 0.012) * 0.25;
     }
 
-    return { pose, ox, oy, rot, sx, sy };
+    XF.pose = pose; XF.ox = ox; XF.oy = oy; XF.rot = rot; XF.sx = sx; XF.sy = sy;
+    return XF;
   }
 
   function drawKarel(tms) {
@@ -973,7 +1187,9 @@ const KAREL = (() => {
 
   function drawCrowd(tms) {
     for (const c of st.crowd) {
-      const ch = CHARACTERS.find(x => x.id === c.id);
+      // definici zvířátka si nese sám záznam – lineární hledání v poli
+      // pro každého kamaráda v každém snímku bylo zbytečné
+      const ch = c.ch || (c.ch = CHARACTERS.find(x => x.id === c.id));
       if (!ch) continue;
       ctx.save();
       ctx.translate(c.x, c.y + Math.sin(st.t * 2 + c.p) * 2);
@@ -986,25 +1202,44 @@ const KAREL = (() => {
   /* =========================================================
      BUBLINA (DOM) – text je ostrý, dá se označit a čte ho čtečka
      ========================================================= */
+  /* ---------- kolik času potřebuje hláška na přečtení ----------
+     Zhruba 240 znaků za minutu je pomalé, klidné tempo – Karel není
+     titulky k akčnímu filmu. K tomu vteřina navrch na „aha, on něco
+     říká" a strop, ať se u dlouhé věty nezasekne netrpělivý hráč. */
+  const readMs = (n) => Math.min(5200, 1100 + n * 26);
+
   function say(text, opts) {
     const o = opts || {};
     const full = L(text) || '';
     st.bubble = { full, shown: o.instant ? full.length : 0, done: !!o.instant, link: o.link || null, warm: !!o.warm };
+    st.readUntil = o.instant ? performance.now() + readMs(full.length) : Infinity;
     st.typeT = 0;
     const el = $('karel-bubble');
     if (!el) return;
     el.hidden = false;
     el.classList.toggle('warm', !!o.warm);
     el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-    renderBubble();
+    shownChars = -1; bubbleDirty = true;
+    renderBubble(true);
     AUDIO.play('quote');
   }
 
-  function renderBubble() {
+  /* Psaní po písmenkách sahá na DOM. Při 62 znacích za vteřinu se ale
+     `Math.floor(shown)` změní jen v každém čtvrtém snímku – zbylé tři
+     zápisy byly úplně stejný text a jen zbytečně zneplatnily rozvržení
+     bubliny (a hned za tím si ho placeBubble() zase vynutil dopočítat).
+     Píše se proto jen na skutečnou změnu. */
+  let shownChars = -1;
+  function renderBubble(force) {
     const b = st.bubble;
     const tx = $('karel-text'), lk = $('karel-link'), nx = $('karel-next');
     if (!b || !tx) return;
-    tx.textContent = b.full.slice(0, Math.floor(b.shown));
+    const n = Math.floor(b.shown);
+    if (force || n !== shownChars) {
+      shownChars = n;
+      tx.textContent = b.full.slice(0, n);
+      bubbleDirty = true;      // text se změnil → bublina má jinou velikost
+    }
     const ready = b.shown >= b.full.length;
     if (lk) {
       if (b.link && ready) {
@@ -1013,7 +1248,10 @@ const KAREL = (() => {
         lk.textContent = L(b.link) || L({ cs: b.link.cs, en: b.link.en });
       } else lk.hidden = true;
     }
-    if (nx) nx.hidden = !(ready && st.phase === 'speech');
+    /* Šipka „▸" je jediné, co hráči řekne, jestli se dá pokračovat.
+       V řeči znamená „ťukni na další větu", ve hře „hlášku máš přečtenou,
+       můžeš si říct o novou". Během zámku schválně nesvítí. */
+    if (nx) nx.hidden = !(ready && (st.phase === 'speech' || (st.phase === 'play' && !speechLocked())));
   }
 
   function hideBubble() {
@@ -1022,23 +1260,49 @@ const KAREL = (() => {
     if (el) el.hidden = true;
   }
 
-  // bublina jede s Karlem – buď nad hlavou, nebo (na širokém pruhu) vedle ní
+  /* Bublina jede s Karlem – buď nad hlavou, nebo (na širokém pruhu) vedle ní.
+
+     Tohle bylo nejdražší místo celé scény, a nebylo to vidět: funkce se
+     volala v KAŽDÉM snímku a hned na začátku četla `offsetWidth` /
+     `offsetHeight`. Čtení rozměru těsně za zápisem stylu z minulého snímku
+     nutí prohlížeč dopočítat rozvržení uprostřed snímku (layout thrashing) –
+     a to i ve chvíli, kdy Karel stojí na místě a bublina se ani nehne.
+
+     Teď se rozměr měří jen když se opravdu mohl změnit (nový text, další
+     písmenko, změna velikosti okna) a výsledná poloha se zapisuje jen když
+     se liší od té minulé. Ve fázi „play", kdy se nic nehýbe, tak scéna na
+     DOM nesáhne vůbec. */
+  let bubbleDirty = true, bubW = 0, bubH = 0, bubLastX = null, bubLastY = null, bubLastTail = null;
   function placeBubble() {
     const el = $('karel-bubble');
     if (!el || el.hidden) return;
+    if (bubbleDirty) {
+      bubW = el.offsetWidth; bubH = el.offsetHeight;
+      bubbleDirty = false;
+    }
     const t = topPt();
     const h = headPt();
     el.classList.toggle('side', !!st.side);
+    let x, y, tail;
     if (st.side) {
-      const x = Math.min(W - el.offsetWidth - 10, h.x + 34 * st.sc);
-      const y = Math.max(10, Math.min(H - el.offsetHeight - 78, h.y - el.offsetHeight * 0.62));
-      el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-      el.style.setProperty('--tail', `${Math.round(Math.max(14, Math.min(el.offsetHeight - 26, h.y - y)))}px`);
+      x = Math.min(W - bubW - 10, h.x + 34 * st.sc);
+      y = Math.max(10, Math.min(H - bubH - 78, h.y - bubH * 0.62));
+      tail = Math.round(Math.max(14, Math.min(bubH - 26, h.y - y)));
     } else {
-      const x = Math.max(el.offsetWidth * 0.5 + 8, Math.min(W - el.offsetWidth * 0.5 - 8, t.x));
-      const y = Math.max(el.offsetHeight + 10, t.y - 12 * st.sc);
-      el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
-      el.style.setProperty('--tail', `${Math.round(t.x - x)}px`);
+      x = Math.max(bubW * 0.5 + 8, Math.min(W - bubW * 0.5 - 8, t.x));
+      y = Math.max(bubH + 10, t.y - 12 * st.sc);
+      tail = Math.round(t.x - x);
+    }
+    x = Math.round(x); y = Math.round(y);
+    if (x !== bubLastX || y !== bubLastY) {
+      bubLastX = x; bubLastY = y;
+      el.style.transform = st.side
+        ? 'translate(' + x + 'px, ' + y + 'px)'
+        : 'translate(' + x + 'px, ' + y + 'px) translate(-50%, -100%)';
+    }
+    if (tail !== bubLastTail) {
+      bubLastTail = tail;
+      el.style.setProperty('--tail', tail + 'px');
     }
   }
 
@@ -1075,9 +1339,21 @@ const KAREL = (() => {
     toPlay();                       // odemkne lištu; bublinu nepřepisuje
     const n = hooks.bumpHello() || 0;
     const mile = QUIPS.hello_at[n];
-    const q = mile
-      ? { text: { cs: mile.cs, en: QUIPS_EN.hello_at[n] || mile.cs }, react: mile.react, link: mile.link }
-      : quip('hello');
+    /* Pořadí je schválně tohle: milník návštěv (desátá, padesátá…) je
+       událost a má přednost před vším. Hned za ním je kontext – „viděl
+       jsem tě běžet, {lastDist} metrů" je při přivítání to nejlepší, co
+       Karel může říct. Náhodná hláška z pytlíku je až třetí v pořadí. */
+    if (mile) {
+      const stats = hooks.getStats() || {};
+      applyQuip({
+        text: { cs: fill(mile.cs, stats), en: fill(QUIPS_EN.hello_at[n] || mile.cs, stats) },
+        react: mile.react, link: mile.link,
+      });
+      return;
+    }
+    const c = ctxQuip();
+    if (c) { applyQuip(c); return; }
+    const q = quip('hello');
     if (!q) return;
     // čísla ze savu se doplní až tady, ať tabulka hlášek zůstala čitelná
     const stats = hooks.getStats() || {};
@@ -1087,9 +1363,13 @@ const KAREL = (() => {
   function advance() {
     const b = st.bubble;
     if (b && !b.done && b.shown < b.full.length) { // dopsat hned
-      b.shown = b.full.length; b.done = true; renderBubble(); placeBubble();
+      b.shown = b.full.length; b.done = true;
+      st.readUntil = performance.now() + readMs(b.full.length);
+      renderBubble(); placeBubble();
       return;
     }
+    // kdo dočetl dřív, nečeká na zámek
+    st.readUntil = 0;
     st.step++;
     if (st.step >= SPEECH.length) { toPlay(); return; }
     AUDIO.play('click');
@@ -1160,7 +1440,7 @@ const KAREL = (() => {
     if (!zone) {
       // ťuknutí vedle – Karel se otočí za rukou, nic víc
       st.face = p.x < st.kx ? -1 : 1;
-      if (Math.random() < 0.3) doQuip('generic');
+      if (!speechLocked() && Math.random() < 0.3) doQuip('generic');
       return;
     }
     poke(zone, p);
@@ -1174,9 +1454,9 @@ const KAREL = (() => {
   }
 
   function endHold() {
-    if (st.petT > 0.9) {
+    if (st.petT > 0.9 && !speechLocked()) {
       // po pořádném drbání se ozve spokojený komentář
-      doQuip('petting', { silent: true });
+      doQuip('petting', { silent: true, noCtx: true });
     }
     st.holding = false;
     st.petT = 0;
@@ -1188,7 +1468,47 @@ const KAREL = (() => {
     endHold();
   }
 
+  /* ---------- ať se hláška dá dočíst ----------
+     Dřív každé ťuknutí okamžitě přepsalo bublinu. Kdo ťukl podruhé (a to
+     udělá skoro každý – Karel je hebký a láká to), o hlášku prostě přišel:
+     text se restartoval od prvního písmene a věta, kterou zrovna četl,
+     zmizela. Proměnná `st.lastTap` na to v kódu byla připravená, jen ji
+     nikdo nikdy nepoužil.
+
+     Teď to má tři stupně:
+       1. Ještě se píše → ťuknutí text DOPÍŠE naráz (netrpělivý hráč
+          nemusí čekat na psací stroj).
+       2. Dopsáno, ale nedočteno → Karel se ROZHÝBE (reakce, zvuk, jiskry,
+          haptika), text ale zůstane. Ťuknutí tedy nikdy nevyjde naprázdno,
+          jen nesebere větu z očí.
+       3. Dočteno → padne nová hláška a šipka „▸" zhasne.
+
+     Zámek jde přeskočit ťuknutím rovnou na bublinu (advance) – kdo přečetl
+     rychleji, nečeká. */
+  const speechLocked = () => !!st.bubble && performance.now() < st.readUntil;
+
+  // ťuknutí, které nesmí přepsat text: Karel aspoň zareaguje
+  function nudge(p) {
+    const h = headPt();
+    spawn(p ? p.x : h.x, p ? p.y : h.y, 4, { sp: 90, g: 300, life: 0.45, r: 2.6, col: ['#fff4cf', '#ffe08a'] });
+    PLATFORM && PLATFORM.haptic && PLATFORM.haptic('light');
+    if (!st.react) react(NUDGE[(Math.random() * NUDGE.length) | 0]);
+  }
+  const NUDGE = ['ears', 'nod', 'hop', 'shake'];
+
   function poke(zone, p) {
+    const b = st.bubble;
+    // 1. ještě se píše → dopsat naráz
+    if (b && !b.done && b.shown < b.full.length) {
+      b.shown = b.full.length; b.done = true;
+      st.readUntil = performance.now() + readMs(b.full.length);
+      renderBubble(); placeBubble();
+      PLATFORM && PLATFORM.haptic && PLATFORM.haptic('light');
+      return;
+    }
+    // 2. dopsáno, ale ještě nedočteno → jen reakce, text zůstane
+    if (speechLocked()) { nudge(p); return; }
+
     st.pokes++;
     const h = headPt();
     spawn(p ? p.x : h.x, p ? p.y : h.y, 6, { sp: 110, g: 300, life: 0.5, r: 3, col: ['#fff4cf', '#ffe08a'] });
@@ -1205,8 +1525,29 @@ const KAREL = (() => {
     doQuip(Math.random() < 0.32 ? 'generic' : zone);
   }
 
+  /* Vybere nejzajímavější hlášku, která teď dává smysl. Použité si scéna
+     pamatuje po dobu návštěvy, takže se Karel neopakuje; když kontextové
+     dojdou, vrátí null a volající sáhne po náhodné z pytlíku. */
+  const usedCtx = new Set();
+  function ctxQuip() {
+    const c = hooks.getStats() || {};
+    for (const r of CTX) {
+      if (usedCtx.has(r.id)) continue;
+      let ok = false;
+      try { ok = !!r.when(c); } catch (e) { ok = false; }   // chybějící údaj hlášku jen přeskočí
+      if (!ok) continue;
+      usedCtx.add(r.id);
+      return { text: { cs: fill(r.cs, c), en: fill(r.en, c) }, react: r.react, link: r.link, warm: r.warm };
+    }
+    return null;
+  }
+
+  /* Kontextová hláška má přednost, ale ne pokaždé – kdyby Karel jenom
+     hlásil čísla ze savu, přestal by být Karel. Zhruba dvě ze tří jsou
+     kontextové, dokud nedojdou. */
   function doQuip(group, opts) {
-    const q = quip(group) || quip('generic');
+    const wantCtx = !(opts && opts.noCtx) && Math.random() < 0.66;
+    const q = (wantCtx && ctxQuip()) || quip(group) || quip('generic') || ctxQuip();
     if (!q) return;
     applyQuip(q, opts);
   }
@@ -1214,7 +1555,7 @@ const KAREL = (() => {
   function applyQuip(q, opts) {
     const lbl = q.link ? LINK_LABEL[q.link] : null; // neznámý klíč → hláška bez odkazu
     const link = lbl ? { href: URL[q.link], cs: lbl.cs, en: lbl.en } : null;
-    say(q.text, { link });
+    say(q.text, { link, warm: q.warm });
     if (q.prop === 'shades') { st.props.shades = 999; }
     if (q.prop === 'hat') { st.props.hat = 6; }
     if (q.special === 'assemble') assemble();
@@ -1276,6 +1617,8 @@ const KAREL = (() => {
   /* ---------- mrkev ---------- */
   function feed() {
     st.carrots++;
+    // celkový počet mrkví si pamatuje hra – Karel z něj má vlastní hlášku
+    if (typeof hooks.bumpFed === 'function') hooks.bumpFed();
     // mrkev přiletí obloukem a Karel po ní chňapne
     const from = { x: st.kx - 200 * st.sc * st.face, y: H * 0.2 };
     const to = headPt();
@@ -1347,7 +1690,11 @@ const KAREL = (() => {
     const b = st.bubble;
     if (b && b.shown < b.full.length) {
       b.shown += dt * (reduceMotion.matches || lowFx ? 220 : 62);
-      if (b.shown >= b.full.length) { b.shown = b.full.length; b.done = true; }
+      if (b.shown >= b.full.length) {
+        b.shown = b.full.length; b.done = true;
+        // hláška je dopsaná – teď teprve začíná běžet čas na přečtení
+        st.readUntil = performance.now() + readMs(b.full.length);
+      }
       renderBubble();
     }
 
@@ -1357,8 +1704,16 @@ const KAREL = (() => {
     updateFlying(dt);
 
     if (st.phase === 'portal') updateArrival(dt);
+
+    /* Zámek na dočtení vyprší časem, ne událostí – šipku „ťukni dál"
+       proto musí rozsvítit smyčka. Sahá se na DOM jedině při skutečné
+       změně stavu, ne každý snímek. */
+    const locked = speechLocked();
+    if (locked !== lockWas) { lockWas = locked; renderBubble(true); }
+
     placeBubble();
   }
+  let lockWas = false;
 
   /* ---------- příchod ----------
      0,0–0,45 s  jiskra a záblesk
@@ -1436,10 +1791,39 @@ const KAREL = (() => {
     drawParts();
   }
 
+  /* ---------- hlídač plynulosti ----------
+     Herní smyčka má svůj `autoQuality` (js/game.js), ale ta na Karlovu scénu
+     nedosáhne: po dobu, co je scéna otevřená, se hra vůbec nekreslí. Scéna
+     tedy potřebuje vlastní. Pravidla jsou stejná jako ve hře, a schválně:
+     pokles je rychlý (dvě vteřiny škubání a jde dolů rozlišení), návrat
+     opatrný (deset vteřin klidu) a po druhém propadu se přestane vracet,
+     aby obraz nepulzoval sem a tam.
+
+     Nejtěžší chvíle scény je „shromážděte se": šest portálů, pět zvířátek
+     navíc a konfety. Právě tam se dřív obraz sekal – a právě tam se teď
+     kvalita stačí přizpůsobit dřív, než si toho hráč všimne. */
+  const DPR_STEPS = [1.75, 1.35, 1.1];
+  let dprStep = 0, slowT = 0, fastT = 0, dropCount = 0;
+  function autoQuality(dt) {
+    if (dt > 0.024) { slowT += dt; fastT = 0; } else { slowT = Math.max(0, slowT - dt * 0.5); fastT += dt; }
+    if (slowT > 2 && dprStep < DPR_STEPS.length - 1) {
+      dprStep++; dropCount++; slowT = 0; fastT = 0;
+      // druhý propad znamená opravdu slabé zařízení – ozdoby zhasnou
+      if (dprStep >= 2) { lowFx = true; seedFireflies(); }
+      resize();
+      return;
+    }
+    if (fastT > 10 && dprStep > 0 && dropCount < 2) { dprStep--; fastT = 0; resize(); }
+  }
+
   function frame(now) {
     if (!st.open) return;
-    const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));
+    const raw = Math.max(0, (now - lastT) / 1000);
+    const dt = Math.min(0.05, raw);
     lastT = now;
+    // první snímek po otevření je vždycky dlouhý (načtení, rozvržení) –
+    // ten se do hlídače nezapočítává, jinak by scéna hned shodila kvalitu
+    if (st.t > 0.6) autoQuality(raw);
     update(dt);
     render();
     raf = requestAnimationFrame(frame);
@@ -1533,14 +1917,18 @@ const KAREL = (() => {
         e.preventDefault();
         if (st.phase === 'portal') skipPortal();
         else if (st.phase === 'speech') advance();
-        else doQuip('generic');
+        else { st.readUntil = 0; doQuip('generic'); }
       }
     });
 
     const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
     on('karel-skip', () => { if (st.phase === 'speech' || st.phase === 'portal') { skipPortal(); toPlay(); } else close(); });
-    on('karel-feed', () => { feed(); });
-    on('karel-say', () => { doQuip('generic'); });
+    /* Zámek na dočtení platí pro ŤUKNUTÍ NA KARLA – tam je opakování
+       nechtěné. Tlačítko v liště je naopak vědomý požadavek „řekni něco
+       dalšího", takže zámek ruší: tlačítko, které chvílemi nedělá nic,
+       je horší než přepsaná hláška. */
+    on('karel-feed', () => { st.readUntil = 0; feed(); });
+    on('karel-say', () => { st.readUntil = 0; doQuip('generic'); });
     on('karel-close', () => { doQuip('leave'); setTimeout(close, 260); });
     on('karel-always', () => {
       if (typeof hooks.getAlways !== 'function' || typeof hooks.setAlways !== 'function') return;
@@ -1556,7 +1944,10 @@ const KAREL = (() => {
     const bub = $('karel-bubble');
     if (bub) bub.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
-      if (st.phase === 'speech') advance();
+      if (st.phase === 'speech') { advance(); return; }
+      // ve hře je ťuknutí na bublinu „dočetl jsem" – zámek zmizí hned
+      if (st.bubble && !st.bubble.done) { advance(); return; }
+      st.readUntil = 0;
     });
 
     I18N.onChange(() => { if (st.open) syncTexts(); syncAlways(); });

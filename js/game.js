@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.8.7';
+  const GAME_VERSION = '1.9.0';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -28,6 +28,8 @@
   const forcedLandscape = () => document.documentElement.classList.contains('force-landscape');
   // svislá souřadnice doteku v souřadnicích hry (v otočené hře ji nese clientX)
   const pointerGameY = (e) => (forcedLandscape() ? window.innerWidth - e.clientX : e.clientY);
+  // vodorovná herní osa – při vynucené šířce je to svislá osa viewportu
+  const pointerGameX = (e) => (forcedLandscape() ? e.clientY : e.clientX);
   // obdélník DOM prvku v souřadnicích hry – getBoundingClientRect vrací
   // souřadnice obrazovky, takže v otočené hře se osy prohodí stejně jako u doteků
   function gameRect(el) {
@@ -63,6 +65,17 @@
      a obraz nepulzuje sem a tam. */
   const DPR_STEPS = [2, 1.5, 1.15];
   let dprStep = 0;
+  // poslední doběh – Karel na něj umí zareagovat, viz getStats() níž
+  let lastRun = null;
+  /* Jak dlouho jsme Karla neviděli. Musí se to změřit PŘED otevřením scény:
+     scéna hned na začátku hlásí onSeen(), který razítko návštěvy přepíše na
+     „teď" – a hláška „neviděli jsme se {days} dní" by pak vždycky říkala nulu. */
+  let karelDaysAway = 0;
+  function karelOpen(opts) {
+    const last = save.karelLastSeen || 0;
+    karelDaysAway = last ? Math.floor((Date.now() - last) / 86400000) : 0;
+    KAREL.open(opts);
+  }
   let slowT = 0;      // nastřádaný „pomalý čas“ (s) – žene pokles kvality
   let fastT = 0;      // nastřádaný plynulý čas (s) – žene návrat kvality
   let dropCount = 0;  // kolikrát už kvalita spadla; po druhém pádu se nevrací
@@ -89,8 +102,12 @@
      hůř než žádné. */
   let menuSlowT = 0;
   let lowFx = false;
+  /* ?fx=full útlum vypne. Je to nástroj na ověřování: v headless prohlížeči
+     (audit rozvržení, snímky obrazovek) snímky vždycky padají, útlum se
+     zapne během vteřiny a ozdoby ani otáčení listu by pak nešlo vůbec vidět. */
+  const fxPinned = new URLSearchParams(location.search).get('fx') === 'full';
   function setLowFx() {
-    if (lowFx) return;
+    if (lowFx || fxPinned) return;
     lowFx = true;
     document.documentElement.classList.add('low-fx');
   }
@@ -389,7 +406,7 @@
     // menu se prolíná – ať se portál neotevře do rozjeté animace
     setTimeout(() => {
       if (S.mode === 'menu' && curScreen === 'menu' && !KAREL.isOpen()) {
-        KAREL.open({ lowFx: lowFx || reduceMotionMq.matches, again });
+        karelOpen({ lowFx: lowFx || reduceMotionMq.matches, again });
       }
     }, 620);
   }
@@ -751,6 +768,9 @@
     const dist = Math.floor(S.worldX / PX_PER_M);
     const isBest = dist > save.best;
     if (isBest) save.best = dist;
+    // co Karel uvidí, až ho hráč po běhu otevře („viděl jsem tě běžet…").
+    // Schválně jen v paměti: po restartu hry už to není čerstvá zpráva.
+    lastRun = { dist, coins: runCoins(), best: isBest };
     // nejdelší řetěz napříč všemi běhy – jen kvůli odznakům
     if (S.comboBest > (save.bestCombo || 0)) save.bestCombo = S.comboBest;
     // kolikátý běh s touhle postavou – odemyká deníčky z azylu
@@ -3053,7 +3073,7 @@
     }
     // otevřená knížka je nad obchodem – Zpět ji jen zavře
     if (curScreen === 'diary') {
-      showScreen('shop'); AUDIO.play('click');
+      cancelTurn(); showScreen('shop'); AUDIO.play('click');
       return true;
     }
     if (curScreen === 'shop' || curScreen === 'ach' || curScreen === 'over' || curScreen === 'settings') {
@@ -3466,17 +3486,19 @@
     if (card) drawPortrait(card, ch);
   }
 
-  function renderWardrobeMirror(el) {
+  function renderWardrobeMirror(el, ghost) {
     const ch = bookChar;
     el.appendChild(Object.assign(document.createElement('span'),
       { className: 'page-kicker', textContent: I18N.t('wardrobe.title') }));
     el.appendChild(Object.assign(document.createElement('h3'),
       { className: 'page-head wardrobe-head',
         textContent: I18N.t('wardrobe.head', { name: I18N.pick(ch.name) }) }));
-    wardCv = document.createElement('canvas');
-    wardCv.className = 'page-portrait wardrobe-portrait';
-    wardCv.width = 190; wardCv.height = 150;
-    el.appendChild(wardCv);
+    const cv = document.createElement('canvas');
+    cv.className = 'page-portrait wardrobe-portrait';
+    cv.width = 190; cv.height = 150;
+    el.appendChild(cv);
+    if (!ghost) wardCv = cv;
+    drawPortrait(cv, ch, 0.5, wornKind(ch));
     el.appendChild(Object.assign(document.createElement('p'),
       { className: 'wardrobe-lead',
         textContent: save.unlocked.includes(ch.id)
@@ -3485,15 +3507,16 @@
              („Nejdřív Kráva Avala přizvi…“) a česky by to nesedlo. Stejný
              důvod má i vazba s dvojtečkou u toastů o nové ozdobě. */
           : I18N.t('wardrobe.needChar') }));
-    paintWardrobe();
+    if (!ghost) paintWardrobe();
   }
 
-  function renderWardrobeGrid(el) {
+  function renderWardrobeGrid(el, ghost) {
     const ch = bookChar;
     const owned = save.unlocked.includes(ch.id);
-    wardGrid = document.createElement('div');
-    wardGrid.className = 'wardrobe-grid';
-    el.appendChild(wardGrid);
+    const grid = document.createElement('div');
+    grid.className = 'wardrobe-grid';
+    el.appendChild(grid);
+    if (!ghost) wardGrid = grid;
 
     /* Na čipu je JEDNOSLOVNÝ popisek (item.short), ne celé jméno. Dvouřádkové
        „Věneček z kopretin" zvedá čip o polovinu a mřížka se pak na krátké
@@ -3525,13 +3548,13 @@
           ? I18N.t('wardrobe.lockedTask', { name: I18N.pick(charById(c.item.from.task).name) })
           : I18N.t('wardrobe.lockedPrice', { n: c.item.price });
         chip.title = `${c.full} — ${how}`;
-        chip.addEventListener('click', () => {
+        if (!ghost) chip.addEventListener('click', () => {
           AUDIO.play('click');
           toast(`🔒 ${c.full} — ${how}`);
         });
       } else if (!owned) {
         chip.disabled = true;                 // deníček se otevírá i u nekoupených
-      } else {
+      } else if (!ghost) {
         chip.addEventListener('click', () => {
           setWorn(ch, c.id);
           AUDIO.play('click');
@@ -3539,12 +3562,20 @@
           paintWardrobe();
         });
       }
-      wardGrid.appendChild(chip);
+      const on = chip.dataset.wear === (wornKind(ch) === null ? 'none' : wornKind(ch));
+      chip.classList.toggle('on', on);
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      grid.appendChild(chip);
     }
-    paintWardrobe();
   }
 
-  function renderPage(el, page, num) {
+  /* opts.ghost  = kreslíme otisk do otáčeného listu, ne živou stránku:
+                    nesmí nic zapisovat do savu ani věšet posluchače
+     opts.noInk  = stránka, na kterou list teprve dosedne – musí být přesným
+                    dvojčetem rubu listu, takže bez nástupové animace */
+  function renderPage(el, page, num, opts) {
+    const ghost = !!(opts && opts.ghost);
+    el.classList.toggle('no-ink', !!(opts && opts.noInk));
     el.innerHTML = '';
     el.dataset.sec = (page && PAGE_SECTION[page.type]) || '';
     if (!page || page.type === 'blank') return;
@@ -3613,10 +3644,13 @@
       src.textContent = species;
       card.append(badge, body, src);
       el.appendChild(card);
-      // přečtené zajímavosti se sčítají kvůli odznaku „chodící encyklopedie“
-      if (!save.factsRead) save.factsRead = [];
-      const key = `${bookChar.id}:${page.i}`;
-      if (!save.factsRead.includes(key)) { save.factsRead.push(key); persist(); }
+      // přečtené zajímavosti se sčítají kvůli odznaku „chodící encyklopedie“;
+      // otisk v otáčeném listu se přečtený počítat nesmí
+      if (!ghost) {
+        if (!save.factsRead) save.factsRead = [];
+        const key = `${bookChar.id}:${page.i}`;
+        if (!save.factsRead.includes(key)) { save.factsRead.push(key); persist(); }
+      }
     } else if (page.type === 'story') {
       add('page-kicker', I18N.t('diary.stories'), 'span');
       add('page-head', I18N.t('diary.story', { n: page.i + 1 }), 'h3');
@@ -3659,9 +3693,9 @@
                  { prize: bookChar.trophy ? I18N.pick(bookChar.trophy.name) : '—' });
       el.appendChild(prize);
     } else if (page.type === 'wardrobe') {
-      renderWardrobeMirror(el);
+      renderWardrobeMirror(el, ghost);
     } else if (page.type === 'wardrobeGrid') {
-      renderWardrobeGrid(el);
+      renderWardrobeGrid(el, ghost);
     } else if (page.type === 'end') {
       const mid = document.createElement('div');
       mid.className = 'page-mid';
@@ -3680,55 +3714,232 @@
     renderExtras(el, page, num);
   }
 
+  /* ---------- listování ----------
+     Jedna otočka, dva způsoby ovládání a JEDEN kód pro obojí.
+
+     Postup otočky je číslo 0→1 (`turn.p`). Ťuknutí na šipku ho rozjede
+     časovačem, tažení prstem ho veze přímo pod prstem – a protože obojí
+     končí ve stejné funkci `leafApply()`, vypadá tažení úplně stejně jako
+     ťuknutí. Kdyby otočku řídily @keyframes (jako dřív), tažení by se
+     muselo kreslit zvlášť a nikdy by nesedělo.
+
+     Co dělá otočku papírem, a ne otáčením kartonu:
+       • RUB listu nese obsah stránky, na kterou list dosedne. Dřív byl
+         prázdný, takže od poloviny otočky přejížděl přes stránku bílý
+         papír a text „naskočil“ až po dopadu – přesně ten amatérský dojem.
+       • Stránka pod listem se vymění AŽ v polovině otočky (setLanded),
+         tedy ve chvíli, kdy ji list zakryje. Dřív se měnila hned na
+         začátku, takže se levá strana přepsala dřív, než k ní list došel.
+       • Stínítka na obou stranách listu a stín vržený na stránku pod ním
+         se počítají z úhlu, ne z pevné animace.
+       • List se od hřbetu nadzvedne (translateZ) a na konci lehce
+         přejede a vrátí se, jako když papír dosedne.
+
+     Za běhu se zapisuje jen `transform` a `opacity` na pět pevných prvků –
+     žádné přepočítávání rozvržení, celou otočku odbaví kompozitor. */
+  let turn = null;        // probíhající otočka
+  let bookDrag = null;    // tažení prstem/myší
+  let LEAF = null;
+
+  const spreadCount = () => Math.ceil(bookPages.length / 2);
+  const easeTurn = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const easeOut3 = (t) => 1 - Math.pow(1 - t, 3);
+
+  function leafRefs() {
+    if (!LEAF) LEAF = {
+      book: $('book'), leaf: $('book-leaf'),
+      front: $('leaf-front'), back: $('leaf-back'),
+      sf: $('leaf-shade-f'), sb: $('leaf-shade-b'),
+      cl: $('cast-l'), cr: $('cast-r'),
+      left: $('book-left'), right: $('book-right'),
+    };
+    return LEAF;
+  }
+
+  /* Ovládací prvky knížky: číslo dvoustrany, šipky, tloušťka stohu po
+     stranách vazby a stužka, která se stěhuje podle postupu. Odděleno od
+     drawSpread(), protože po otočce se stránky překreslovat NESMÍ – obsah
+     už na nich je a překreslení by rozeběhlo nástupovou animaci znovu. */
+  function drawChrome() {
+    const total = spreadCount();
+    $('book-pos').textContent = `${bookSpread + 1}/${total}`;
+    $('btn-diary-prev').disabled = bookSpread === 0;
+    $('btn-diary-next').disabled = bookSpread >= total - 1;
+    const k = total > 1 ? bookSpread / (total - 1) : 0;
+    $('book-edge-l').style.width = (2 + 9 * k).toFixed(1) + 'px';
+    $('book-edge-r').style.width = (11 - 9 * k).toFixed(1) + 'px';
+  }
+
   function drawSpread() {
     // odkazy na zrcadlo a mřížku šatníku platí jen pro právě kreslenou
     // dvoustranu – ať se po odlistování nepřekresluje do zahozených prvků
     wardCv = null; wardGrid = null;
     renderPage($('book-left'), bookPages[bookSpread * 2], bookSpread * 2 + 1);
     renderPage($('book-right'), bookPages[bookSpread * 2 + 1], bookSpread * 2 + 2);
-    const total = Math.ceil(bookPages.length / 2);
-    $('book-pos').textContent = `${bookSpread + 1}/${total}`;
-    $('btn-diary-prev').disabled = bookSpread === 0;
-    $('btn-diary-next').disabled = bookSpread >= total - 1;
+    drawChrome();
   }
 
-  function turnBook(dir) {
-    const total = Math.ceil(bookPages.length / 2);
+  function leafApply(p) {
+    const L = leafRefs(), dir = turn.dir;
+    const e = p < 0 ? 0 : p > 1 ? 1 : p;
+    let ang = 180 * e;
+    // dosednutí: papír na konci lehce přejede a vrátí se
+    if (e > 0.86) ang -= Math.sin((e - 0.86) / 0.14 * Math.PI) * 3.6;
+    const lift = Math.sin(e * Math.PI) * 14;
+    L.leaf.style.transform =
+      'rotateY(' + (dir > 0 ? -ang : ang).toFixed(2) + 'deg) translateZ(' + lift.toFixed(1) + 'px)';
+    // papír stavěný na hranu ztmavne u hřbetu; rub se naopak rozsvěcí, jak dosedá
+    L.sf.style.opacity = (e < 0.5 ? (e / 0.5) * 0.9 : 0.9).toFixed(3);
+    L.sb.style.opacity = (e > 0.5 ? (1 - (e - 0.5) / 0.5) * 0.86 : 0.86).toFixed(3);
+    // vržený stín: nejsilnější, když list visí těsně nad cílovou stránkou
+    const to = Math.max(0, 1 - Math.abs(e - 0.74) / 0.36) * 0.85;
+    const fr = Math.max(0, 1 - Math.abs(e - 0.26) / 0.36) * 0.55;
+    (dir > 0 ? L.cl : L.cr).style.opacity = to.toFixed(3);
+    (dir > 0 ? L.cr : L.cl).style.opacity = fr.toFixed(3);
+    // pásmo necitlivosti kolem poloviny, ať tažení sem a tam nepřekresluje
+    setLanded(e >= (turn.landed ? 0.46 : 0.54));
+  }
+
+  function setLanded(on) {
+    if (!turn || turn.landed === on) return;
+    turn.landed = on;
+    const L = leafRefs(), dir = turn.dir;
+    const sp = on ? turn.next : bookSpread;
+    const i = dir > 0 ? sp * 2 : sp * 2 + 1;
+    renderPage(dir > 0 ? L.left : L.right, bookPages[i], i + 1, { noInk: true });
+  }
+
+  function beginTurn(dir) {
     const next = bookSpread + dir;
-    if (bookBusy || !bookChar || next < 0 || next >= total) return;
-    AUDIO.play('click');
-    PLATFORM.haptic('light');
-    if (lowFx || reduceMotionMq.matches) { bookSpread = next; drawSpread(); return; }
-    /* Líc listu je otisk odcházející stránky. Plátno (portrét na titulní
-       straně) se musí překreslit ručně – innerHTML bitmapu nepřenese –
-       a data-sec se kopíruje taky, jinak by měl list na otočce jinou
-       barvu popisku než stránka, ze které vznikl. */
-    const from = dir > 0 ? $('book-right') : $('book-left');
-    const leaf = $('book-leaf');
-    const face = $('leaf-front');
-    face.innerHTML = from.innerHTML;
-    leaf.dataset.sec = from.dataset.sec || '';
-    const srcs = from.querySelectorAll('canvas'), dsts = face.querySelectorAll('canvas');
+    if (next < 0 || next >= spreadCount()) return false;
+    const L = leafRefs();
+    // odcházející šatník za chvíli zmizí – odkazy zahodíme, ať se
+    // paintWardrobe() netrefí do prvků, které už nikdo neuvidí
+    wardCv = null; wardGrid = null;
+    turn = { dir, next, p: 0, raf: 0, landed: false, span: 240 };
+    turn.span = Math.max(120, gameRect(L.book).width / 2);
+    // LÍC = otisk odcházející stránky (bitmapy pláten innerHTML nepřenese)
+    const from = dir > 0 ? L.right : L.left;
+    L.front.innerHTML = from.innerHTML;
+    L.front.dataset.sec = from.dataset.sec || '';
+    const srcs = from.querySelectorAll('canvas'), dsts = L.front.querySelectorAll('canvas');
     for (let i = 0; i < srcs.length && i < dsts.length; i++) {
       dsts[i].width = srcs[i].width; dsts[i].height = srcs[i].height;
       dsts[i].getContext('2d').drawImage(srcs[i], 0, 0);
     }
-    // otisk se nesmí znovu rozanimovat – je to fotka, ne nová stránka
-    face.querySelectorAll('*').forEach((n) => { n.style.animation = 'none'; });
-    leaf.className = 'book-leaf ' + (dir > 0 ? 'turn-next' : 'turn-prev');
-    $('book').classList.add('turning');
+    // RUB = stránka, na kterou list dosedne
+    const bi = dir > 0 ? next * 2 : next * 2 + 1;
+    renderPage(L.back, bookPages[bi], bi + 1, { ghost: true });
+    // pod odcházejícím listem se rovnou odkryje nová stránka
+    const ui = dir > 0 ? next * 2 + 1 : next * 2;
+    renderPage(from, bookPages[ui], ui + 1);
+    L.leaf.className = 'book-leaf ' + (dir > 0 ? 'turn-next' : 'turn-prev');
+    L.book.classList.add('turning');
     bookBusy = true;
-    bookSpread = next;
-    drawSpread();
-    setTimeout(() => {
-      leaf.className = 'book-leaf';
-      face.innerHTML = '';
-      $('book').classList.remove('turning');
-      bookBusy = false;
-    }, BOOK_TURN_MS);
+    leafApply(0);
+    return true;
+  }
+
+  function endTurn(commit) {
+    const L = leafRefs(), dir = turn.dir;
+    if (commit) {
+      bookSpread = turn.next;
+      drawChrome();
+    } else {
+      // vrácená otočka: obě stránky zpátky na původní obsah
+      setLanded(false);
+      const i = dir > 0 ? bookSpread * 2 + 1 : bookSpread * 2;
+      renderPage(dir > 0 ? L.right : L.left, bookPages[i], i + 1, { noInk: true });
+    }
+    L.leaf.className = 'book-leaf';
+    L.leaf.style.transform = '';
+    L.front.innerHTML = ''; L.back.innerHTML = '';
+    L.sf.style.opacity = '0'; L.sb.style.opacity = '0';
+    L.cl.style.opacity = '0'; L.cr.style.opacity = '0';
+    L.book.classList.remove('turning');
+    turn = null; bookBusy = false;
+  }
+
+  function animTurn(to, ms, ease) {
+    const from = turn.p, t0 = performance.now();
+    const dur = Math.max(150, ms * Math.abs(to - from));
+    const step = (now) => {
+      if (!turn) return;
+      const k = Math.min(1, (now - t0) / dur);
+      turn.p = from + (to - from) * ease(k);
+      leafApply(turn.p);
+      if (k < 1) { turn.raf = requestAnimationFrame(step); return; }
+      turn.raf = 0;
+      endTurn(to > 0.5);
+    };
+    turn.raf = requestAnimationFrame(step);
+  }
+
+  // tvrdé ukončení (odchod z deníčku, přepnutí jazyka) – nic nedopočítáváme
+  function cancelTurn() {
+    if (bookDrag) bookDrag = null;
+    if (!turn) return;
+    if (turn.raf) cancelAnimationFrame(turn.raf);
+    endTurn(false);
+  }
+
+  function turnBook(dir) {
+    if (bookBusy || !bookChar) return;
+    const next = bookSpread + dir;
+    if (next < 0 || next >= spreadCount()) return;
+    AUDIO.play('click');
+    PLATFORM.haptic('light');
+    if (lowFx || reduceMotionMq.matches) { bookSpread = next; drawSpread(); return; }
+    if (!beginTurn(dir)) return;
+    animTurn(1, BOOK_TURN_MS, easeTurn);
+  }
+
+  /* ---------- tažení prstem ----------
+     Svislé tažení patří rolování dlouhé stránky (na velkém systémovém písmu
+     se text nevejde na papír), takže se listování rozjede až když je pohyb
+     znatelně vodorovný. Souřadnice jdou přes pointerGameX/Y – při vynucené
+     šířce je celá hra otočená o 90° a osy viewportu jsou prohozené. */
+  function onBookDown(e) {
+    if (bookBusy || !bookChar || lowFx || reduceMotionMq.matches) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    bookDrag = { id: e.pointerId, x: pointerGameX(e), y: pointerGameY(e),
+                 on: false, lx: pointerGameX(e), lt: performance.now(), v: 0 };
+  }
+
+  function onBookMove(e) {
+    if (!bookDrag || e.pointerId !== bookDrag.id) return;
+    const gx = pointerGameX(e);
+    const dx = gx - bookDrag.x, dy = pointerGameY(e) - bookDrag.y;
+    if (!bookDrag.on) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) { bookDrag = null; return; }
+      if (Math.abs(dx) < 12) return;
+      if (!beginTurn(dx < 0 ? 1 : -1)) { bookDrag = null; return; }
+      bookDrag.on = true;
+      bookDrag.x = gx;            // postup měříme od místa, kde otočka začala
+      PLATFORM.haptic('light');
+    }
+    const now = performance.now(), dt = now - bookDrag.lt;
+    if (dt > 8) {
+      bookDrag.v = (gx - bookDrag.lx) / dt;   // px/ms, pro švihnutí
+      bookDrag.lx = gx; bookDrag.lt = now;
+    }
+    turn.p = Math.max(0, Math.min(1, (turn.dir > 0 ? -(gx - bookDrag.x) : gx - bookDrag.x) / turn.span));
+    leafApply(turn.p);
+  }
+
+  function onBookUp(e) {
+    if (!bookDrag || (e && e.pointerId !== bookDrag.id)) return;
+    const d = bookDrag; bookDrag = null;
+    if (!d.on || !turn) return;
+    // švihnutí dolistuje i z půlky cesty; jinak rozhoduje, kam je blíž
+    const flick = (turn.dir > 0 ? -d.v : d.v) > 0.45;
+    const done = flick || turn.p > 0.34;
+    if (done) { AUDIO.play('click'); PLATFORM.haptic('light'); }
+    animTurn(done ? 1 : 0, done ? 520 : 340, easeOut3);
   }
 
   function openDiary(ch) {
+    cancelTurn();
     bookChar = ch;
     bookPages = buildBookPages(ch);
     bookSpread = 0;
@@ -4373,7 +4584,7 @@
     const grid = $('shop-grid');
     grid.innerHTML = '';
     shopPortraits.clear();
-    $('shop-coins').textContent = save.coins;
+    paintCoins(save.coins);
     let selectedCard = null;
     for (const ch of SHOP_ORDER) {
       const owned = save.unlocked.includes(ch.id);
@@ -4396,24 +4607,37 @@
       wrap.appendChild(badge);
       card.appendChild(wrap);
 
+      /* Text karty žije ve vlastním sloupci. Na vysokém displeji stojí pod
+         portrétem, na nízkém (telefon naležato) se karta překlopí naležato
+         a sloupec si sedne vedle portrétu. Dokud byl obsah přímo v kartě,
+         šlo se na nízkém displeji vejít jedině tak, že se kus obsahu skrýval
+         (na 700 px odešel popisek, na 470 statistiky, na 360 deníček) –
+         a přesně proto obchod na telefonu vypadal chudě. */
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      card.appendChild(body);
+
       const name = document.createElement('h3');
       name.textContent = I18N.pick(ch.name);
-      card.appendChild(name);
+      body.appendChild(name);
 
       const tag = document.createElement('p');
       tag.className = 'tagline';
       tag.textContent = I18N.pick(ch.tagline);
-      card.appendChild(tag);
+      body.appendChild(tag);
 
       const perk = document.createElement('p');
       perk.className = 'perk';
+      const perkIcon = document.createElement('span');
+      perkIcon.className = 'perk-icon';
+      perkIcon.textContent = '✨';
       const perkText = document.createElement('span');
       perkText.className = 'perk-text';
       perkText.textContent = I18N.pick(ch.perk);
-      perk.appendChild(perkText);
-      card.appendChild(perk);
+      perk.append(perkIcon, perkText);
+      body.appendChild(perk);
 
-      card.appendChild(statRows(ch));
+      body.appendChild(statRows(ch));
 
       /* Deníček z azylu – opravdové útržky ze života zvířátka a zajímavosti
          o jeho druhu. Na kartě je jen ochutnávka: karta v karuselu má pevnou
@@ -4447,7 +4671,7 @@
         more.textContent = I18N.t('shop.diaryOpen', { n: (ch.facts || []).length });
         box.appendChild(more);
         box.addEventListener('click', () => openDiary(ch));
-        card.appendChild(box);
+        body.appendChild(box);
       }
 
       const btn = document.createElement('button');
@@ -4456,10 +4680,18 @@
       else if (owned) { btn.textContent = I18N.t('shop.select'); }
       else {
         btn.textContent = `🪙 ${ch.unlock.price}`;
-        btn.classList.add(save.coins >= ch.unlock.price ? 'buy' : 'cant');
+        // chybějící mince se vypíšou rovnou – „nemáš dost" je informace,
+        // kterou hráč potřebuje dřív, než na tlačítko ťukne
+        const lack = ch.unlock.price - save.coins;
+        if (lack > 0) {
+          btn.classList.add('cant');
+          btn.title = I18N.t('toast.needCoins', { n: lack });
+        } else {
+          btn.classList.add('buy');
+        }
       }
       btn.addEventListener('click', () => onCharAction(ch));
-      card.appendChild(btn);
+      body.appendChild(btn);
       grid.appendChild(card);
       drawPortrait(cv, ch);
       shopPortraits.set(ch.id, cv);
@@ -4473,22 +4705,26 @@
     ctaArt.className = 'cta-art';
     ctaArt.textContent = '🐾💚';
     cta.appendChild(ctaArt);
+    const ctaBody = document.createElement('div');
+    ctaBody.className = 'card-body';
+    cta.appendChild(ctaBody);
     const ctaQ = document.createElement('h3');
     ctaQ.textContent = I18N.t('shop.cta.q');
-    cta.appendChild(ctaQ);
+    ctaBody.appendChild(ctaQ);
     const ctaText = document.createElement('p');
     ctaText.className = 'cta-text';
     ctaText.textContent = I18N.t('shop.cta.text');
-    cta.appendChild(ctaText);
+    ctaBody.appendChild(ctaText);
     const ctaBtn = document.createElement('a');
     ctaBtn.className = 'btn small buy';
     ctaBtn.href = 'https://nechmerust.org/zvireci-obyvatele';
     ctaBtn.target = '_blank';
     ctaBtn.rel = 'noopener';
     ctaBtn.textContent = I18N.t('shop.cta.btn');
-    cta.appendChild(ctaBtn);
+    ctaBody.appendChild(ctaBtn);
     grid.appendChild(cta);
 
+    watchFocus(grid);
     // vybrané zvířátko ať je po otevření rovnou vidět
     if (selectedCard) {
       requestAnimationFrame(() => {
@@ -4530,10 +4766,11 @@
   function buildItems() {
     const grid = $('items-grid');
     grid.innerHTML = '';
-    $('shop-coins').textContent = save.coins;
+    paintCoins(save.coins);
     // ozdoba se ukazuje na zvířátku, se kterým hráč běhá – ať je vidět,
     // jak to bude doopravdy vypadat, ještě než se za ni zaplatí
     const on = charById(save.selected);
+    let wornCard = null;
     for (const it of ITEM_ORDER) {
       const have = itemOwned(it);
       const worn = wornKind(on) === it.id;
@@ -4555,9 +4792,12 @@
       wrap.appendChild(badge);
       card.appendChild(wrap);
 
-      card.appendChild(Object.assign(document.createElement('h3'),
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      card.appendChild(body);
+      body.appendChild(Object.assign(document.createElement('h3'),
         { textContent: `${it.icon} ${I18N.pick(it.name)}` }));
-      card.appendChild(Object.assign(document.createElement('p'),
+      body.appendChild(Object.assign(document.createElement('p'),
         { className: 'tagline item-note', textContent: I18N.pick(it.note) }));
 
       const btn = document.createElement('button');
@@ -4573,9 +4813,18 @@
         btn.classList.add(save.coins >= it.price ? 'buy' : 'cant');
       }
       btn.addEventListener('click', () => onItemAction(it));
-      card.appendChild(btn);
+      body.appendChild(btn);
       grid.appendChild(card);
       drawPortrait(cv, on, 0.6, it.id);
+      if (worn) wornCard = card;
+    }
+    watchFocus(grid);
+    // nasazená ozdoba ať je po přepnutí záložky rovnou vidět (u zvířátek
+    // to obchod dělal odjakživa, u ozdob se na to zapomnělo)
+    if (wornCard) {
+      requestAnimationFrame(() => {
+        grid.scrollLeft = wornCard.offsetLeft - (grid.clientWidth - wornCard.offsetWidth) / 2;
+      });
     }
   }
 
@@ -4639,6 +4888,54 @@
   bindCarousel($('shop-grid'));
   bindCarousel($('items-grid'));
 
+  /* ---------- zvýraznění karty uprostřed karuselu ----------
+     Karta, na kterou hráč právě kouká, vystoupí dopředu. Dělá to
+     IntersectionObserver, ne posluchač rolování: prohlížeč hlásí jen změnu
+     stavu, takže rolování nestojí ani snímek navíc (a na slabém telefonu
+     je to znát – posluchač rolování by při každém snímku sahal na styl
+     sedmi karet). `rootMargin` vyřízne z karuselu svislý pruh uprostřed,
+     takže „focus" dostane právě karta, která do něj z většiny padne. */
+  const focusObs = 'IntersectionObserver' in window ? new IntersectionObserver((rows) => {
+    for (const r of rows) r.target.classList.toggle('focus', r.isIntersecting);
+  }, { root: null, rootMargin: '0px -42% 0px -42%', threshold: 0.02 }) : null;
+  function watchFocus(grid) {
+    if (!focusObs) return;
+    for (const card of grid.children) focusObs.observe(card);
+  }
+
+  /* Počítadlo mincí se po nákupu neodečte skokem, ale odpočítá – hráč tak
+     vidí, kolik ho zvířátko stálo. Běží to na jednom rAF, který se sám
+     ukončí; kdyby přišel další nákup dřív, přepíše se cíl a nový běh
+     nezaloží (`coinRaf`), takže se nikdy nepřekrývají dvě animace. */
+  let coinRaf = 0, coinShown = null;
+  function paintCoins(to) {
+    const el = $('shop-coins');
+    if (coinShown === null || lowFx || reduceMotionMq.matches) {
+      coinShown = to; el.textContent = to; return;
+    }
+    const from = coinShown, t0 = performance.now(), dur = 520;
+    coinShown = to;
+    if (coinRaf) return;
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      const v = Math.round(from + (coinShown - from) * (1 - Math.pow(1 - k, 3)));
+      el.textContent = k < 1 ? v : coinShown;
+      coinRaf = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    coinRaf = requestAnimationFrame(step);
+  }
+
+  // karta koupeného zvířátka po překreslení nadskočí – ať je vidět, co se stalo
+  function flashBought(id) {
+    requestAnimationFrame(() => {
+      const cv = shopPortraits.get(id);
+      const card = cv && cv.closest('.char-card');
+      if (!card || lowFx || reduceMotionMq.matches) return;
+      card.classList.add('bought');
+      setTimeout(() => card.classList.remove('bought'), 700);
+    });
+  }
+
   function onCharAction(ch) {
     AUDIO.play('click');
     if (save.unlocked.includes(ch.id)) {
@@ -4654,7 +4951,9 @@
       save.selected = ch.id;
       persist();
       AUDIO.play('buy');
+      PLATFORM.haptic('success');
       buildShop();
+      flashBought(ch.id);
       initMenu();
       toast(I18N.t('toast.joined', { name: I18N.pick(ch.name) }));
       toastAchievements(syncAchievements()); // odznak za prvního parťáka
@@ -4698,9 +4997,15 @@
   $('btn-settings').addEventListener('click', () => { showScreen('settings'); AUDIO.play('click'); });
   $('btn-settings-back').addEventListener('click', () => { initMenu(); showScreen('menu'); AUDIO.play('click'); });
   /* ---------- listování v deníčku ---------- */
-  $('btn-diary-close').addEventListener('click', () => { AUDIO.play('click'); showScreen('shop'); });
+  $('btn-diary-close').addEventListener('click', () => { AUDIO.play('click'); cancelTurn(); showScreen('shop'); });
   $('btn-diary-prev').addEventListener('click', () => turnBook(-1));
   $('btn-diary-next').addEventListener('click', () => turnBook(1));
+  // listování tažením – posluchače pohybu visí na okně, ať tažení přežije
+  // i vyjetí prstu mimo knížku (stejně to dělá karusel v obchodě)
+  $('book').addEventListener('pointerdown', onBookDown);
+  window.addEventListener('pointermove', onBookMove, { passive: true });
+  window.addEventListener('pointerup', onBookUp);
+  window.addEventListener('pointercancel', onBookUp);
   /* Tažením se dřív listovalo jako v opravdové knize. Zrušeno schválně:
      stránka se dá rolovat svisle (dlouhý zápisek, zvětšené systémové písmo)
      a šikmý tah se pak vyhodnotil jako otočení listu – hráč chtěl posunout
@@ -4799,7 +5104,7 @@
     AUDIO.play('click');
     $('btn-karel').classList.remove('nudge');
     // i na vyžádání platí: kdo řeč slyšel, dostane krátké přivítání
-    KAREL.open({ lowFx: lowFx || reduceMotionMq.matches, again: !!save.karelSeen });
+    karelOpen({ lowFx: lowFx || reduceMotionMq.matches, again: !!save.karelSeen });
   });
   KAREL.init({
     getAlways: () => !!save.karelAlways,
@@ -4810,17 +5115,68 @@
       persist();
       return save.karelHellos;
     },
-    // čísla do hlášek, ať Karel mluví o TVÉM postupu a ne obecně
-    getStats: () => ({
-      coins: save.coins,
-      best: save.best || 0,
-      chars: save.unlocked.length,
-      name: I18N.pick(charById(save.selected).name),
-    }),
+    /* ---------- co Karel o hráči ví ----------
+       Dřív dostal čtyři čísla a uměl s nimi tři hlášky. Aby mohl doopravdy
+       reagovat na to, co hráč dělá, potřebuje celý obrázek: poslední běh,
+       postup ve sbírce, denní mise, odznaky, šatník, kolik mu chybí na
+       další zvířátko a jak dlouho tu nebyl.
+
+       Všechno se počítá až tady a jen ve chvíli, kdy si o to scéna řekne
+       (tedy při hlášce, ne každý snímek). Karlova scéna do savu nesahá –
+       tohle je jediné okno, kterým se k němu dostane. */
+    getStats: () => {
+      const d = buildDaily();
+      const a = achCount();
+      // nejbližší zvířátko, které se dá koupit – z toho vzniká „chybí ti X"
+      const next = SHOP_ORDER.find((c) => !save.unlocked.includes(c.id) && c.unlock.type === 'coins');
+      const wornId = wornKind(charById('karel'));
+      const wornItem = wornId ? ITEMS.find((i) => i.id === wornId) : null;
+      const buyable = ITEMS.filter((i) => !i.from);
+      return {
+        coins: save.coins,
+        best: save.best || 0,
+        runs: save.runs || 0,
+        chars: save.unlocked.length,
+        charsTotal: CHARACTERS.length,
+        name: I18N.pick(charById(save.selected).name),
+        // poslední běh (jen dokud běží tahle relace hry)
+        lastDist: lastRun ? lastRun.dist : 0,
+        lastCoins: lastRun ? lastRun.coins : 0,
+        newBest: !!(lastRun && lastRun.best),
+        // co si může koupit
+        nextName: next ? I18N.pick(next.name) : '',
+        lack: next ? Math.max(0, next.unlock.price - save.coins) : 0,
+        // denní mise a odznaky
+        dailyTotal: d.total, dailyLeft: Math.max(0, d.total - d.done),
+        achDone: a.done, achTotal: a.total,
+        // šatník
+        wornName: wornItem ? I18N.pick(wornItem.name) : '',
+        items: buyable.filter(itemOwned).length,
+        itemsTotal: buyable.length,
+        // drobnosti, které dělají Karla pozorným
+        fed: save.karelFed || 0,
+        factsRead: (save.factsRead || []).length,
+        days: karelDaysAway,
+        hour: new Date().getHours(),
+        musicOff: !save.music,
+        sfxOff: !save.sfx,
+        tutorialDone: !!save.tutorialDone,
+      };
+    },
+    // kolikrát už dostal mrkev – Karel si to pamatuje napříč spuštěními
+    bumpFed: () => {
+      save.karelFed = (save.karelFed || 0) + 1;
+      persist();
+      return save.karelFed;
+    },
     // ozdoba ze šatníku – Karel má na sobě to, co mu hráč vybral
     getWorn: () => wornKind(charById('karel')),
     onSeen: () => {
-      if (save.karelSeen) return;
+      // razítko návštěvy se zapisuje vždycky, i když se známe – z něj se
+      // počítá „neviděli jsme se {days} dní". Zapisuje se AŽ TEĎ, takže
+      // hláška při téhle návštěvě ještě mluví o mezeře, která doopravdy byla.
+      save.karelLastSeen = Date.now();
+      if (save.karelSeen) { persist(); return; }
       save.karelSeen = true;
       persist();
       // ať je po prvním setkání vidět, kde Karla příště najít

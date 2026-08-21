@@ -156,16 +156,33 @@
         <span class="book-pos" id="book-pos"></span>
       </div>
       <div class="book" id="book">
-        <div class="book-ribbon" aria-hidden="true"></div>
+        <!-- stoh nedočtených / dočtených stran po stranách vazby: tloušťka
+             se mění podle toho, kde v deníčku hráč je (viz drawSpread) -->
+        <div class="book-edge l" id="book-edge-l" aria-hidden="true"></div>
+        <div class="book-edge r" id="book-edge-r" aria-hidden="true"></div>
+        <div class="book-ribbon" id="book-ribbon" aria-hidden="true"></div>
         <div class="book-page left" id="book-left"></div>
         <div class="book-page right" id="book-right"></div>
+        <!-- stín, který otáčený list vrhá na stránku pod sebou. Vlastní
+             prvky (ne ::after stránky), aby se opacita dala nastavovat za
+             běhu bez přepočítávání stylu celého obsahu stránky. -->
+        <div class="book-cast l" id="cast-l" aria-hidden="true"></div>
+        <div class="book-cast r" id="cast-r" aria-hidden="true"></div>
         <div class="book-spine" aria-hidden="true"></div>
-        <!-- otáčený list má dvě strany: lícem je odcházející stránka,
-             rubem prázdný papír – proto je za polovinou otočky vidět
-             druhá strana listu a ne text pod ním -->
+        <div class="book-corners" aria-hidden="true"></div>
+        <!-- Otáčený list je opravdový list papíru: LÍC je otisk odcházející
+             stránky, RUB nese obsah stránky, na kterou list dosedne. Proto
+             se za polovinou otočky ukáže správný text a ne prázdný papír.
+             Stínítko nad každou stranou řídí js (leafShade) podle úhlu. -->
         <div class="book-leaf" id="book-leaf" aria-hidden="true">
-          <div class="leaf-face front" id="leaf-front"></div>
-          <div class="leaf-face back"></div>
+          <div class="leaf-face front">
+            <div class="leaf-ink" id="leaf-front"></div>
+            <div class="leaf-shade" id="leaf-shade-f"></div>
+          </div>
+          <div class="leaf-face back">
+            <div class="leaf-ink" id="leaf-back"></div>
+            <div class="leaf-shade" id="leaf-shade-b"></div>
+          </div>
         </div>
       </div>
       <div class="book-nav">

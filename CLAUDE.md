@@ -4,19 +4,26 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.8.7 (tři skladby na prostředí, o 18 kulis živější scény) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.0 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.8.7,
-> `sw.js` má cache `loukarun-v48`, nová hudba leží v `assets/music/` (a schválně
-> se nepředkešuje) a web má sesynchronizovanou kopii. Zbývá jen krok 1 z
-> `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName` v
-> `android/app/build.gradle` — a sestavit.
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.0,
+> `sw.js` má cache `loukarun-v49` a web má sesynchronizovanou kopii. Zbývá jen
+> krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
+> v `android/app/build.gradle` — a sestavit.
 >
-> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o dvě verze starší než kód.
+> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o čtyři verze starší než kód.
+>
+> **Co je v 1.9.0 nového:** deníček listuje jako opravdová kniha (rub listu
+> nese obsah cílové stránky, obsah se mění až v půlce otočky, dá se listovat
+> tažením prstu); karta v obchodě se na telefonu naležato překlopí do dvou
+> sloupců, takže se nic neskrývá; Karel reaguje na skutečný postup hráče
+> a jeho hlášky se dají v klidu dočíst; uvítací scéna má pečené pozadí
+> a portál bez `shadowBlur` — na „shromážděte se" spadl čas snímku
+> z ~50 ms na ~22 ms.
 
 ## Vydání nové verze
 
@@ -97,6 +104,34 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   A ťuknutí v šatníku nesmí volat `drawSpread()` — restartovalo by
   nástupovou animaci, shodilo odrolování a u sousední stránky se
   zajímavostí znovu zapsalo `save.factsRead`.
+- **Otáčení listu v deníčku má tři nepřekročitelná pravidla.** (1) RUB listu
+  nese obsah stránky, na kterou list dosedne — kreslí se `renderPage(…, {ghost:
+  true})`, což je režim, který NESMÍ nic zapisovat do savu (`factsRead`) ani
+  věšet posluchače (šatník). (2) Stránka pod listem se vymění až v polovině
+  otočky (`setLanded`) a vykreslí se s `{noInk: true}`, tedy bez nástupové
+  animace — musí být přesným dvojčetem rubu, jinak text v okamžiku dosednutí
+  poskočí. (3) Za běhu se zapisuje jen `transform` a `opacity` na pět pevných
+  prvků; nic, co by nutilo přepočítat rozvržení. Ťuknutí i tažení prstem jedou
+  přes stejnou funkci `leafApply(p)` — proto vypadají stejně.
+- **Karta v obchodě se na nízkém displeji překlápí naležato.** Text karty žije
+  v `.card-body`; naležato mu musí zůstat `min-width: 0` a `flex-shrink: 1`
+  (`.char-card > .card-body`), jinak se nezalomí a vyteče na sousední kartu.
+  Obecné pravidlo `.char-card > * { flex-shrink: 0 }` chrání svislou kartu, ale
+  naležato míří na vodorovnou osu, takže by přesně tohle způsobilo.
+- **Karlova scéna má pečené pozadí.** Obloha, slunce, kopce, keře a tráva se
+  jednou nakreslí do dvou plátek (`bakeBackdrop()` v `js/karel.js`) a pak už se
+  jen přenášejí. Dynamické zůstávají mraky, stíny a světlušky. Kdo přidá do
+  pozadí něco, co se hýbe, musí to dát mezi ně — ne do pečené vrstvy. A do
+  portálu nikdy nevracej `shadowBlur`: byla to jediná příčina sekání při
+  „shromážděte se" (přes tisíc rozmazaných tahů na snímek).
+- **Karlova hláška má zámek na dočtení** (`st.readUntil`, `speechLocked()`).
+  Ťuknutí na Karla během něj text nepřepíše, jen ho rozhýbe. Tlačítka ve spodní
+  liště a ťuknutí na bublinu zámek ruší — jsou to vědomé požadavky. Kdyby zámek
+  platil i na ně, tlačítko by chvílemi nedělalo nic, a to je horší.
+- **`?fx=full` v adrese vypne útlum efektů.** V headless prohlížeči (audit
+  rozvržení, snímky) snímky vždycky padají a útlum by se zapnul do vteřiny,
+  takže by nešlo vyfotit ani otáčení listu. Pro ověřování ho používej, pro
+  měření výkonu taky (měří se tak nejhorší případ).
 - **Kopie hry na webu.** Do `nechmerust.org` se hra dostává skriptem
   `web/scripts/sync-loukarun.sh` v repozitáři `TGeeeeq/NMRStranky1.0`.
   `sw.js` a `manifest.webmanifest` tam mají **schválně jiný obsah** (start_url
