@@ -644,7 +644,10 @@ const KAREL = (() => {
      Plátky se pečou v ROZLIŠENÍ PLÁTNA (× dpr), takže složení je prostý
      přenos pixelů bez převzorkování. Přepéct je potřeba při resize a při
      změně kvality – jinak nikdy. */
-  let bgFar = null, bgNear = null, bakeKey = '';
+  let bgFar = null, bgNear = null;
+  // klíč pečení jako čtyři čísla, ne skládaný řetězec: bakeBackdrop() se volá
+  // v každém snímku a i pár set alokací za vteřinu je zbytečných
+  const bake = { w: -1, h: -1, dpr: -1, ky: -1, low: false };
 
   function newLayer() {
     const c = document.createElement('canvas');
@@ -656,9 +659,9 @@ const KAREL = (() => {
   }
 
   function bakeBackdrop() {
-    const key = W + 'x' + H + 'x' + dpr.toFixed(2) + 'x' + st.ky.toFixed(1) + (lowFx ? 'L' : '');
-    if (bakeKey === key && bgFar && bgNear) return;
-    bakeKey = key;
+    if (bgFar && bgNear && bake.w === W && bake.h === H
+        && bake.dpr === dpr && bake.ky === st.ky && bake.low === lowFx) return;
+    bake.w = W; bake.h = H; bake.dpr = dpr; bake.ky = st.ky; bake.low = lowFx;
     if (W < 2 || H < 2) return;
 
     /* --- daleká vrstva --- */
@@ -791,16 +794,16 @@ const KAREL = (() => {
      Přechod se staví jednou a sílu řídí globalAlpha. Dřív se skládal
      každý snímek včetně dvou `toFixed` a dvou skládaných řetězců –
      tedy tři objekty a dvě čísla na text v každém jediném snímku. */
-  let vigGrad = null, vigKey = '';
+  let vigGrad = null;
+  const vig = { w: -1, h: -1, x: -1, y: -1 };
   function drawVignette() {
     const cx = bodyCx(), cy = st.ky - 55 * st.sc;
-    const key = W + ':' + H + ':' + cx.toFixed(0) + ':' + cy.toFixed(0);
-    if (vigKey !== key) {
+    if (!vigGrad || vig.w !== W || vig.h !== H || vig.x !== cx || vig.y !== cy) {
+      vig.w = W; vig.h = H; vig.x = cx; vig.y = cy;
       vigGrad = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.12, cx, cy, Math.max(W, H) * 0.62);
       vigGrad.addColorStop(0, 'rgba(40,26,12,0)');
       vigGrad.addColorStop(0.55, 'rgba(40,26,12,0.35)');
       vigGrad.addColorStop(1, 'rgba(40,26,12,1)');
-      vigKey = key;
     }
     const arrival = st.phase === 'portal' ? 1 : Math.max(0, 1 - st.pt / 1.2);
     ctx.globalAlpha = 0.15 + 0.3 * arrival;
@@ -1869,6 +1872,12 @@ const KAREL = (() => {
   }
 
   function close() {
+    /* Pečené vrstvy jsou dvě plátna přes celou obrazovku (na hustém displeji
+       přes 20 MB dohromady). Scéna se otevírá málokdy, hra pod ní běží pořád
+       – tak ať jí ta paměť po zavření zůstane. Uklízí se i sprity portálu. */
+    bgFar = null; bgNear = null; bake.w = -1;
+    sprInner = null; sprGlow = null;
+    vigGrad = null; vig.w = -1;
     if (!st.open) return;
     st.open = false;
     cancelAnimationFrame(raf);

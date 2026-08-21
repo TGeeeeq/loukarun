@@ -2133,7 +2133,7 @@
       }
     }
 
-    c.font = `700 ${Math.round((20 + fx * 2) * pop)}px "Baloo 2", system-ui, sans-serif`;
+    c.font = comboFont((20 + fx * 2) * pop);
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.lineWidth = 4;
@@ -2927,8 +2927,35 @@
     ctx.restore();
   }
 
-  // zalomení textu na řádky podle maximální šířky (písmo už musí být nastavené)
+  /* Číslo řetězu se při každém zásahu nafukuje, takže se zkratka písma
+     skládala znovu v každém snímku, co popisek žije. Velikostí je konečná
+     hrstka celých čísel – stačí je jednou vyrobit a půjčovat. */
+  const COMBO_FONTS = {};
+  function comboFont(px) {
+    const k = Math.round(px);
+    return COMBO_FONTS[k] || (COMBO_FONTS[k] = '700 ' + k + 'px "Baloo 2", system-ui, sans-serif');
+  }
+
+  /* ---------- zalomení textu na řádky ----------
+     Písmo už musí být nastavené; podle něj se taky ukládá výsledek.
+
+     Zalomení se PAMATUJE. Bublina Karlovy školy běhu i postranní bublina
+     se překreslují v každém snímku, po celou dobu, co jsou vidět – a při
+     každém překreslení se sem chodilo pro totéž zalomení znovu.
+     `measureText` je přitom volání do sazby prohlížeče a dělalo se JEDNOU
+     NA SLOVO: u delší hlášky to je přes dvacet měření v každém snímku,
+     a hned za tím ještě jedno na každý hotový řádek u volajícího.
+     Přitom se výsledek mezi snímky nemění – mění se jen průhlednost.
+
+     Klíč je text + šířka + písmo. Rejstřík se drží malý (a čistí se celý
+     naráz, ne po jednom – hlášek je konečný počet a přetečení znamená
+     spíš změnu rozlišení než skutečnou potřebu). Ukládají se i naměřené
+     šířky řádků, ať se nemusí měřit ani ty. */
+  const wrapCache = new Map();
   function wrapLines(text, maxW) {
+    const key = ctx.font + '|' + Math.round(maxW) + '|' + text;
+    const hit = wrapCache.get(key);
+    if (hit) return hit.lines;
     const words = text.split(' ');
     const lines = [];
     let cur = '';
@@ -2938,7 +2965,18 @@
       else cur = test;
     }
     if (cur) lines.push(cur);
+    let tw = 0;
+    for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
+    if (wrapCache.size > 120) wrapCache.clear();
+    wrapCache.set(key, { lines, tw });
     return lines;
+  }
+  // nejširší řádek posledního zalomení – měřit ho znovu u volajícího
+  // by zahodilo půlku úspory
+  function wrapWidth(text, maxW) {
+    const key = ctx.font + '|' + Math.round(maxW) + '|' + text;
+    const hit = wrapCache.get(key);
+    return hit ? hit.tw : 0;
   }
 
   // velká vyprávěcí bublina Karlovy školy běhu – víceřádková, text se
@@ -2953,10 +2991,9 @@
     const fs = long ? 19 : 22;
     const lineH = long ? 24 : 27;
     ctx.font = `700 ${fs}px "Baloo 2", sans-serif`;
-    const lines = wrapLines(raw, Math.min(360, W * 0.5));
-    let tw = 0;
-    for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
-    const w = tw + 36;
+    const maxW = Math.min(360, W * 0.5);
+    const lines = wrapLines(raw, maxW);
+    const w = wrapWidth(raw, maxW) + 36;
     const h = lines.length * lineH + 22;
     const bx = Math.min(Math.max(ax - w / 2, 12), W - w - 12);
     // bublina nesmí zajet pod HUD – horní mez je spodní hrana ukazatelů
@@ -3000,11 +3037,10 @@
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.font = '700 19px "Baloo 2", sans-serif';
-    const lines = wrapLines(text, Math.min(280, W * 0.42));
+    const maxW = Math.min(280, W * 0.42);
+    const lines = wrapLines(text, maxW);
     const lineH = 24;
-    let tw = 0;
-    for (const l of lines) tw = Math.max(tw, ctx.measureText(l).width);
-    const w = tw + 28;
+    const w = wrapWidth(text, maxW) + 28;
     const h = lines.length * lineH + 16;
     const bx = Math.min(Math.max(ax - w / 2, 8), W - w - 8);
     const by = Math.max(ay - h - 12, 8);
@@ -4900,6 +4936,12 @@
   }, { root: null, rootMargin: '0px -42% 0px -42%', threshold: 0.02 }) : null;
   function watchFocus(grid) {
     if (!focusObs) return;
+    /* Mřížka se staví celá znovu (`innerHTML = ''`), takže staré karty by
+       v pozorovateli zůstaly viset i po zahození – IntersectionObserver si
+       cíle drží. Obě mřížky sdílejí jednoho pozorovatele a vidět je vždycky
+       jen jedna; ta druhá se stejně staví znovu při přepnutí záložky, takže
+       je bezpečné odpojit všechno naráz. */
+    focusObs.disconnect();
     for (const card of grid.children) focusObs.observe(card);
   }
 

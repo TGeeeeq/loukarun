@@ -28,6 +28,19 @@ const GFX = (() => {
     return s - Math.floor(s);
   }
 
+  /* ---------- písmo bez skládání řetězce ----------
+     Kulisy se kreslí v každém snímku a `ctx.font = \`bold ${8*s}px …\`` v nich
+     znamenalo nový řetězec (a nové rozebrání zkratky písma prohlížečem) na
+     každý nápis v každém snímku. Velikost se zaokrouhlí na půl pixelu –
+     v obraze to není poznat – a hotové řetězce se recyklují z rejstříku.
+     Je to totéž pravidlo, které u kulis platí pro alokace: nic nového
+     za běhu. */
+  const FONTS = {};
+  function boldFont(px) {
+    const k = Math.round(px * 2) / 2;
+    return FONTS[k] || (FONTS[k] = 'bold ' + k + 'px "Baloo 2", sans-serif');
+  }
+
   function rr(ctx, x, y, w, h, r) { // rounded rect
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -51,7 +64,7 @@ const GFX = (() => {
     for (let i = 0; i < 3; i++) {
       const ph = (((t || 0) * 0.0009 + i * 0.33) % 1 + 1) % 1;
       ctx.globalAlpha = baseAlpha * (1 - ph) * 0.9;
-      ctx.font = `bold ${(8 + i * 3) * s}px "Baloo 2", sans-serif`;
+      ctx.font = boldFont((8 + i * 3) * s);
       ctx.fillText('z', (x + ph * 10) * s, (y - ph * 26) * s);
     }
     ctx.globalAlpha = baseAlpha;
@@ -276,7 +289,7 @@ const GFX = (() => {
       ctx.strokeStyle = '#a8845a'; ctx.lineWidth = 2 * s;
       rr(ctx, -68 * s, -86 * s, 136 * s, 24 * s, 4 * s); ctx.stroke();
       ctx.fillStyle = '#4a3220';
-      ctx.font = `bold ${14 * s}px "Baloo 2", sans-serif`;
+      ctx.font = boldFont(14 * s);
       ctx.textAlign = 'center';
       ctx.fillText(extra || 'Mrkvov 2 km', 0, -69 * s, 126 * s);
     },
@@ -972,7 +985,7 @@ const GFX = (() => {
         // nad telefonem občas problikne notifikace
         if (Math.sin((t || 0) * 0.005) > 0) {
           ctx.fillStyle = '#ffd24a';
-          ctx.font = `bold ${9 * s}px "Baloo 2", sans-serif`;
+          ctx.font = boldFont(9 * s);
           ctx.textAlign = 'center';
           ctx.fillText('₿', -27 * s, -84 * s);
         }
@@ -990,7 +1003,7 @@ const GFX = (() => {
         // srdíčka od sledujících
         if (Math.sin((t || 0) * 0.005) > -0.3) {
           ctx.fillStyle = '#ff8fb1';
-          ctx.font = `bold ${9 * s}px "Baloo 2", sans-serif`;
+          ctx.font = boldFont(9 * s);
           ctx.textAlign = 'center';
           ctx.fillText('♥', -19 * s, -142 * s);
         }
@@ -1171,7 +1184,7 @@ const GFX = (() => {
       if (v === 0 || v === 2) {
         const baseAlpha = ctx.globalAlpha;
         ctx.fillStyle = v === 2 ? '#ff8fb1' : '#fff';
-        ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
+        ctx.font = boldFont(11 * s);
         ctx.textAlign = 'center';
         for (let i = 0; i < 3; i++) {
           const ph = (((t || 0) * 0.0012 + i * 0.33) % 1 + 1) % 1;
@@ -1209,9 +1222,9 @@ const GFX = (() => {
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
       ctx.globalAlpha = base * (1 - ph);
-      ctx.font = `bold ${8 * s}px "Baloo 2", sans-serif`;
+      ctx.font = boldFont(8 * s);
       ctx.fillText('z', (-15 - ph * 6) * s, (-42 - ph * 14) * s);
-      ctx.font = `bold ${11 * s}px "Baloo 2", sans-serif`;
+      ctx.font = boldFont(11 * s);
       ctx.fillText('Z', (-8 - ph * 10) * s, (-48 - ph * 18) * s);
       ctx.globalAlpha = base;
     },
