@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.2';
+  const GAME_VERSION = '1.9.3';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -3316,6 +3316,27 @@
     }, 400);
   }
 
+  /* Portrét zblízka – hlava s krkem přes celou kartu. Používá ho záložka
+     ozdob v obchodě: na celém zvířátku je klobouk nebo šála o dva pixely
+     větší než nic a hráč nepozná, co si kupuje. Rámec hlavy dává GFX
+     (jen tam jsou čísla, ze kterých se hlava staví), tady se z něj spočítá
+     jen zvětšení a posun. Tělo zůstane vidět u levého okraje odříznuté –
+     je to záměr, čte se to jako přiblížení, ne jako chybějící zvířátko. */
+  function drawHeadPortrait(cv, ch, wear, phase = 0.6) {
+    const c2 = cv.getContext('2d');
+    c2.clearRect(0, 0, cv.width, cv.height);
+    const box = GFX.headBox(ch);
+    // svisle se nechává kousek vzduchu, ať se vysoký klobouk nebo rohy
+    // muflona neuseknou o horní hranu
+    const z = Math.min(cv.width * 0.94 / box.w, cv.height * 0.9 / box.h);
+    /* Hlava sedí vlevo od středu, ne na něm: čumák míří do +x a potřebuje
+       před sebou vzduch, a tělo se tím zároveň odřízne o kus dřív. */
+    GFX.drawCharacter(c2, ch,
+      cv.width * 0.42 - z * (box.x + box.w / 2),
+      cv.height / 2 - z * (box.y + box.h / 2), z,
+      { runPhase: phase, wear }, 400);
+  }
+
   /* =========================================================
      DENÍČEK Z AZYLU
 
@@ -4848,7 +4869,12 @@
         dTitle.className = 'diary-title';
         const have = diaryUnlocked(ch);
         dTitle.textContent = I18N.t('shop.diary');
-        if (ch.diary && ch.diary.length) dTitle.textContent += `  ${have}/${ch.diary.length}`;
+        // počet se musí říct slovem: samotné „0/5" vedle „5 zajímavostí"
+        // a čísla dvoustrany v knížce si hráč přebral jako totéž
+        if (ch.diary && ch.diary.length) {
+          dTitle.textContent += '  ' + I18N.t('shop.diaryEntries',
+            { have, n: ch.diary.length });
+        }
         box.appendChild(dTitle);
         const p = document.createElement('p');
         if (have > 0) {
@@ -5008,7 +5034,7 @@
       btn.addEventListener('click', () => onItemAction(it));
       body.appendChild(btn);
       grid.appendChild(card);
-      drawPortrait(cv, on, 0.6, it.id);
+      drawHeadPortrait(cv, on, it.id);
       if (worn) wornCard = card;
     }
     watchFocus(grid);
@@ -5404,10 +5430,21 @@
     $('btn-install').hidden = false;
   });
   $('btn-install').addEventListener('click', async () => {
-    if (!installPrompt) return;
     AUDIO.play('click');
-    installPrompt.prompt();
-    await installPrompt.userChoice.catch(() => {});
+    /* Nabídku dává prohlížeč a dává ji jen jednou. Když ji už nedrží
+       (nebo ji tenhle prohlížeč nikdy nedal), tlačítko dřív mlčelo –
+       ťuknutí nedělalo vůbec nic. Radši poradit a schovat se. */
+    if (!installPrompt) {
+      $('btn-install').hidden = true;
+      toast(I18N.t('toast.installManual'));
+      return;
+    }
+    try {
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+    } catch (e) {
+      toast(I18N.t('toast.installManual'));
+    }
     installPrompt = null;
     $('btn-install').hidden = true;
   });

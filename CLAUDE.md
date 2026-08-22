@@ -4,18 +4,18 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.2 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.3 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.2,
-> `sw.js` má cache `loukarun-v51` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.3,
+> `sw.js` má cache `loukarun-v52` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
-> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o pět verzí starší než kód.
+> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o šest verzí starší než kód.
 >
 > **Co je v 1.9.x nového:** deníček listuje jako opravdová kniha (rub listu
 > nese obsah cílové stránky, obsah se mění až v půlce otočky, dá se listovat
@@ -28,7 +28,11 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 > divadlo**: světla v sále dolů, opona, reflektor — a hlavně se scéna uklidí,
 > takže přes lištu koncertu už neleží zmrazené texty z běhu. V 1.9.2 se
 > opravilo **listování deníčku prstem** — na telefonu na výšku si tah bral
-> prohlížeč a listování umřelo hned po nadzvednutí listu.
+> prohlížeč a listování umřelo hned po nadzvednutí listu. V 1.9.3 má
+> **záložka ozdob v obchodě záběr na hlavu s krkem** (na celém zvířátku nebyl
+> klobouk ani šála k rozeznání) a doladily se tři drobnosti z QA auditu:
+> přeložené přístupné popisky, tlačítko instalace, které nemlčí, a počet
+> zápisků v deníčku řečený slovem.
 
 ## Vydání nové verze
 

@@ -3514,10 +3514,26 @@ const GFX = (() => {
     ctx.restore();
   }
 
+  /* ---------- rámec hlavy s krkem ----------
+     Obchod s ozdobami potřebuje záběr na hlavu: klobouk ani šála nejsou
+     na celém zvířátku k rozeznání. Rámec se počítá tady, protože jen tady
+     jsou čísla, ze kterých se hlava staví — vrátí se v souřadnicích
+     POSTAVY (počátek mezi kopýtky, y roste dolů), aby si volající mohl
+     spočítat zvětšení sám. Kdo posune hlavu v drawCharacter, posune ji
+     i tady.
+
+     V souřadnicích hlavy: uši osla a rohy muflona sahají k −48, hříva za
+     hlavou k −30, čumák k +32 a spodek krku k +26. */
+  function headBox(ch) {
+    const slim = ch.species === 'osel';
+    const ox = slim ? 38 : 40, oy = slim ? -63 : -58;
+    return { x: ox - 30, y: oy - 48, w: 62, h: 74 };
+  }
+
   return {
     lerp, lerpColor, shade, hexA, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround, drawGodRays,
-    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter,
+    drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter, headBox,
     PROPS,
   };
 })();
