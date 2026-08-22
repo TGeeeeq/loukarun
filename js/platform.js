@@ -110,7 +110,15 @@ window.PLATFORM = (() => {
   /* ---------- sdílení výsledku ----------
      Web: Web Share API s obrázkem, jinak stažení PNG.
      Android: WebView navigator.share nezná, jde se přes plugin Share –
-     obrázek se musí nejdřív uložit do cache a sdílí se jeho file:// adresa. */
+     obrázek se musí nejdřív uložit do cache a sdílí se jeho file:// adresa.
+
+     POZOR: když se sdílí obrázek, NEPOSÍLÁ se k němu žádný text ani titulek.
+     Android má v jednom sdílení jediný typ obsahu; k obrázku se text přidá
+     jako EXTRA_TEXT a příjemce si pak vybere, co z toho vezme. Instagram
+     text neumí (nemá kam ho dát) a smíšené sdílení u něj skončí tím, že se
+     appka jen otevře a obrázek zmizí. Adresa hry i odznak Google Play jsou
+     navíc vypálené přímo v obrázku (buildShareCard), takže se textem nic
+     neztrácí. Text se posílá jen tam, kde obrázek sdílet nejde. */
   function blobToBase64(blob) {
     return new Promise((res, rej) => {
       const r = new FileReader();
@@ -127,7 +135,7 @@ window.PLATFORM = (() => {
         const data = await blobToBase64(blob);
         await Filesystem.writeFile({ path: name, data, directory: 'CACHE' });
         const { uri } = await Filesystem.getUri({ path: name, directory: 'CACHE' });
-        await Share.share({ title, text, files: [uri] });
+        await Share.share({ files: [uri] }); // bez textu – viz komentář výše
         return true;
       } catch (e) { /* zkusíme níž aspoň text */ }
     }
@@ -136,9 +144,9 @@ window.PLATFORM = (() => {
     }
     if (blob && navigator.canShare) {
       try {
-        const file = new File([blob], name, { type: 'image/png' });
+        const file = new File([blob], name, { type: blob.type || 'image/png' });
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ title, text, files: [file] });
+          await navigator.share({ files: [file] }); // bez textu – viz komentář výše
           return true;
         }
       } catch (e) { if (e && e.name === 'AbortError') return false; }

@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.4';
+  const GAME_VERSION = '1.9.5';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -4739,9 +4739,13 @@
     const cv = buildShareCard(dist, runCoins(), chr, S.comboBest, S.carrotsRun, dist >= save.best && dist > 0);
     const text = I18N.t('share.text', { d: dist, name: I18N.pick(chr.name), url: SHARE_URL });
     AUDIO.play('click');
+    /* JPEG, ne PNG: karta je fotografická (přechody, žádná průhlednost), takže
+       PNG jen nadělá megabajty. Menší soubor se navíc rychleji předá appce,
+       do které se sdílí – a čím dýl se přebírá, tím spíš z toho Instagram
+       vyjde jen otevřený, bez obrázku. */
     cv.toBlob((blob) => {
-      PLATFORM.share({ title: I18N.t('share.title'), text, blob, filename: 'louka-run.png' });
-    }, 'image/png');
+      PLATFORM.share({ title: I18N.t('share.title'), text, blob, filename: 'louka-run.jpg' });
+    }, 'image/jpeg', 0.92);
   }
 
   /* ---------- menu ---------- */

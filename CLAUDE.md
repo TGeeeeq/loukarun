@@ -4,14 +4,14 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.4 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.4 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.4,
-> `sw.js` má cache `loukarun-v53` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.5,
+> `sw.js` má cache `loukarun-v54` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
@@ -36,7 +36,9 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 > objevovat **systémová hláška „Chcete-li ukončit režim celé obrazovky…"** —
 > hra si fullscreen brala zpátky prvním dalším ťuknutím, tedy klidně skokem
 > na 900 m, a Chrome ji vypsal při každém vstupu do fullscreenu. Vrací se teď
-> jen na obrazovkách, kde se nehraje (viz *Na co si dát pozor*).
+> jen na obrazovkách, kde se nehraje (viz *Na co si dát pozor*). V 1.9.5 se
+> **kartička sdílí bez textu a jako JPEG** — Instagram se dřív u prvního
+> sdílení jen otevřel a obrázek nechal zmizet.
 
 ## Vydání nové verze
 
@@ -192,6 +194,15 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   aplikací) proto nic nedělá v režimu `run` ani `paused` — jen na obrazovkách,
   kam se hráč ze sdílení vrací. A `goLandscapeFullscreen()` požadavek
   neposílá, když už ve fullscreenu jsme; jen obnoví zámek na šířku.
+
+- **Obrázek se sdílí sám, bez textu.** Android nese v jednom sdílení jediný
+  typ obsahu; text přiložený k obrázku dojde jako `EXTRA_TEXT` a příjemce si
+  vybere, co vezme. Instagram text neumí a smíšené sdílení u něj skončí tím,
+  že se appka jen otevře a obrázek zmizí — proto `PLATFORM.share()` posílá
+  s obrázkem **jen obrázek** (adresa hry i odznak Google Play jsou vypálené
+  přímo v kartičce) a text jde jen tam, kde se obrázek sdílet nedá. Kartička
+  je JPEG q0,92 (~150 kB místo megabajtového PNG): čím dýl se soubor předává,
+  tím spíš ho appka na druhé straně nestihne přečíst.
 
 - **Kopie hry na webu.** Do `nechmerust.org` se hra dostává skriptem
   `web/scripts/sync-loukarun.sh` v repozitáři `TGeeeeq/NMRStranky1.0`.
