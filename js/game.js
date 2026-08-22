@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.3';
+  const GAME_VERSION = '1.9.4';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -600,7 +600,8 @@
   /* Fullscreen na první dotek – dřív ho prohlížeč (bez gesta) nedovolí. Není
      to `once`: stejná cesta hru do fullscreenu vrací i potom, co ji z něj
      vyhodí sdílecí list nebo přepnutí do jiné aplikace. Dokud hra ve
-     fullscreenu je, je to jen dvě porovnání na ťuknutí. */
+     fullscreenu je, je to jen dvě porovnání na ťuknutí. Za běhu se fullscreen
+     nebere nikdy – viz reclaimFullscreen(). */
   window.addEventListener('pointerdown', reclaimFullscreen, true);
   window.addEventListener('keydown', reclaimFullscreen, true);
   /* První ťuknutí ještě nemá `wantFs`, tam fullscreen chceme vždycky – tohle
@@ -698,9 +699,16 @@
      ať už je to „Běžet znovu“, nebo skok za běhu. */
   let wantFs = false;
   let lastFsTry = 0;
+  let fsPending = false; // požadavek je na cestě – druhý by hlášku vytáhl dvakrát
 
   function inFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function lockLandscape() {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
   }
 
   function goLandscapeFullscreen() {
@@ -710,17 +718,29 @@
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (!req) return;
     wantFs = true;
+    /* Už ve fullscreenu jsme: požadavek se NEPOSÍLÁ. Chrome na Androidu totiž
+       při každém přijatém requestFullscreen znovu vytáhne systémovou hlášku
+       „Chcete-li ukončit režim celé obrazovky…“, která hráči leží přes hru,
+       dokud ji nesmázne prstem. Zámek na šířku si obnovíme i tak – ten se
+       po přepnutí aplikací umí uvolnit sám. */
+    if (inFullscreen() || fsPending) { lockLandscape(); return; }
     lastFsTry = performance.now();
-    Promise.resolve(req.call(el)).then(() => {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(() => {});
-      }
-    }).catch(() => {});
+    fsPending = true;
+    Promise.resolve(req.call(el)).then(lockLandscape).catch(() => {})
+      .finally(() => { fsPending = false; });
   }
 
+  /* Vrácení do fullscreenu nikdy nesmí přijít za běhu. Prohlížeč na každý
+     vstup do fullscreenu vypíše systémovou hlášku, a když si ho hra brala
+     zpátky prvním skokem, objevila se hráči uprostřed běhu (klidně na 900 m)
+     přes celou spodní část obrazovky. Vracíme se proto jen na obrazovkách,
+     kde se nehraje – tedy přesně tam, kam se hráč vrátí ze sdílecího listu
+     („Pochlubit se“ je na obrazovce po běhu). Pauza se počítá jako hra:
+     ťuknutí na Pokračovat vrací rovnou do běhu a hláška by ho zastihla. */
   function reclaimFullscreen() {
     if (!wantFs || inFullscreen()) return;
-    // odmítnutý požadavek nesmí zkoušet každý skok znovu
+    if (S.mode === 'run' || S.mode === 'paused') return;
+    // odmítnutý požadavek nesmí zkoušet každé ťuknutí znovu
     if (performance.now() - lastFsTry < 1200) return;
     goLandscapeFullscreen();
   }
