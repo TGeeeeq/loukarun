@@ -2,6 +2,30 @@
 
 ## ⏳ Čeká na vydání
 
+- **hra 1.9.7 — fullscreen naskočí hned a iPhone se přestal zvětšovat.**
+  Na webu nasazená, do Play jde ve stejném AAB jako zbytek 1.9.x.
+  - **Android: celá obrazovka už je od startovní obrazovky.** Fullscreen se
+    říkal z `pointerdown`, jenže u doteku prstem uživatelské gesto vzniká až
+    při zvednutí prstu (`pointerdown` je jeho spouštěčem jen u myši). Požadavek
+    tedy vždycky skončil zamítnutím — a to dorazilo až *po* `click`, takže po
+    sobě nechal zvednuté `fsPending` i čerstvé `lastFsTry` a umlčel i ten
+    pokus, který by prošel. Hra běžela v okně s adresním řádkem až do prvního
+    tlačítka v menu. Nově se žádá z `pointerup`, zamítnutý pokus už neblokuje
+    ten další a po vyhození z fullscreenu (`fullscreenchange`) je hra
+    připravená vzít si ho na prvním dalším tlačítku.
+  - **iPhone: hru už nejde omylem roztáhnout dvěma prsty.** Safari na iPhonu
+    ignoruje `user-scalable=no` a `window.innerWidth/innerHeight` tam měří
+    *zvětšený* výřez — po štípnutí přišel `resize` s menšími rozměry, obraz
+    „naskočil“ blíž a doteky přestaly sedět s DOM. Ruší se proto `gesturestart`
+    (událost WebKitu, jinde se nespustí) a `resize()` navíc zvětšený výřez
+    přečká, dokud se hráč nevrátí na 100 %.
+  - **iPhone: startovní obrazovka už neslibuje nemožné.** Safari na iPhonu
+    Fullscreen API na prvcích vůbec nemá (umí ho jen `<video>`), takže hra
+    tam poběží v pásu mezi lištami. Místo „spustí se na celou obrazovku“ se
+    tam ukáže cesta ven — Sdílet → Přidat na plochu; spuštění z plochy už
+    lišty schová (`apple-mobile-web-app-capable`). Z plochy (`navigator.
+    standalone`) se hláška neukazuje.
+
 - **hra 1.8.7 — hudba na sebe navazuje a scény žijí.** Na webu je nasazená,
   **AAB pro tuhle verzi ještě sestavený není** — čeká se, až si ji Tomáš
   odzkouší na nechmerust.org/loukarun. Až to odkýve, začíná se krokem 1 níž

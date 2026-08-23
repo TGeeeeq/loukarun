@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.6';
+  const GAME_VERSION = '1.9.7';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -123,7 +123,35 @@
     if (menuSlowT > 1.5) setLowFx();
   }
 
+  /* ---------- zvětšení dvěma prsty (iPhone) ----------
+     Safari na iPhonu ignoruje `user-scalable=no` v <meta viewport>, takže hru
+     jde uprostřed běhu omylem roztáhnout dvěma prsty – a v běhací hře, kde
+     hráč ťuká oběma palci, se to stane snadno. Škodí to dvakrát:
+
+       1) `window.innerWidth/innerHeight` na iOS měří *zvětšený* výřez, ne
+          rozvržení. Po štípnutí tedy přišel `resize` s menšími rozměry, hra se
+          překreslila do menšího plátna a obraz „naskočil“ blíž.
+       2) DOM (tlačítka, panely) zůstal v původním rozvržení, takže doteky
+          přestaly sedět tam, kam hráč mířil – hra vypadala zaseknutě.
+
+     `gesturestart` je vlastní událost WebKitu; na Androidu ani na počítači se
+     nikdy nespustí, takže tenhle blok nikde jinde nic nemění. Kdyby přece jen
+     nějaké zvětšení proklouzlo (starší iOS, přístupnost), `resize()` ho přečká
+     a rozměry hry nechá být, dokud se hráč nevrátí na 100 %.
+
+     Hlídat se to musí `gesturestart`em, ne dvouprstým `touchmove` – nepasivní
+     posluchač doteků na celém dokumentu by sebral listování v deníčku a
+     rolování v obchodě plynulost (prohlížeč by je nesměl posunout dřív, než
+     se posluchač vyjádří). */
+  const vv = window.visualViewport || null;
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  });
+
+  let sized = false; // první rozměry se musí spočítat vždy, i kdyby se načetlo zvětšené
   function resize() {
+    if (sized && vv && vv.scale > 1.01) return; // zvětšený výřez by hru rozhodil, počká se
+    sized = true;
     document.documentElement.classList.toggle('force-landscape', portraitMq.matches);
     DPR = Math.min(window.devicePixelRatio || 1, DPR_STEPS[dprStep]);
     W = forcedLandscape() ? window.innerHeight : window.innerWidth;
@@ -141,6 +169,8 @@
   window.addEventListener('resize', resize);
   if (portraitMq.addEventListener) portraitMq.addEventListener('change', resize);
   else if (portraitMq.addListener) portraitMq.addListener(resize); // starší iOS Safari
+  // návrat z nechtěného zvětšení zpátky na 100 % okno jako `resize` nehlásí
+  if (vv) vv.addEventListener('resize', () => { if (vv.scale <= 1.01) resize(); });
   resize();
 
   /* ---------- uložený postup ---------- */
@@ -614,8 +644,17 @@
   /* První ťuknutí ještě nemá `wantFs`, tam fullscreen chceme vždycky – tohle
      je jediná cesta u buildu bez startovní obrazovky (appka z Google Play).
      Podmínka pokrývá spuštění klávesou: startovní obrazovka bere i Enter,
-     takže fullscreen už může být vyžádaný, než přijde vůbec první ťuknutí. */
-  window.addEventListener('pointerdown', () => {
+     takže fullscreen už může být vyžádaný, než přijde vůbec první ťuknutí.
+
+     MUSÍ to být `pointerup`, ne `pointerdown`. Uživatelské gesto (bez něj
+     prohlížeč fullscreen nepustí) totiž u doteku vzniká teprve při zvednutí
+     prstu – `pointerdown` je jeho spouštěčem jen u myši. Na telefonu proto
+     požadavek z `pointerdown` vždycky skončil zamítnutím, které navíc dorazilo
+     až PO `click`, takže po sobě nechal zvednuté `fsPending` i čerstvé
+     `lastFsTry`. Ty pak umlčely i ten pokus, který by prošel – ťuknutí na
+     „Spustit hru“ – a hra běžela v okně s adresním řádkem až do prvního
+     tlačítka v menu. Přesně tak to hráči na Androidu popisovali. */
+  window.addEventListener('pointerup', () => {
     if (!wantFs) goLandscapeFullscreen();
   }, { once: true, capture: true });
 
@@ -707,10 +746,19 @@
   let wantFs = false;
   let lastFsTry = 0;
   let fsPending = false; // požadavek je na cestě – druhý by hlášku vytáhl dvakrát
+  let fsFails = 0;       // po třetím zamítnutí to prohlížeč zjevně nedovolí vůbec
 
   function inFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
+
+  /* Z fullscreenu nás prohlížeč vyhazuje sám (sdílecí list, přepnutí aplikace,
+     systémové okno). Škrtnutí `lastFsTry` zařídí, že si ho další ťuknutí na
+     tlačítko vezme hned – jinak by první tlačítko po návratu spadlo do
+     1,2s okna a hráč by musel ťuknout dvakrát. */
+  const onFsChange = () => { if (!inFullscreen()) lastFsTry = 0; };
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
 
   function lockLandscape() {
     if (screen.orientation && screen.orientation.lock) {
@@ -730,10 +778,16 @@
        „Chcete-li ukončit režim celé obrazovky…“, která hráči leží přes hru,
        dokud ji nesmázne prstem. Zámek na šířku si obnovíme i tak – ten se
        po přepnutí aplikací umí uvolnit sám. */
-    if (inFullscreen() || fsPending) { lockLandscape(); return; }
+    if (inFullscreen() || fsPending || fsFails >= 3) { lockLandscape(); return; }
     lastFsTry = performance.now();
     fsPending = true;
-    Promise.resolve(req.call(el)).then(lockLandscape).catch(() => {})
+    Promise.resolve(req.call(el))
+      .then(() => { fsFails = 0; lockLandscape(); })
+      /* Zamítnutý pokus nesmí umlčet ten příští: `lastFsTry` se ruší, ať si
+         hra fullscreen vezme hned na dalším tlačítku. Nekonečné zkoušení
+         hlídá `fsFails` – když to prohlížeč třikrát nedovolí, nedovolí to
+         nikdy (vložený rámec, zásada oprávnění) a hra ho přestane otravovat. */
+      .catch(() => { fsFails++; lastFsTry = 0; })
       .finally(() => { fsPending = false; });
   }
 
@@ -5618,5 +5672,24 @@
       if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); openGate(); }
     });
     document.getElementById('start-go').focus({ preventScroll: true });
+
+    /* Safari na iPhonu Fullscreen API vůbec nemá – `requestFullscreen` tam
+       na žádném prvku neexistuje (umí ho jen video). Slib „spustí se na celou
+       obrazovku“ by tedy lhal: hra poběží v pásu mezi lištami Safari. Jediná
+       cesta naplno je přidat si ji na plochu, tak to hráči rovnou řekneme.
+       Z plochy už `apple-mobile-web-app-capable` lišty schová a poznáme to
+       podle `navigator.standalone` – tam se hláška neukazuje. */
+    const el = document.documentElement;
+    const canFs = !!(el.requestFullscreen || el.webkitRequestFullscreen);
+    const standalone = window.navigator.standalone === true
+      || window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+    if (!canFs && !standalone) {
+      const note = gate.querySelector('.start-note');
+      if (note) {
+        note.removeAttribute('data-i18n'); // ať to přepnutí jazyka nepřepíše zpátky
+        note.innerHTML = I18N.t('start.ios');
+        I18N.onChange(() => { note.innerHTML = I18N.t('start.ios'); });
+      }
+    }
   }
 })();

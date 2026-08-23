@@ -4,14 +4,14 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.6 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku, listování deníčku funguje i s útlumem efektů) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.7 (fullscreen naskočí hned na startovní obrazovce, iPhone už nejde omylem zvětšit dvěma prsty, přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku, listování deníčku funguje i s útlumem efektů) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.6,
-> `sw.js` má cache `loukarun-v55` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.7,
+> `sw.js` má cache `loukarun-v56` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
