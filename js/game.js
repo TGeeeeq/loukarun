@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.7';
+  const GAME_VERSION = '1.9.8';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -435,11 +435,16 @@
   function maybeGreet() {
     if (typeof KAREL === 'undefined') return;
     const again = !!save.karelSeen;
-    if (again && !save.karelAlways) return;
+    /* Návod na instalaci (přidání hry na plochu) přibyl do řeči až dodatečně,
+       a má ho vidět každý – i ten, kdo Karla dávno zná. Takový hráč dostane
+       scénu jednou navíc, ale rovnou od návodu (open({guide:true})), ne celou
+       přednášku o seně znovu. Pak už je zase všechno jako dřív. */
+    const guide = again && !save.karelGuideSeen;
+    if (again && !guide && !save.karelAlways) return;
     // menu se prolíná – ať se portál neotevře do rozjeté animace
     setTimeout(() => {
       if (S.mode === 'menu' && curScreen === 'menu' && !KAREL.isOpen()) {
-        karelOpen({ lowFx: lowFx || reduceMotionMq.matches, again });
+        karelOpen({ lowFx: lowFx || reduceMotionMq.matches, again: again && !guide, guide });
       }
     }, 620);
   }
@@ -5499,6 +5504,7 @@
       // počítá „neviděli jsme se {days} dní". Zapisuje se AŽ TEĎ, takže
       // hláška při téhle návštěvě ještě mluví o mezeře, která doopravdy byla.
       save.karelLastSeen = Date.now();
+      save.karelGuideSeen = true;   // návod na instalaci už zazněl
       if (save.karelSeen) { persist(); return; }
       save.karelSeen = true;
       persist();

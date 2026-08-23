@@ -1352,7 +1352,10 @@ html.force-landscape .book-page { touch-action: none; }
   color: #6a5a48; text-shadow: none;
   font-size: 0.74rem; line-height: 1.4;
 }
-.settings-links { font-size: 0.78rem; font-weight: 700; }
+.settings-links {
+  font-size: 0.78rem; font-weight: 700;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px;
+}
 .settings-card .privacy-link { color: #7a6242; }
 
 /* ztlumený přepínač je vidět na první pohled – vyšisovaný a bez zlata */

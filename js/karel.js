@@ -38,6 +38,7 @@ const KAREL = (() => {
     adopce: 'https://nechmerust.org/virtualni-adopce',
     seno: 'https://www.darujme.cz/vyzva/1205543',
     instagram: 'https://www.instagram.com/nech_me_rust',
+    kontakt: 'https://nechmerust.org/kontakt',
   };
 
   /* =========================================================
@@ -77,11 +78,45 @@ const KAREL = (() => {
       link: { href: URL.seno, cs: '🌾 Přispět na seno', en: '🌾 Donate for hay' },
       warm: true,
     },
+    /* ---------- návod na instalaci ----------
+       Přidat hru na plochu je jediná věc, kterou za hráče nikdo neudělá:
+       Chrome nabídne vlastní tlačítko (btn-install v Nastavení), Safari na
+       iPhonu žádné takové API nemá a bez návodu na to nikdo nepřijde. Karel
+       to proto řekne nahlas a po kouskách – jeden krok na jednu bublinu se
+       dá odklikat i na malém displeji.
+
+       `guide: true` na první z těchto zastávek je záložka pro open({guide:true}):
+       kdo celé uvítání už jednou viděl, dostane rovnou tenhle konec, ať se
+       nemusí podruhé poslouchat sedm zastávek o seně. */
+    {
+      guide: true,
+      cs: 'Ještě jedna praktická věc a pak už tě nechám běhat.\nTuhle hru si můžeš přidat na plochu telefonu jako opravdovou aplikaci. Pak běží přes celou obrazovku, naskočí hned a hraje i bez signálu — třeba v autobuse. Je to pár ťuknutí a zadarmo.',
+      en: 'One more practical thing and then I\'ll let you run.\nYou can add this game to your phone\'s home screen like a real app. Then it runs full screen, starts instantly and plays even with no signal — on the bus, say. It\'s a couple of taps and it\'s free.',
+    },
+    {
+      cs: '📱 Máš iPhone? Otevři hru v Safari — jinde to Apple nedovolí.\nDole ťukni na Sdílet (čtvereček se šipkou nahoru), sjeď níž na „Přidat na plochu“ a potvrď Přidat. Ikonka pak čeká mezi ostatními aplikacemi.',
+      en: '📱 On an iPhone? Open the game in Safari — Apple won\'t allow it anywhere else.\nTap Share at the bottom (the square with an arrow), scroll down to “Add to Home Screen” and confirm Add. The icon then waits with your other apps.',
+    },
+    {
+      cs: '🤖 Máš Android? V Chromu ťukni na tři tečky vpravo nahoře a vyber „Nainstalovat aplikaci“ (někde se to jmenuje „Přidat na plochu“).\nA v ⚙ Nastavení tady ve hře na to bývá tlačítko 📲 Instalovat. Nebo si nás stáhni z Google Play — jsem oficiálně v obchodě, jak jsem se chlubil.',
+      en: '🤖 On Android? In Chrome tap the three dots at the top right and pick “Install app” (sometimes it\'s called “Add to Home screen”).\nAnd here in ⚙ Settings there\'s usually a 📲 Install button. Or get us from Google Play — I\'m officially in a store, as I bragged.',
+    },
+    {
+      cs: 'A když už se přiznávám: hru děláme na koleni, mezi krmením a úklidem výběhů. Tak se nezlob, když někde něco zlobí — v našich podmínkách je tohle velké sousto a pořád se to všechno učíme.\nKdyby ti něco nešlo nebo tě něco napadlo, napiš nám. Vážně to čteme a máme z toho radost.',
+      en: 'And while I\'m confessing: we make this game on a shoestring, between feeding time and mucking out. So don\'t be cross if something misbehaves — this is a big bite for us and we\'re still learning all of it.\nIf anything breaks or you think of something, write to us. We really do read it and it makes our day.',
+      link: { href: URL.kontakt, cs: '✉️ Napsat nám', en: '✉️ Write to us' },
+      warm: true,
+    },
     {
       cs: 'Tak. Poselství předáno, mise splněna, portál zavřený.\nTeď si dělej, co chceš. Můžeš mě pošťouchat, podrbat, nakrmit. Já to vydržím — jsem osel, my jsme na to stavění.',
       en: 'There. Message delivered, mission accomplished, portal closed.\nNow do whatever you like. Poke me, scratch me, feed me. I can take it — I\'m a donkey, we\'re built for this.',
     },
   ];
+
+  /* Kde v řeči začíná návod na instalaci. Kdo uvítání už jednou viděl,
+     dostane při open({guide:true}) rovnou tenhle konec – návod má vidět
+     každý, ale poslouchat kvůli němu podruhé celou přednášku o seně ne. */
+  const GUIDE_FROM = Math.max(0, SPEECH.findIndex((s) => s.guide));
 
   /* ---------- hlášky podle toho, kam se ťukne ----------
      Každý koš se míchá zvlášť (viz Bag níž), takže se hláška
@@ -509,6 +544,7 @@ const KAREL = (() => {
     pt: 0,                // čas ve fázi (s)
     step: 0,              // kolikátá věta řeči
     again: false,         // už se známe? pak žádná řeč, jen krátké přivítání
+    speechFrom: 0,        // od které zastávky řeč začíná (návod na instalaci)
     // Karel
     kx: 0, ky: 0, sc: 1,  // kde stojí a jak je velký (CSS px plátna)
     face: 1,              // 1 = doprava, -1 = doleva
@@ -1380,7 +1416,9 @@ const KAREL = (() => {
     if (st.step === 1) react('nod');
     else if (st.step === 3) react('hop');
     else if (st.step === 5) { react('nod'); hearts(3); }
-    else if (st.step === 6) react('laugh');
+    else if (st.step === GUIDE_FROM) react('nod');
+    else if (st.step === GUIDE_FROM + 3) { react('nod'); hearts(2); }
+    else if (st.step === SPEECH.length - 1) react('laugh');
   }
 
   /* ---------- krátké přivítání „už se známe" ----------
@@ -1838,7 +1876,7 @@ const KAREL = (() => {
       st.pt = 0;
       if (st.again) { hello(); return; }
       st.phase = 'speech';
-      st.step = 0;
+      st.step = st.speechFrom;
       speakStep();
     }
   }
@@ -1851,7 +1889,7 @@ const KAREL = (() => {
     st.pt = 0;
     if (st.again) { hello(); return; }
     st.phase = 'speech';
-    st.step = 0;
+    st.step = st.speechFrom;
     speakStep();
   }
 
@@ -1924,7 +1962,10 @@ const KAREL = (() => {
 
     // stav do výchozí polohy
     st.open = true;
-    st.t = 0; st.pt = 0; st.step = 0;
+    /* speechFrom drží, kde řeč začíná – portál (i jeho přeskočení) na něj
+       skáče, takže open({guide:true}) pustí rovnou návod na instalaci. */
+    st.speechFrom = o.guide ? GUIDE_FROM : 0;
+    st.t = 0; st.pt = 0; st.step = st.speechFrom;
     st.phase = 'portal';
     st.again = !!o.again;   // už se známe → po portálu jen krátké přivítání
     st.react = null; st.props = {}; st.parts.length = 0; st.portals.length = 0;
