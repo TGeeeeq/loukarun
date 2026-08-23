@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.5';
+  const GAME_VERSION = '1.9.6';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -597,12 +597,19 @@
     AUDIO.play('slide');
   }
 
-  /* Fullscreen na první dotek – dřív ho prohlížeč (bez gesta) nedovolí. Není
-     to `once`: stejná cesta hru do fullscreenu vrací i potom, co ji z něj
-     vyhodí sdílecí list nebo přepnutí do jiné aplikace. Dokud hra ve
-     fullscreenu je, je to jen dvě porovnání na ťuknutí. Za běhu se fullscreen
-     nebere nikdy – viz reclaimFullscreen(). */
-  window.addEventListener('pointerdown', reclaimFullscreen, true);
+  /* Fullscreen se bere zpátky jen z tlačítek — nikdy z dotyku na plátně nebo
+     na stránce deníčku. Vstup do fullscreenu přerovná rozvržení a prohlížeč
+     pošle rozjetému gestu `pointercancel`, takže když si ho hra brala na
+     každý `pointerdown`, umřelo pod rukou listování prstem v deníčku. Tlačítko
+     je vždycky jedno krátké ťuknutí, tam se nic přerušit nedá. Za běhu se
+     fullscreen nebere nikdy – viz reclaimFullscreen(). */
+  window.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest || !t.closest('button')) return;
+    // „Pochlubit se" otevírá sdílecí list; fullscreen do stejného gesta nepatří
+    if (t.closest('#btn-share') || t.closest('#screen-diary')) return;
+    reclaimFullscreen();
+  }, true);
   window.addEventListener('keydown', reclaimFullscreen, true);
   /* První ťuknutí ještě nemá `wantFs`, tam fullscreen chceme vždycky – tohle
      je jediná cesta u buildu bez startovní obrazovky (appka z Google Play).
@@ -4117,13 +4124,19 @@
      šířce je celá hra otočená o 90° a osy viewportu jsou prohozené. */
   function onBookDown(e) {
     if (bookDrag) return;   // druhý prst do rozjetého tahu nemluví
-    if (bookBusy || !bookChar || lowFx || reduceMotionMq.matches) return;
+    if (bookBusy || !bookChar) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     // stránka pod prstem – při otočeném rozvržení si ji odrolujeme sami
     const page = e.target && e.target.closest ? e.target.closest('.book-page') : null;
+    /* Útlum efektů (lowFx) a „omezený pohyb" vypínají ANIMACI otáčení, ne
+       ovládání: tažení prstem zůstane, jen stránku přehodí naráz. Dokud tahle
+       větev chyběla, telefonu, kterému během běhu spadlo rozlišení, přestalo
+       listování prstem do konce sezení fungovat (a v otočeném rozvržení s ním
+       i rolování dlouhé stránky, protože to si taky obsluhujeme sami). */
     bookDrag = { id: e.pointerId, x: pointerGameX(e), y: pointerGameY(e),
                  on: false, lx: pointerGameX(e), lt: performance.now(), v: 0,
-                 page, scroll: null, top0: 0 };
+                 page, scroll: null, top0: 0,
+                 simple: lowFx || reduceMotionMq.matches };
   }
 
   function onBookMove(e) {
@@ -4146,7 +4159,14 @@
         el.scrollTop = bookDrag.top0 - dy;
         return;
       }
-      if (Math.abs(dx) < 12) return;
+      // bez animace nemá cenu tah dopočítávat: rozhodne až zřetelné švihnutí
+      if (Math.abs(dx) < (bookDrag.simple ? 40 : 12)) return;
+      if (bookDrag.simple) {
+        const dir = dx < 0 ? 1 : -1;
+        bookDrag = null;
+        turnBook(dir);   // v tomhle režimu stránku přehodí bez otáčení listu
+        return;
+      }
       if (!beginTurn(dx < 0 ? 1 : -1)) { bookDrag = null; return; }
       bookDrag.on = true;
       bookDrag.x = gx;            // postup měříme od místa, kde otočka začala

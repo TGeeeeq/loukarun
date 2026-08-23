@@ -4,14 +4,14 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.4 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **Hra 1.9.6 (přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku, listování deníčku funguje i s útlumem efektů) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
 >
 > **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
 >
 > Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
 >
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.5,
-> `sw.js` má cache `loukarun-v54` a web má sesynchronizovanou kopii. Zbývá jen
+> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.6,
+> `sw.js` má cache `loukarun-v55` a web má sesynchronizovanou kopii. Zbývá jen
 > krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
 > v `android/app/build.gradle` — a sestavit.
 >
@@ -38,7 +38,10 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 > na 900 m, a Chrome ji vypsal při každém vstupu do fullscreenu. Vrací se teď
 > jen na obrazovkách, kde se nehraje (viz *Na co si dát pozor*). V 1.9.5 se
 > **kartička sdílí bez textu a jako JPEG** — Instagram se dřív u prvního
-> sdílení jen otevřel a obrázek nechal zmizet.
+> sdílení jen otevřel a obrázek nechal zmizet. V 1.9.6 jde **listovat prstem
+> i po útlumu efektů** — telefonu, kterému během běhu spadlo rozlišení,
+> přestalo listování do konce sezení fungovat — a fullscreen se bere zpátky
+> jen z tlačítek, ať pod rukou neumře rozjeté gesto.
 
 ## Vydání nové verze
 
@@ -119,6 +122,14 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   A ťuknutí v šatníku nesmí volat `drawSpread()` — restartovalo by
   nástupovou animaci, shodilo odrolování a u sousední stránky se
   zajímavostí znovu zapsalo `save.factsRead`.
+- **Útlum efektů vypíná animaci, ne ovládání.** `lowFx` (a „omezený pohyb"
+  v systému) zhasne ozdoby a otáčení listu se přehodí naráz — ale tažení
+  prstem v deníčku musí zůstat, jinak se knížka na takovém telefonu dá
+  listovat jen šipkami a dlouhá stránka v otočeném rozvržení se nedá odrolovat
+  vůbec (`touch-action: none` si rolování bere hra). `lowFx` se navíc zapíná
+  i jen kvůli `dprStep > 0`, tedy po jakémkoli propadu snímků za běhu, a už
+  se nevypne — plete se to s „občas mi to nefunguje".
+
 - **Otáčení listu v deníčku má tři nepřekročitelná pravidla.** (1) RUB listu
   nese obsah stránky, na kterou list dosedne — kreslí se `renderPage(…, {ghost:
   true})`, což je režim, který NESMÍ nic zapisovat do savu (`factsRead`) ani
