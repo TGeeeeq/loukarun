@@ -4,44 +4,30 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.8 (Karel na konci uvítání vysvětlí, jak si hru přidat na plochu na iPhonu i na Androidu, omluví chybky a poprosí o zpětnou vazbu; fullscreen naskočí hned na startovní obrazovce, iPhone už nejde omylem zvětšit dvěma prsty, přepracovaný deníček a obchod, chytřejší Karel, plynulá uvítací scéna, divadelní přechod na koncert, záběr na hlavu v obchodě s ozdobami, žádná systémová hláška o fullscreenu za běhu, spolehlivější sdílení obrázku, listování deníčku funguje i s útlumem efektů) je hotová a nasazená na webu. Všechno je připravené na sestavení nového AAB pro Google Play — jen se ještě nestavěl.**
+> **AAB v1.0.15 (versionCode 16, hra 1.9.11) je sestavený, podepsaný a leží
+> v `googleplay/app-release.aab`. Zbývá ho ručně nahrát do Play Console**
+> (Louka Run → Production → Create new release). V produkci je zatím v1.0.14.
 >
-> **Nejdřív si to Tomáš odzkouší na webu** (nechmerust.org/loukarun) a **teprve až to odkýve, vytvoří se tady na počítači nový AAB** podle `RELEASE.md`. To pořadí je schválně: web se dá opravit dalším pushem za pár minut, kdežto verze v Play Console se stahuje zpátky blbě — do Play tedy jde až otestovaná hra.
+> Hra 1.9.11 je na webu (nechmerust.org/loukarun) nasazená a odzkoušená —
+> proto se AAB stavěl. **Pořadí platí i příště: nejdřív web, teprve po
+> „odzkoušeno, můžeš stavět" AAB.** Web se opraví dalším pushem za pár minut,
+> kdežto verze v Play Console se stahuje zpátky blbě.
 >
-> Nestav AAB sám od sebe, ani když je všechno zelené. Čeká se na „odzkoušeno, můžeš stavět".
->
-> **Co je pro AAB hotové:** kód i grafika jsou v `main`, `GAME_VERSION` je 1.9.8,
-> `sw.js` má cache `loukarun-v57` a web má sesynchronizovanou kopii. Zbývá jen
-> krok 1 z `RELEASE.md` — zvednout `versionCode` (14 → 15) a `versionName`
-> v `android/app/build.gradle` — a sestavit.
->
-> `googleplay/app-release.aab` v repozitáři je pořád **v1.0.13 (versionCode 14, hra 1.8.5)** — tedy o šest verzí starší než kód.
->
-> **Co je v 1.9.x nového:** deníček listuje jako opravdová kniha (rub listu
-> nese obsah cílové stránky, obsah se mění až v půlce otočky, dá se listovat
-> tažením prstu); karta v obchodě se na telefonu naležato překlopí do dvou
-> sloupců, takže se nic neskrývá; Karel reaguje na skutečný postup hráče
-> a jeho hlášky se dají v klidu dočíst; uvítací scéna má pečené pozadí
-> a portál bez `shadowBlur` — na „shromážděte se" spadl čas snímku
-> z ~50 ms na ~22 ms. V 1.9.1 navíc **Karel vždycky nejdřív pozdraví**
-> (obchod si nechá na pošťouchnutí) a **přechod na Zvířecí koncert je
-> divadlo**: světla v sále dolů, opona, reflektor — a hlavně se scéna uklidí,
-> takže přes lištu koncertu už neleží zmrazené texty z běhu. V 1.9.2 se
-> opravilo **listování deníčku prstem** — na telefonu na výšku si tah bral
-> prohlížeč a listování umřelo hned po nadzvednutí listu. V 1.9.3 má
-> **záložka ozdob v obchodě záběr na hlavu s krkem** (na celém zvířátku nebyl
-> klobouk ani šála k rozeznání) a doladily se tři drobnosti z QA auditu:
-> přeložené přístupné popisky, tlačítko instalace, které nemlčí, a počet
-> zápisků v deníčku řečený slovem. V 1.9.4 se přestala uprostřed běhu
-> objevovat **systémová hláška „Chcete-li ukončit režim celé obrazovky…"** —
-> hra si fullscreen brala zpátky prvním dalším ťuknutím, tedy klidně skokem
-> na 900 m, a Chrome ji vypsal při každém vstupu do fullscreenu. Vrací se teď
-> jen na obrazovkách, kde se nehraje (viz *Na co si dát pozor*). V 1.9.5 se
-> **kartička sdílí bez textu a jako JPEG** — Instagram se dřív u prvního
-> sdílení jen otevřel a obrázek nechal zmizet. V 1.9.6 jde **listovat prstem
-> i po útlumu efektů** — telefonu, kterému během běhu spadlo rozlišení,
-> přestalo listování do konce sezení fungovat — a fullscreen se bere zpátky
-> jen z tlačítek, ať pod rukou neumře rozjeté gesto.
+> **Co je v AAB nového proti v1.0.14 (hra 1.9.8):**
+> - **Pohodlné nastavení** (1.9.9) — osm nových voleb: hlasitost hudby, efektů
+>   a zvířecích hlasů zvlášť, vibrace, klidné efekty, větší text v deníčku,
+>   rychlý návrat bez znělky a tlačítka skoku a skluzu. Všechny **výchozí
+>   vypnuté**, takže se hra po aktualizaci chová přesně jako dosud.
+> - **Deníček ukazuje, že stránka pokračuje** (1.9.10) — nad spodním okrajem se
+>   papír vytrácí a poskakuje v něm šipka dolů; zhasne po dorolování. Červená
+>   stužka (jen nakřivo posazená dekorace) pryč.
+> - **Fullscreen se po instalaci na plochu vrací** (1.9.10) — `fsFails >= 3`
+>   býval doživotní vypínač, ale prohlížeč odmítá i dočasně (systémové okno
+>   „Nainstalovat aplikaci"). Série se teď po 10 s zapomíná.
+> - **Karlovy texty bez pevných dat** (1.9.11) — zastávka o akcích mluví jen
+>   o tom, co se opakuje, a aktuálnost nese odkaz na nechmerust.org/udalosti.
+>   Přibyly oslice Tonička a Elvíra (povahy opsané z karet na webu), poděkování
+>   za Spolu Mezi Lesy. Počet zvířat je „přes stovku" místo pevného čísla.
 
 ## Vydání nové verze
 

@@ -2,6 +2,36 @@
 
 ## ⏳ Čeká na vydání
 
+- **v1.0.15 (versionCode 16, hra 1.9.11) — AAB je sestavený a podepsaný,
+  čeká na nahrání do Play Console (`googleplay/app-release.aab`).**
+  V produkci je v1.0.14, takže tenhle release nese změny hry 1.9.9–1.9.11:
+  - **Pohodlné nastavení** (1.9.9): hlasitost hudby, efektů a zvířecích hlasů
+    zvlášť, vibrace, klidné efekty, větší text v panelech deníčku, rychlý
+    návrat bez znělky a tlačítka skoku a skluzu. **Všechny výchozí vypnuté** —
+    po aktualizaci se hra chová přesně jako dosud. Vibrace jsou podmíněné
+    přepínačem vibrací A hlavním vypínačem zvuků (bránu drží
+    `COMFORT.setHapticsGate`). Panel je složený přes atribut `hidden`, ne přes
+    `<details>`: zavřené `<details>` v Chromiu obsah neskrylo.
+  - **Deníček ukazuje, že stránka pokračuje** (1.9.10): nad spodním okrajem se
+    papír vytrácí a poskakuje v něm šipka dolů, obojí zhasne po dorolování.
+    Ukazatel je SOUROZENEC stránky, ne dítě — uvnitř by roloval s obsahem pryč
+    a zamíchal pořadí `.book-page > *`, na kterém visí nástupová animace.
+    Červená stužka pryč (byla to jen nakřivo posazená dekorace).
+  - **Fullscreen se po instalaci na plochu vrací** (1.9.10): `fsFails >= 3` byl
+    doživotní vypínač postavený na předpokladu, že třetí zamítnutí znamená
+    „nikdy". Prohlížeč ale odmítá i dočasně — dokud přes stránku leží systémové
+    okno, a nabídka „Nainstalovat aplikaci" je přesně takové. Série se teď po
+    10 s zapomíná a hned při `visibilitychange`/`appinstalled`. Trvalý případ
+    se pozná z `fullscreenEnabled === false`. `requestFullscreen` je v
+    try/catch — synchronní výjimka by nechala `fsPending` natrvalo zvednuté.
+  - **Karlovy texty bez pevných dat** (1.9.11): den po festivalu v uvítání
+    pořád stálo „11.–13. září je festival". Zastávka o akcích proto mluví jen
+    o tom, co se opakuje (brigády, Loukáda, procházky), a aktuálnost nese
+    tlačítko s odkazem na nechmerust.org/udalosti. Přibyly oslice Tonička
+    a Elvíra — povahy schválně opsané z `lib/animals.ts` v TGeeeeq/NMRStranky1.0,
+    ať karta na webu neříká něco jiného. Počet zvířat je „přes stovku" místo
+    „třiadevadesát" (obě místa, česky i anglicky).
+
 - **hra 1.9.7 — fullscreen naskočí hned a iPhone se přestal zvětšovat.**
   Na webu nasazená, do Play jde ve stejném AAB jako zbytek 1.9.x.
   - **Android: celá obrazovka už je od startovní obrazovky.** Fullscreen se
@@ -26,11 +56,7 @@
     lišty schová (`apple-mobile-web-app-capable`). Z plochy (`navigator.
     standalone`) se hláška neukazuje.
 
-- **hra 1.8.7 — hudba na sebe navazuje a scény žijí.** Na webu je nasazená,
-  **AAB pro tuhle verzi ještě sestavený není** — čeká se, až si ji Tomáš
-  odzkouší na nechmerust.org/loukarun. Až to odkýve, začíná se krokem 1 níž
-  (zvednout `versionCode` 14 → 15 a `versionName`). Jinak je pro sestavení
-  všechno připravené. Viz `CLAUDE.md`.
+- **hra 1.8.7 — hudba na sebe navazuje a scény žijí.** Součást AAB v1.0.14.
   - **Každé prostředí má tři skladby** místo jedné třicetisekundové smyčky
     (`MUSIC_TRACKS` v `js/audio.js`). Hrají za sebou v zamíchaném pořadí
     a navázání používá stejné prolnutí jako dřív smyčka, takže hudba nikde
@@ -70,8 +96,7 @@
     fotky a čmáranice. Každému hráči se proto rozložení těch drobností jednou
     přeskládá. Text ani odemčené zápisky to nijak nemění.
 
-- **v1.0.13 (versionCode 14, hra 1.8.5) — AAB je sestavený a podepsaný,
-  čeká na nahrání do Play Console (`googleplay/app-release.aab`).**
+- **v1.0.13 (versionCode 14, hra 1.8.5) — vydáno.**
   Hra si sama bere zpátky celou obrazovku. Prohlížeč z fullscreenu vyhazuje,
   kdykoli přes hru položí systémové okno — nejvíc to bilo do očí po
   „Pochlubit se“: sdílecí list Androidu fullscreen zrušil a hra se vrátila do
@@ -161,19 +186,18 @@ Stačí otevřít terminál v kořeni tohoto repozitáře, spustit `claude` a za
 
 ## Postup (kroky pro Claude Code)
 
-> **`googleplay/app-release.aab` v repozitáři je v1.0.13 (versionCode 14).**
-> Obsahuje opravu zvětšeného písma i startovní obrazovku a je podepsaný
-> upload klíčem — do Play Console jde nahrát rovnou. Pro další verzi se
-> začíná krokem 1 (zvednout versionCode i versionName).
+> **`googleplay/app-release.aab` v repozitáři je v1.0.15 (versionCode 16,
+> hra 1.9.11).** Je podepsaný upload klíčem — do Play Console jde nahrát
+> rovnou. Pro další verzi se začíná krokem 1 (zvednout versionCode
+> i versionName; v Play je po nahrání tohohle bundlu versionCode 16).
 
 > **`main` UŽ JE nejnovější — past je zavřená.** Verze 1.0.5–1.0.13 kdysi
 > skončily na vývojových větvích `claude/*` (vynutila je session v prohlížeči)
 > a `main` zůstal roky pozadu, takže `git pull origin main` stáhl starý kód
 > a sestavil starý AAB. Od hry 1.8.6 je všechno sloučené do `main` a další
 > práce tam patří taky. Ověřit se to dá podle `GAME_VERSION` v `js/game.js`
-> (má být 1.8.7 nebo novější); `versionName` v `android/app/build.gradle` je
-> pořád 1.0.13, protože pro 1.8.6 ani 1.8.7 se AAB nestavěl — čeká se, až si
-> hru Tomáš odzkouší na webu (viz `CLAUDE.md`).
+> (má být 1.9.11 nebo novější) proti `versionName` v
+> `android/app/build.gradle` (1.0.15 = hra 1.9.11).
 
 ```bash
 git fetch origin
