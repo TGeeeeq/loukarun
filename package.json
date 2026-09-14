@@ -4,7 +4,7 @@
   "description": "**Veselá běhací hra na podporu zvířecího azylu [Nech mě růst](https://nechmerust.org).**",
   "main": "sw.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.cjs"
   },
   "repository": {
     "type": "git",

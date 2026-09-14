@@ -27,6 +27,18 @@ window.PLATFORM = (() => {
     } catch (e) { return null; }
   }
 
+  // Keep installation advice out of native apps and installed web apps.
+  // Browser fullscreen alone does not mean that the game is installed.
+  let installedThisSession = false;
+  window.addEventListener('appinstalled', () => { installedThisSession = true; });
+  function shouldOfferInstall() {
+    if (NATIVE || installedThisSession || navigator.standalone === true) return false;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const fullscreenApp = window.matchMedia('(display-mode: fullscreen)').matches
+      && !document.fullscreenElement && !document.webkitFullscreenElement;
+    return !standalone && !fullscreenApp;
+  }
+
   const Haptics = plugin('Haptics');
   const App = plugin('App');
   const Prefs = plugin('Preferences');
@@ -170,7 +182,7 @@ window.PLATFORM = (() => {
 
   const canShare = !!(Share || navigator.share || navigator.canShare);
 
-  return { native: NATIVE, haptic, setHaptics, onBack, share, canShare };
+  return { native: NATIVE, shouldOfferInstall, haptic, setHaptics, onBack, share, canShare };
 })();
 
 /* =========================================================

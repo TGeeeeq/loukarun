@@ -439,7 +439,7 @@
        a má ho vidět každý – i ten, kdo Karla dávno zná. Takový hráč dostane
        scénu jednou navíc, ale rovnou od návodu (open({guide:true})), ne celou
        přednášku o seně znovu. Pak už je zase všechno jako dřív. */
-    const guide = again && !save.karelGuideSeen;
+    const guide = again && !save.karelGuideSeen && PLATFORM.shouldOfferInstall();
     if (again && !guide && !save.karelAlways) return;
     // menu se prolíná – ať se portál neotevře do rozjeté animace
     setTimeout(() => {
@@ -664,7 +664,11 @@
   }, { once: true, capture: true });
 
   window.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+    if (e.repeat || e.defaultPrevented) return;
+    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) return;
+    if (S.mode === 'menu' && curScreen !== 'menu') return;
+    const target = e.target;
+    if (target && target.closest && target.closest('button, a, input, select, textarea, [contenteditable]:not([contenteditable="false"]), [role="button"]')) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); uiOrJump(); }
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); slide(); }
     if (e.code === 'KeyP') togglePause();
@@ -980,15 +984,19 @@
     const panel = el.parentElement;
     const chars = Array.from(text); // Array.from kvůli emoji – ta jsou dvě jednotky
     const per = Math.min(17, 1700 / Math.max(1, chars.length));
-    let t0 = 0, shown = -1;
+    let t0 = 0, shown = -1, finished = false;
     const finish = () => {
+      if (finished) return;
+      finished = true;
       el.textContent = text;
       panel.classList.add('done', 'punch');
       AUDIO.play('quote');
       overSkip = null;
     };
-    overSkip = () => { overTasks.length = 0; finish(); };
+    // Complete only the story; the result counters must keep running.
+    overSkip = finish;
     overRun((now) => {
+      if (finished) return true;
       if (!t0) t0 = now + delay;
       if (now < t0) return false;
       const n = Math.min(chars.length, Math.floor((now - t0) / per) + 1);
@@ -2667,7 +2675,7 @@
     const px = playerX();
 
     ctx.save();
-    if (S.shake > 0) {
+    if (S.shake > 0 && !reduceMotionMq.matches) {
       ctx.translate((Math.random() - 0.5) * 10 * S.shake, (Math.random() - 0.5) * 8 * S.shake);
     }
 
@@ -5530,6 +5538,7 @@
   let installPrompt = null;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
+    if (!PLATFORM.shouldOfferInstall()) return;
     installPrompt = e;
     $('btn-install').hidden = false;
   });
