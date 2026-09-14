@@ -1409,6 +1409,9 @@ const KAREL = (() => {
      ŘEČ – posun po zastávkách
      ========================================================= */
   function speakStep() {
+    // Installation is a web-only topic, not part of the native welcome.
+    if (st.step >= GUIDE_FROM && st.step < GUIDE_FROM + 3
+        && !PLATFORM.shouldOfferInstall()) st.step = GUIDE_FROM + 3;
     const s = SPEECH[st.step];
     if (!s) { toPlay(); return; }
     say(s, { link: s.link, warm: s.warm });
@@ -1895,7 +1898,7 @@ const KAREL = (() => {
 
   function render() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (st.shake > 0) {
+    if (st.shake > 0 && !reduceMotion.matches) {
       ctx.translate((Math.random() - 0.5) * 10 * st.shake, (Math.random() - 0.5) * 10 * st.shake);
     }
     const tms = st.t * 1000;

@@ -10,8 +10,11 @@ mkdir -p www
 cp style.css manifest.webmanifest soukromi.html www/
 cp -r js assets www/
 
-sed "s/if ('serviceWorker' in navigator) {/if ('serviceWorker' in navigator \&\& !window.Capacitor) {/" index.html > www/index.html
-grep -q '!window.Capacitor' www/index.html || { echo 'ERROR: SW guard not applied — index.html changed?'; exit 1; }
+# The source already disables service workers on native platforms.
+# Validate that contract instead of rewriting an obsolete HTML fragment.
+cp index.html www/index.html
+grep -Fq "if ('serviceWorker' in navigator && !(window.PLATFORM && PLATFORM.native)) {" www/index.html || { echo 'ERROR: native SW guard missing'; exit 1; }
+test ! -e www/sw.js || { echo 'ERROR: service worker must not ship in the native app'; exit 1; }
 
 # tester guide is a web-testing thing; the file isn't shipped, so drop its menu link
 sed -i 's|<a class="privacy-link" href="jak-testovat.html"[^>]*>[^<]*</a> \&nbsp;·\&nbsp; ||' www/index.html
