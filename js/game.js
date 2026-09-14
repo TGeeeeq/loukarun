@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.8';
+  const GAME_VERSION = '1.9.9';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -199,8 +199,10 @@
 
   AUDIO.setSfx(save.sfx !== false);
   AUDIO.setMusic(save.music !== false);
-  // vibrace patří ke zvukům – kdo si je vypne, chce mít úplný klid
-  PLATFORM.setHaptics(save.sfx !== false);
+  /* Vibrace se řídí dvěma věcmi naráz: vlastním přepínačem v Nastavení
+     a hlavním vypínačem zvuků. Kdo ztlumí hru, chce klid celý – a kdo chce
+     zvuk bez bzučení, tomu na to teď stačí zaškrtávátko. */
+  COMFORT.setHapticsGate(() => save.sfx !== false);
 
   /* ---------- stav hry ---------- */
   const S = {
@@ -705,6 +707,21 @@
   // (nad HUD tlačítka) a pointerup by pak plátnu vůbec nedorazil
   window.addEventListener('pointerup', () => { ptr = null; releaseJump(); });
   window.addEventListener('pointercancel', () => { ptr = null; releaseJump(); });
+  for (const [id, action] of [['comfort-jump', jump], ['comfort-slide', slide]]) {
+    // Bez téhle pojistky by chybějící tlačítko v index.html shodilo celý
+    // game.js, a s ním hru – rozsynchronizovaná webová kopie by stačila.
+    const button = document.getElementById(id);
+    if (!button) continue;
+    button.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (S.mode !== 'run') return;
+      action();
+    });
+    button.addEventListener('click', (e) => {
+      // Keyboard/assistive activation; pointer activation was handled above.
+      if (e.detail === 0 && S.mode === 'run') action();
+    });
+  }
 
   /* =========================================================
      PRŮBĚH HRY
@@ -5315,7 +5332,7 @@
      hra vystartuje – dost na to, aby stisk něco znamenal, a málo na to, aby
      to zdržovalo. V šetrném režimu i na slabém telefonu se přeskočí. */
   const LAUNCH_MS = 180;
-  const reduceMotionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reduceMotionMq = { get matches() { return COMFORT.reducedMotion; } };
   $('btn-play').addEventListener('click', () => {
     if (lowFx || reduceMotionMq.matches) { startRun(); return; }
     const menu = $('screen-menu');
@@ -5418,7 +5435,7 @@
   }
   function toggleSfx() {
     save.sfx = !(save.sfx !== false);
-    persist(); AUDIO.setSfx(save.sfx); PLATFORM.setHaptics(save.sfx); syncAudioBtns();
+    persist(); AUDIO.setSfx(save.sfx); COMFORT.syncHaptics(); syncAudioBtns();
   }
   function toggleMusic() {
     save.music = !(save.music !== false);
@@ -5656,7 +5673,11 @@
      a Capacitor zvuk bez gesta povoluje, takže tam by obrazovka byla jen
      zdržení – zahodíme ji a nastartujeme hned. */
   function boot() {
-    armAfSplash();
+    if (COMFORT.fastStart && (save.runs > 0 || save.karelSeen)) {
+      afActive = false;
+      if (afSplash) afSplash.remove();
+      finishIntro();
+    } else armAfSplash();
     // hudba běží od úplného začátku – když prohlížeč autoplay nedovolí,
     // rozjede ji první dotek/klávesa (AUDIO si to pohlídá sám)
     AUDIO.playMusic('intro');

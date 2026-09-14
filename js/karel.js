@@ -1898,7 +1898,7 @@ const KAREL = (() => {
 
   function render() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (st.shake > 0 && !reduceMotion.matches) {
+    if (st.shake > 0 && !COMFORT.reducedMotion) {
       ctx.translate((Math.random() - 0.5) * 10 * st.shake, (Math.random() - 0.5) * 10 * st.shake);
     }
     const tms = st.t * 1000;

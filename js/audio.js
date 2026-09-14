@@ -13,6 +13,7 @@ const AUDIO = (() => {
   let enabled = true;
   let musicEnabled = true;
   let lastKey = null;
+  const levels = { music: 1, sfx: 1, voice: 1 };
 
   /* Mapování prostředí → seznam skladeb.
      Každé prostředí má víc krátkých skladeb (~30 s) a hraje je za sebou
@@ -115,10 +116,10 @@ const AUDIO = (() => {
       sfxComp.release.value = 0.2;
       sfxComp.connect(master);
       sfxGain = ctx.createGain();
-      sfxGain.gain.value = SFX_VOL;
+      sfxGain.gain.value = SFX_VOL * levels.sfx * duckNow;
       sfxGain.connect(sfxComp);
       voiceGain = ctx.createGain();
-      voiceGain.gain.value = VOICE_VOL;
+      voiceGain.gain.value = VOICE_VOL * levels.voice * duckNow;
       voiceGain.connect(master);
     }
     if (ctx.state === 'suspended') ctx.resume();
@@ -206,7 +207,7 @@ const AUDIO = (() => {
     let el = samples[src];
     if (!el) { el = samples[src] = new Audio(src); el.preload = 'auto'; }
     // ⟨audio⟩ nemá voiceGain – stejnou úroveň i ztlumení dopočítáme sem
-    el.volume = Math.min(1, vol * VOICE_VOL * duckNow);
+    el.volume = Math.min(1, vol * VOICE_VOL * levels.voice * duckNow);
     try { el.currentTime = 0; } catch (e) { /* metadata ještě nejsou */ }
     el.play().catch(() => {});
   }
@@ -339,13 +340,24 @@ const AUDIO = (() => {
   const DUCK_LEVEL = 0.32;
   const DUCK_TIME = 0.25;
   let duckNow = 1;
+  function setMix(values) {
+    for (const key of Object.keys(levels)) {
+      const value = values && values[key];
+      if (typeof value === 'number' && Number.isFinite(value)) levels[key] = Math.max(0, Math.min(1, value));
+    }
+    applyMix();
+    return { ...levels };
+  }
   function duck(on) {
     const to = on ? DUCK_LEVEL : 1;
     if (to === duckNow) return;
     duckNow = to;
+    applyMix();
+  }
+  function applyMix() {
     if (sfxGain && ctx) {
       const t = ctx.currentTime;
-      for (const [node, base] of [[sfxGain, SFX_VOL], [voiceGain, VOICE_VOL]]) {
+      for (const [node, base] of [[sfxGain, SFX_VOL * levels.sfx], [voiceGain, VOICE_VOL * levels.voice]]) {
         node.gain.cancelScheduledValues(t);
         node.gain.setValueAtTime(node.gain.value, t);
         node.gain.linearRampToValueAtTime(base * duckNow, t + DUCK_TIME);
@@ -356,9 +368,9 @@ const AUDIO = (() => {
       const g = WA.active.gain.gain;
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
-      g.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + DUCK_TIME);
+      g.linearRampToValueAtTime(MUSIC_VOL * levels.music * duckNow, t + DUCK_TIME);
     }
-    if (players) for (const el of players) el.volume = el._vol * duckNow;
+    if (players) for (const el of players) el.volume = el._vol * levels.music * duckNow;
     // vrstva rychlosti i hlasy visí na sfxGain/voiceGain – ztlumí se s nimi
   }
 
@@ -481,7 +493,7 @@ const AUDIO = (() => {
     node.loop = true; // pojistka: kdyby prolnutí nestihlo, hraje dál postaru
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(MUSIC_VOL * duckNow, t + fade);
+    gain.gain.linearRampToValueAtTime(MUSIC_VOL * levels.music * duckNow, t + fade);
     node.connect(gain); gain.connect(master);
     node.start(t);
     WA.active = { src, node, gain, buf, t0: t, dur: buf.duration };
@@ -541,7 +553,7 @@ const AUDIO = (() => {
   // odcházející stopa se spolehlivě zastaví i tam a nehraje přes novou.
   function setVol(el, v) {
     el._vol = v;
-    el.volume = v * duckNow; // ztlumení při pauze se přičítá až tady, ať prolínání zůstane netknuté
+    el.volume = v * levels.music * duckNow; // ztlumení při pauze se přičítá až tady, ať prolínání zůstane netknuté
   }
 
   /* Nová skladba se stahuje až ve chvíli, kdy na ni přijde řada. Když se
@@ -693,5 +705,5 @@ const AUDIO = (() => {
   }, 400);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
 
-  return { play, voice, playMusic, stopMusic, setSfx, setMusic, ensureCtx, comboTone, step, setIntensity, duck };
+  return { play, voice, playMusic, stopMusic, setSfx, setMusic, setMix, ensureCtx, comboTone, step, setIntensity, duck };
 })();

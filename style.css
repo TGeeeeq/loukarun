@@ -2979,3 +2979,46 @@ html.low-fx .book-leaf { display: none; }
   #start-gate img { max-height: 46%; }
   #start-gate .start-note { font-size: 0.74rem; }
 }
+
+/* Comfort panel: readable, scrollable and usable on short landscape phones. */
+#screen-settings { justify-content: flex-start; touch-action: pan-y; }
+#screen-settings .settings-card { width: min(720px, 100%); max-width: 720px; margin: auto 0; }
+#comfort-settings { width: 100%; text-align: left; }
+/* Zavřený panel je jen řádek s názvem – žádný rámeček, žádné odsazení.
+   Karta nastavení je na iPhoneSE a phone720x320 přesně na hranici výšky
+   (audit-rozvrzeni.js hlásí na čistém stavu nulu), takže cokoli navíc ji
+   přetlačí přes okraj. Krabice se proto kreslí až otevřená a záporný horní
+   okraj vrací zpátky mezeru, kterou řádku dává `.settings-card { gap: 12px }`.
+   Ta čísla nejsou odhad: s `margin: 6px` a `padding: 6px` hlásil audit
+   +23 px na čtyřech rozvrženích, s těmihle nulu. Než je změníš, změř to. */
+.comfort-panel { border: 0; padding: 0; margin: -6px 0 0; background: none; color: #344529; }
+.comfort-panel.open { border: 1px solid rgba(85,161,60,.25); border-radius: 18px; padding: 10px 16px 16px; margin: 12px 0; background: linear-gradient(145deg, #fffdf5, #edf5e5); }
+.comfort-toggle { width: 100%; padding: 2px; font: inherit; font-size: 1rem; font-weight: 800; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; line-height: 1.5; }
+.comfort-panel.open > .comfort-toggle { margin-bottom: 10px; }
+/* O viditelnosti rozhoduje atribut, ne prohlížeč – proto !important. */
+.comfort-body[hidden] { display: none !important; }
+.comfort-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; }
+.comfort-row { min-height: 48px; display: flex; align-items: center; gap: 10px; font-size: 16px; line-height: 1.35; cursor: pointer; }
+.comfort-range { display: grid; grid-template-columns: 1fr auto; }
+.comfort-range input { grid-column: 1 / -1; width: 100%; height: 32px; accent-color: #397b36; cursor: pointer; touch-action: none; }
+.comfort-range output { font-variant-numeric: tabular-nums; font-weight: 800; }
+.comfort-checkbox input { flex: 0 0 24px; width: 24px; height: 24px; accent-color: #397b36; }
+.comfort-note, .comfort-status { font-size: 14px; line-height: 1.45; margin-top: 12px; }
+.comfort-status:empty { display: none; }
+.comfort-status { color: #8a351d; font-weight: 700; }
+.comfort-controls { display: none; position: fixed; right: max(16px, var(--safe-right)); bottom: max(10px, var(--safe-bottom)); gap: 12px; pointer-events: auto; }
+.comfort-action { min-width: 76px; min-height: 52px; padding: 8px 14px; font-size: 16px; touch-action: none; opacity: .9; }
+@media (pointer: coarse) { html.comfort-touch-controls .comfort-controls { display: flex; } }
+html.comfort-large-text .settings-card .controls-hint,
+html.comfort-large-text .comfort-row,
+html.comfort-large-text .settings-links { font-size: 18px; }
+html.comfort-large-text .page-body,
+html.comfort-large-text .fact-body,
+html.comfort-large-text .page-locked-text { font-size: 21px !important; line-height: 1.55; }
+html.comfort-large-text .book-page { overflow-y: auto; }
+:where(button, a, input, select):focus-visible { outline: 3px solid #153f2b; outline-offset: 4px; box-shadow: 0 0 0 6px #fffdf5; }
+html.comfort-reduced .menu-fx,
+html.comfort-reduced .over-rays,
+html.comfort-reduced .over-burst { display: none; }
+html.comfort-reduced *, html.comfort-reduced *::before, html.comfort-reduced *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+@media (max-width: 520px) and (orientation: landscape) { .comfort-grid { grid-template-columns: 1fr; } }

@@ -213,8 +213,11 @@ window.STORE = (() => {
   }
 
   function set(key, value) {
-    try { localStorage.setItem(key, value); } catch (e) { /* plné/zakázané úložiště – postup zůstane v paměti */ }
+    let localSaved = false;
+    try { localStorage.setItem(key, value); localSaved = true; } catch (e) { /* session can continue */ }
     if (Prefs) { try { Prefs.set({ key, value }).catch(() => {}); } catch (e) {} }
+    // A false return does not rule out an asynchronous native backup.
+    return localSaved;
   }
 
   /* Záchrana postupu po vymazání dat WebView. Spustí se jen na Androidu,
