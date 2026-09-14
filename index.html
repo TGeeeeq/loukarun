@@ -170,7 +170,6 @@
              se mění podle toho, kde v deníčku hráč je (viz drawSpread) -->
         <div class="book-edge l" id="book-edge-l" aria-hidden="true"></div>
         <div class="book-edge r" id="book-edge-r" aria-hidden="true"></div>
-        <div class="book-ribbon" id="book-ribbon" aria-hidden="true"></div>
         <div class="book-page left" id="book-left"></div>
         <div class="book-page right" id="book-right"></div>
         <!-- stín, který otáčený list vrhá na stránku pod sebou. Vlastní
@@ -180,6 +179,12 @@
         <div class="book-cast r" id="cast-r" aria-hidden="true"></div>
         <div class="book-spine" aria-hidden="true"></div>
         <div class="book-corners" aria-hidden="true"></div>
+        <!-- Ukazatel „tady to pokračuje". Je to SOUROZENEC stránky, ne její
+             dítě: uvnitř by se rolovalo s obsahem pryč a hlavně by zamíchal
+             pořadí `.book-page > *`, na kterém visí nástupová animace textu.
+             Rozsvěcí ho syncPageMore() v js/game.js. -->
+        <div class="page-more l" id="page-more-l" aria-hidden="true"><i></i></div>
+        <div class="page-more r" id="page-more-r" aria-hidden="true"><i></i></div>
         <!-- Otáčený list je opravdový list papíru: LÍC je otisk odcházející
              stránky, RUB nese obsah stránky, na kterou list dosedne. Proto
              se za polovinou otočky ukáže správný text a ne prázdný papír.

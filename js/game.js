@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.9';
+  const GAME_VERSION = '1.9.10';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -165,6 +165,9 @@
     vignette = null;
     stageBand = null; stageBeam = null; stageBeamY = -1;
     measureMenuPanel();
+    // otočení telefonu mění výšku stránky deníčku, a tedy i to, jestli se
+    // do ní obsah vejde
+    schedulePageMore();
   }
   window.addEventListener('resize', resize);
   if (portraitMq.addEventListener) portraitMq.addEventListener('change', resize);
@@ -643,8 +646,12 @@
   window.addEventListener('click', (e) => {
     const t = e.target;
     if (!t || !t.closest || !t.closest('button')) return;
-    // „Pochlubit se" otevírá sdílecí list; fullscreen do stejného gesta nepatří
-    if (t.closest('#btn-share') || t.closest('#screen-diary')) return;
+    /* Tlačítka, která otevírají systémové okno, do fullscreenu nepatří:
+       „Pochlubit se" vytáhne sdílecí list a „Instalovat" nabídku instalace.
+       Prohlížeč nad takovým oknem fullscreen stejně zruší (nebo požadavek
+       rovnou zamítne), takže by z toho byla jen série zamítnutí – a právě
+       ta hře donedávna fullscreen zabíjela na celé sezení. */
+    if (t.closest('#btn-share') || t.closest('#btn-install') || t.closest('#screen-diary')) return;
     reclaimFullscreen();
   }, true);
   window.addEventListener('keydown', reclaimFullscreen, true);
@@ -772,7 +779,18 @@
   let wantFs = false;
   let lastFsTry = 0;
   let fsPending = false; // požadavek je na cestě – druhý by hlášku vytáhl dvakrát
-  let fsFails = 0;       // po třetím zamítnutí to prohlížeč zjevně nedovolí vůbec
+  let fsFails = 0;       // zamítnutí za sebou; po pauze se série zapomene
+  let lastFsFail = 0;
+  /* Série zamítnutí NESMÍ platit do konce sezení. Dřív platila („třikrát ne
+     znamená nikdy") a hráč to odnesl přesně takhle: přes stránku leží
+     systémové okno – typicky nabídka „Nainstalovat aplikaci" – a prohlížeč
+     po tu dobu fullscreen odmítá. Tři ťuknutí během ní stačila a hra pak
+     běžela v okně s adresním řádkem až do zavření karty, ať hráč dělal co
+     dělal. Zamítnutí je tedy dočasné a po téhle pauze se zapomíná.
+
+     Případ, který OPRAVDU platí navždy (vložený rámec, zásada oprávnění),
+     se nepozná počítáním pokusů, ale z `fullscreenEnabled` – viz níž. */
+  const FS_FAIL_FORGET = 10000;
 
   function inFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -786,6 +804,17 @@
   document.addEventListener('fullscreenchange', onFsChange);
   document.addEventListener('webkitfullscreenchange', onFsChange);
 
+  /* Zahození série zamítnutí. Volá se všude, kde se nad stránkou zavřelo
+     systémové okno – právě kvůli němu prohlížeč odmítal a odmítnutí se
+     nesmí vláčet dál. Návrat z instalace, ze sdílecího listu i z přepnutí
+     aplikací chodí jako `visibilitychange`, takže to pokryje i případy,
+     o kterých hra jinak neví. */
+  function forgetFsFails() { fsFails = 0; lastFsFail = 0; lastFsTry = 0; }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) forgetFsFails();
+  });
+  window.addEventListener('appinstalled', forgetFsFails);
+
   function lockLandscape() {
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock('landscape').catch(() => {});
@@ -797,8 +826,12 @@
     if (!window.matchMedia('(pointer: coarse)').matches) return;
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (!req) return;
+    // `false` (ne `undefined`) znamená, že to tenhle dokument nesmí vůbec
+    const blocked = document.fullscreenEnabled === false
+      || document.webkitFullscreenEnabled === false;
+    if (!req || blocked) return;
     wantFs = true;
+    if (performance.now() - lastFsFail > FS_FAIL_FORGET) fsFails = 0;
     /* Už ve fullscreenu jsme: požadavek se NEPOSÍLÁ. Chrome na Androidu totiž
        při každém přijatém requestFullscreen znovu vytáhne systémovou hlášku
        „Chcete-li ukončit režim celé obrazovky…“, která hráči leží přes hru,
@@ -807,13 +840,19 @@
     if (inFullscreen() || fsPending || fsFails >= 3) { lockLandscape(); return; }
     lastFsTry = performance.now();
     fsPending = true;
-    Promise.resolve(req.call(el))
-      .then(() => { fsFails = 0; lockLandscape(); })
+    const failed = () => { fsFails++; lastFsFail = performance.now(); lastFsTry = 0; };
+    /* Podle normy vrací `requestFullscreen` slib, ale starší prefixovaná
+       varianta umí vyhodit rovnou. Bez try/catch by výjimka proletěla ven
+       a `fsPending` by zůstalo natrvalo zvednuté – od té chvíle by si hra
+       fullscreen nevyžádala už nikdy a nedalo by se to ničím probudit. */
+    let p;
+    try { p = Promise.resolve(req.call(el)); }
+    catch (e) { fsPending = false; failed(); return; }
+    p.then(() => { fsFails = 0; lockLandscape(); })
       /* Zamítnutý pokus nesmí umlčet ten příští: `lastFsTry` se ruší, ať si
          hra fullscreen vezme hned na dalším tlačítku. Nekonečné zkoušení
-         hlídá `fsFails` – když to prohlížeč třikrát nedovolí, nedovolí to
-         nikdy (vložený rámec, zásada oprávnění) a hra ho přestane otravovat. */
-      .catch(() => { fsFails++; lastFsTry = 0; })
+         hlídá `fsFails`, ale jen v krátkém okně – viz FS_FAIL_FORGET. */
+      .catch(failed)
       .finally(() => { fsPending = false; });
   }
 
@@ -4077,6 +4116,59 @@
     $('book-edge-r').style.width = (11 - 9 * k).toFixed(1) + 'px';
   }
 
+  /* ---------- „tady to pokračuje" ----------
+     Stránka má pevnou výšku a při zvětšeném písmu se text nevejde. Dorolovat
+     se dá odjakživa (`.book-page { overflow: hidden auto }`), jenže na papíru
+     to není vidět a hráč o konec zajímavosti prostě přišel. Nad spodním
+     okrajem se proto rozsvítí zeslabení se šipkou dolů – a zhasne, jakmile je
+     stránka dorolovaná.
+
+     Počítá se to ze skutečné výšky obsahu, ne z nastavení: stejně tak to
+     chytne dlouhou stránku šatníku nebo systémové zvětšení písma na Androidu,
+     o kterém hra nijak neví. Práh 6 px je proti zaokrouhlování – bez něj
+     šipka blikala i na stránce, kde přetéká půl pixelu. */
+  function pageOverflows(el) {
+    return el.scrollHeight - el.clientHeight - el.scrollTop > 6;
+  }
+
+  /* POZOR: schválně `document.getElementById`, ne zkratka `$`. Ta se
+     deklaruje `const` až o pár tisíc řádků níž, kdežto tuhle funkci volá
+     i `resize()`, které běží hned při startu – přes `$` by to skončilo
+     v dočasné mrtvé zóně, celý game.js by spadl a hra by se nespustila
+     vůbec. (Ano, stalo se.) */
+  function syncPageMore() {
+    const pairs = [['book-left', 'page-more-l'], ['book-right', 'page-more-r']];
+    for (const [pageId, hintId] of pairs) {
+      const page = document.getElementById(pageId);
+      const hint = document.getElementById(hintId);
+      if (!page || !hint) continue;
+      hint.classList.toggle('on', pageOverflows(page));
+    }
+  }
+
+  /* Výška stránky se ustálí až o kus po vykreslení – doběhne nástupová
+     animace textu a doskáčou písma. Jedno měření hned po `renderPage` proto
+     umí lhát: šipka svítila na stránce, ze které přetečení mezitím zmizelo.
+     Kontrola se tedy po chvíli zopakuje.
+
+     `var` schválně, ne `let`: `resize()` běží hned při startu, tedy dřív,
+     než se sem vůbec dojde – s `let` by to byla dočasná mrtvá zóna a hra by
+     se nespustila. `clearTimeout(undefined)` nevadí. */
+  var pageMoreT;
+  function schedulePageMore() {
+    syncPageMore();
+    clearTimeout(pageMoreT);
+    pageMoreT = setTimeout(syncPageMore, 520);
+  }
+
+  /* Rolovat se dá prstem, kolečkem i tažením přes onBookMove() (které
+     zapisuje `scrollTop` samo) – všechny tři cesty skončí událostí `scroll`,
+     takže stačí poslouchat ji. */
+  ['book-left', 'book-right'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('scroll', syncPageMore, { passive: true });
+  });
+
   function drawSpread() {
     // odkazy na zrcadlo a mřížku šatníku platí jen pro právě kreslenou
     // dvoustranu – ať se po odlistování nepřekresluje do zahozených prvků
@@ -4084,6 +4176,7 @@
     renderPage($('book-left'), bookPages[bookSpread * 2], bookSpread * 2 + 1);
     renderPage($('book-right'), bookPages[bookSpread * 2 + 1], bookSpread * 2 + 2);
     drawChrome();
+    schedulePageMore();
   }
 
   function leafApply(p) {
@@ -4114,6 +4207,7 @@
     const sp = on ? turn.next : bookSpread;
     const i = dir > 0 ? sp * 2 : sp * 2 + 1;
     renderPage(dir > 0 ? L.left : L.right, bookPages[i], i + 1, { noInk: true });
+    schedulePageMore();
   }
 
   function beginTurn(dir) {
@@ -4286,6 +4380,9 @@
     drawSpread();
     AUDIO.play('click');
     showScreen('diary');
+    // drawSpread() kreslil do ještě schované obrazovky, kde je clientHeight
+    // nula a přetečení by tedy vyšlo vždycky – spočítá se až teď
+    schedulePageMore();
   }
 
   /* ---------- odznaky (achievementy) ----------

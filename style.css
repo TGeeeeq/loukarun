@@ -784,13 +784,48 @@ html.force-landscape .book-page { touch-action: none; }
     linear-gradient(90deg, rgba(70,46,18,0) 0%, rgba(70,46,18,0.3) 38%, rgba(52,33,12,0.42) 50%, rgba(70,46,18,0.3) 62%, rgba(70,46,18,0) 100%),
     linear-gradient(90deg, transparent 47%, rgba(255,245,222,0.16) 50%, transparent 53%);
 }
-/* Stužka je zároveň ukazatel postupu: drawSpread() jí posouvá `right`,
-   takže se v deníčku stěhuje zleva doprava podle toho, kde hráč je. */
-.book-ribbon {
-  position: absolute; top: -30px; right: 11%; width: 20px; height: 46px; z-index: 4;
-  background: linear-gradient(100deg, #a8362c, #d4564a 38%, #8d2b24);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
-  box-shadow: 0 7px 14px rgba(0,0,0,0.4);
+/* ---------- „tady to pokračuje" ----------
+   Stránka má pevnou výšku a při systémově zvětšeném písmu (nebo se
+   zapnutým „větším textem") se text nevejde. Dorolovat se dá odjakživa,
+   jenže na papíru to není vidět a hráč o zbytek zajímavosti prostě přišel.
+   Nad spodním okrajem se proto papír zesvětlí do ztracena a bliká v něm
+   šipka dolů — obojí zhasne, jakmile je stránka dorolovaná až dolů.
+
+   Geometrie je opsaná z `.book-cast`, aby ukazatel seděl přesně na papíru
+   a ne na kožených deskách. `z-index: 4` je pod otáčeným listem (5), takže
+   při listování nemůže ležet přes něj. Rozsvěcí ho syncPageMore(). */
+.page-more {
+  position: absolute; bottom: var(--gutter); height: 58px;
+  width: calc(50% - var(--gutter));
+  z-index: 4; pointer-events: none;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px;
+  opacity: 0; transition: opacity .22s var(--ease-out);
+  background: linear-gradient(180deg, rgba(246,235,210,0) 0%, rgba(246,235,210,0.72) 46%, rgba(240,226,194,0.95) 100%);
+}
+.page-more.l { left: var(--gutter); border-radius: 0 0 2px 7px; }
+.page-more.r { right: var(--gutter); border-radius: 0 0 7px 2px; }
+.page-more.on { opacity: 1; }
+/* Při listování je ukazatel vždycky pryč: stránka pod listem se zrovna
+   mění a její rolování stejně nikdo neřeší. */
+.book.turning .page-more { opacity: 0; }
+/* Šipka je dvě hrany otočené o 45° — žádný znak, takže nezávisí na písmu
+   ani na tom, čím ho systém nahradí. Inkoustová modrá, ať patří k deníčku. */
+.page-more i {
+  display: block; width: 14px; height: 14px;
+  border-right: 3px solid rgba(46,62,102,0.62);
+  border-bottom: 3px solid rgba(46,62,102,0.62);
+  border-radius: 0 0 3px 0;
+  /* Otočení patří do ZÁKLADNÍHO stylu a poskakuje se samostatnou vlastností
+     `translate`. S útlumem efektů se animace zkrátí na nulu a prvek spadne
+     zpátky na základní styl — kdyby v něm rotace nebyla, zůstal by z šipky
+     neotočený roh. */
+  transform: rotate(45deg);
+  animation: pageMoreNudge 1.8s var(--ease-out) infinite;
+}
+@keyframes pageMoreNudge {
+  0%, 58%, 100% { translate: 0 0; opacity: .5; }
+  22%           { translate: 3px 3px; opacity: 1; }
+  40%           { translate: 0 0; opacity: .8; }
 }
 
 /* ---------- typografie stránky ----------

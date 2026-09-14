@@ -18,7 +18,7 @@
      hudba, písma  z cache hned, na pozadí se nestahují znovu
    ========================================================= */
 
-const CACHE = 'loukarun-v58';
+const CACHE = 'loukarun-v59';
 
 const CORE = [
   './',
