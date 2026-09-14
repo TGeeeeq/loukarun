@@ -54,8 +54,8 @@ const KAREL = (() => {
       en: 'Hi! I\'m Karel. A donkey. Not as an insult, as a species.\nAnd before you run off — I need to tell you something.',
     },
     {
-      cs: 'Díky. Fakt díky. Že tuhle hru hraješ, že o nás víš, že jsi tady.\nJe nás na Louce třiadevadesát a skoro nikdo z nás to jinde neměl lehký. Počítal jsem nás. Dvakrát. Podruhé to vyšlo stejně, což mě překvapilo.',
-      en: 'Thank you. Really. For playing this game, for knowing about us, for being here.\nThere are ninety-three of us at the Meadow and hardly any of us had it easy before. I counted us. Twice. The second time it came out the same, which surprised me.',
+      cs: 'Díky. Fakt díky. Že tuhle hru hraješ, že o nás víš, že jsi tady.\nJe nás na Louce přes stovku a skoro nikdo z nás to jinde neměl lehký. Počítal jsem nás. Dvakrát. Podruhé to vyšlo stejně, což mě překvapilo.',
+      en: 'Thank you. Really. For playing this game, for knowing about us, for being here.\nThere are over a hundred of us at the Meadow and hardly any of us had it easy before. I counted us. Twice. The second time it came out the same, which surprised me.',
     },
     {
       cs: 'Tohle není jenom hra. Louka je opravdové místo, kde se opravdu žere opravdové seno.\nMrkni na náš web — jsou tam fotky, na kterých vypadám mimořádně dobře.',
@@ -63,18 +63,25 @@ const KAREL = (() => {
       link: { href: URL.web, cs: '🌿 nechmerust.org', en: '🌿 nechmerust.org' },
     },
     {
-      cs: 'A přijeď za námi! V srpnu a v září je Loukáda — víkend, kdy se společně pracuje, večer se sedí u ohně a spí se pod nebem.\n11.–13. září je festival Spolu Mezi Lesy a 26. září procházka se zvířaty. Půjdu vepředu. To je moje pozice.',
-      en: 'And come visit! There\'s Loukáda in August and September — a weekend of working together, evenings by the fire and sleeping under the sky.\nSept 11–13 is the Spolu Mezi Lesy festival, and Sept 26 a walk with the animals. I\'ll be in front. That\'s my position.',
+      /* ŽÁDNÁ PEVNÁ DATA. Dřív tu stálo „11.–13. září je festival“ a den po
+         festivalu z toho byla ve hře nepravda, o které nikdo nevěděl —
+         verze hry se nevydává po každé akci. Co se zrovna chystá, nese
+         tlačítko s odkazem; text mluví jen o tom, co se opakuje. */
+      cs: 'A přijeď za námi! Pořádáme brigády, festivaly a procházky se zvířaty — a další už chystáme. Loukáda je víkend, kdy se společně pracuje, večer se sedí u ohně a spí se pod nebem.\nNově si u nás jde zamluvit i soukromý čas jen pro sebe: maringotka pod stromy, procházka jen pro vás. Co je zrovna na programu, najdeš na webu. Půjdu vepředu. To je moje pozice.',
+      en: 'And come visit! We run work weekends, festivals and walks with the animals — and more are on the way. Loukáda is a weekend of working together, evenings by the fire and sleeping under the sky.\nAnd now you can book time at the Meadow just for yourselves: a shepherd\'s hut under the trees, a walk for your group alone. Whatever is on right now is on the website. I\'ll be in front. That\'s my position.',
       link: { href: URL.udalosti, cs: '📅 Nadcházející akce', en: '📅 Upcoming events' },
     },
     {
-      cs: 'Novinky z Louky? Přijely ovečky Malvína a Rozárka a pořád se všemu diví.\nKobylka Zorka nás opustila a chybí nám každý den. A tahle hra je i na Google Play — jsem oficiálně v obchodě. Máma by byla pyšná.',
-      en: 'News from the Meadow? The lambs Malvína and Rozárka arrived and are still amazed by everything.\nZorka the mare left us and we miss her every day. And this game is on Google Play — I\'m officially in a store. Mum would be proud.',
+      /* Povahy obou oslic jsou opsané z popisků na nechmerust.org
+         (lib/animals.ts), ať Karel neříká o vlastních kamarádkách něco
+         jiného než jejich karta na webu. */
+      cs: 'Novinky z Louky? Už nejsem jediný osel — přijely Tonička a Elvíra. Tonička si všechno nejdřív pořádně prohlédne, Elvíra u plotu nezmešká vůbec nic.\nA díky všem, kdo dorazili na festival Spolu Mezi Lesy. Uspořádaly ho naše milé Kateřinky a bylo to krásné.',
+      en: 'News from the Meadow? I\'m not the only donkey here any more — Tonička and Elvíra have arrived. Tonička likes to size everything up first; Elvíra never misses a thing at the fence.\nAnd thank you to everyone who came to the Spolu Mezi Lesy festival. Our lovely Kateřinas put it on and it was beautiful.',
       link: { href: URL.novinky, cs: '📰 Novinky z Louky', en: '📰 News from the Meadow' },
     },
     {
-      cs: 'A teď to hlavní, kvůli čemu jsem sem lezl portálem:\nběží sbírka na seno a slámu na zimu. Ceny sena se zdvojnásobily a nás je pořád třiadevadesát. Cíl je sto tisíc.\nVím, prosit o seno není nic okouzlujícího. Ale zima je zima a seníky se samy neplní.',
-      en: 'And now the main thing I climbed through a portal for:\nour hay and straw winter fundraiser is running. Hay prices have doubled and there are still ninety-three of us. The goal is 100,000 CZK.\nI know, begging for hay isn\'t glamorous. But winter is winter and haylofts don\'t fill themselves.',
+      cs: 'A teď to hlavní, kvůli čemu jsem sem lezl portálem:\nběží sbírka na seno a slámu na zimu. Ceny sena se zdvojnásobily a je nás přes stovku. Cíl je sto tisíc.\nVím, prosit o seno není nic okouzlujícího. Ale zima je zima a seníky se samy neplní.',
+      en: 'And now the main thing I climbed through a portal for:\nour hay and straw winter fundraiser is running. Hay prices have doubled and there are over a hundred of us. The goal is 100,000 CZK.\nI know, begging for hay isn\'t glamorous. But winter is winter and haylofts don\'t fill themselves.',
       link: { href: URL.seno, cs: '🌾 Přispět na seno', en: '🌾 Donate for hay' },
       warm: true,
     },
