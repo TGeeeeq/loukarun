@@ -421,8 +421,19 @@
       var KEY_LOAD = 'loukarun-znovu';     // tiché načtení znovu
       var done = false;
 
-      function had(k) { try { return sessionStorage.getItem(k) === '1'; } catch (e) { return false; } }
-      function mark(k) { try { sessionStorage.setItem(k, '1'); } catch (e) { /* bez úložiště */ } }
+      // Značka platí jen chvíli. Dřív se ukládala natrvalo a rušila se jedině
+      // po povedeném startu – jenže v nainstalované hře sessionStorage přežívá,
+      // dokud Android drží úlohu. Po jednom nepovedeném spuštění tak šlo další
+      // ťuknutí rovnou na chybovou stránku, i když by oprava zabrala. Přesně
+      // tak vypadá „ikona se spustí až na několikáté ťuknutí“.
+      var PLATNOST = 90000; // ms – jedno spuštění i s opravou se vejde
+      function had(k) {
+        try {
+          var v = parseInt(sessionStorage.getItem(k), 10);
+          return !!v && Date.now() - v < PLATNOST;
+        } catch (e) { return false; }
+      }
+      function mark(k) { try { sessionStorage.setItem(k, String(Date.now())); } catch (e) { /* bez úložiště */ } }
 
       function check() {
         if (done) return;
