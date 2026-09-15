@@ -482,6 +482,10 @@
           'připojení k internetu. <br><em>Couldn’t load the game. Please try again online.</em></p>' +
           '<button style="font:inherit;padding:10px 18px;border:0;border-radius:999px;' +
           'background:#0d3b1e;color:#fff" onclick="location.reload()">Zkusit znovu / Retry</button>' +
+          // Cesta ven z rozbité uložené kopie. Tahle stránka leží mimo dosah
+          // service workeru, takže se načte i tehdy, když se hra načíst nedá.
+          '<a href="/loukarun/oprava" style="font:inherit;font-size:14px;opacity:.85;' +
+          'color:#0d3b1e">Hra se pořád neotvírá? Zkus opravu</a>' +
           '<code style="font-size:12px;opacity:.7;word-break:break-all">' + location.href + '</code>' +
           '</div>';
       }

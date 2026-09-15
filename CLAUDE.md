@@ -4,12 +4,16 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.12 opravuje spouštění nainstalované PWA z plochy** (ikona po
+> **Hra 1.9.13 opravuje spouštění nainstalované PWA z plochy** (ikona po
 > ťuknutí neotevřela nic, na Xiaomi i po desítkách pokusů). Příčina byla
 > v service workeru — podrobně v *Na co si dát pozor*, odstavce o pozvánkové
-> bráně a o `VITAL`. Je to **jen na webu**; aplikace z Google Play service
-> worker nepoužívá, takže se jí to netýká a AAB se kvůli tomu stavět nemusí.
-> Číslo cache je `loukarun-v61`.
+> bráně a o aktivaci nové verze. Je to **jen na webu**; aplikace z Google Play
+> service worker nepoužívá, takže se jí to netýká a AAB se kvůli tomu stavět
+> nemusí. Číslo cache je `loukarun-v62`.
+>
+> Pozor na 1.9.12: ta měla instalaci, která schválně selhala bez souborů ze
+> `VITAL` — a hráče s vypršeným kódem tím zamkla v rozbitém stavu napořád.
+> Verze 1.9.13 to obrací a přidává záchrannou stránku `/loukarun/oprava`.
 
 > **AAB v1.0.15 (versionCode 16, hra 1.9.11) je sestavený, podepsaný a leží
 > v `googleplay/app-release.aab`. Zbývá ho ručně nahrát do Play Console**
@@ -217,17 +221,31 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
   stránka, takže to vypadá, že ťuknutí na ikonu neudělalo vůbec nic. Cache se
   sama nepřepisuje, takže to **nespraví ani restart telefonu** — jen nové číslo
   v `CACHE`. Proto `install` ukládá přes `seed()` s kontrolou `storable()`,
-  čtení jede přes `usable()` a brána na straně webu odpovídá na skript a styl
+  čtení jede přes `usable()`, `activate` pouští `scrub()` (vyhodí otrávené
+  položky ze všech cache) a brána na straně webu odpovídá na skript a styl
   stavem **403**, ne přesměrováním.
-- **Instalace service workeru schválně selže, když chybí něco ze `VITAL`.**
-  Dřív `Promise.allSettled` prošlo i tehdy, když se nestáhlo vůbec nic:
-  `skipWaiting()` pustilo novou verzi ke slovu, `activate` smazal starou cache
-  a hra byla rozbitá až do příštího vydání. Teď se nová verze neaktivuje, stará
-  cache zůstane a hráč dál hraje tu dosavadní.
+- **Nová verze service workeru se aktivuje VŽDYCKY, i když se jí nepovedlo nic
+  stáhnout.** Opravená obsluha požadavků je to nejcennější, co nese, a dokud běží
+  ta stará, hráč se z rozbitého stavu nedostane. Pokus nechat instalaci selhat,
+  aby se nepustila ke slovu poloprázdná cache, dopadl mnohem hůř: komu vypršel
+  pozvánkový kód, tomu `seed()` dostal od brány odmítnutí, instalace selhala
+  pokaždé — a on zůstal navždy na staré verzi i s rozbitou cache. Podle úplnosti
+  cache se rozhoduje jen úklid té předchozí (`complete()` v `activate`), a než
+  je nová hotová, čte se přes `cached()` i z té staré. Doplní ji `topUp()` na
+  pozadí při startu hry; teprve až je kompletní, předchozí se smaže.
 - **Značky hlídače spuštění v `sessionStorage` platí jen 90 s.** V nainstalované
   hře `sessionStorage` přežívá, dokud Android drží úlohu, takže natrvalo
   nastavená značka po jednom nepovedeném startu poslala každé další ťuknutí
   rovnou na chybovou stránku — místo aby zkusila opravu, která by zabrala.
+
+- **Z prázdného okna musí vést cesta ven, a ta nesmí být uvnitř hry.** Když se
+  stránka hry nenačte, nespustí se ani nic, co by si uklidilo — hráč je zamčený.
+  Proto obě náhradní stránky v `sw.js` i hlídač spuštění v `index.html` odkazují
+  na **`/loukarun/oprava`**: ta leží mimo scope service workeru, takže se načte
+  vždycky, vypíše stav cache a umí ji smazat. Landing `/loukarun` totéž dělá
+  potichu sám, ale **jen když najde otrávenou položku** — nekompletní cache je
+  po vydání běžný mezistav, ne porucha, a mazat podle ní by každému hráči
+  zbytečně zabilo offline hru.
 
 - **Kopie hry na webu.** Do `nechmerust.org` se hra dostává skriptem
   `web/scripts/sync-loukarun.sh` v repozitáři `TGeeeeq/NMRStranky1.0`.

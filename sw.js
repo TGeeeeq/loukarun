@@ -22,9 +22,15 @@
    DRUHÉ PRAVIDLO: do cache nesmí nic, co přišlo od pozvánkové
    brány. Viz `storable()` a `seed()` – stálo to hráče prázdné
    okno, které se samo nespravilo.
+
+   TŘETÍ PRAVIDLO: nová verze se musí aktivovat VŽDYCKY, i když
+   se jí nepodařilo stáhnout soubory. Opravená obsluha požadavků
+   je totiž to nejcennější, co nese – a dokud běží ta stará,
+   hráč se z rozbitého stavu nedostane. Co se rozhoduje podle
+   úplnosti cache, je jen úklid té předchozí (`activate`).
    ========================================================= */
 
-const CACHE = 'loukarun-v61';
+const CACHE = 'loukarun-v62';
 
 const CORE = [
   './',
@@ -116,23 +122,57 @@ self.addEventListener('install', (e) => {
     // po jednom (ne addAll): jediný nedostupný obrázek by jinak shodil celé
     // ukládání a hra by neměla offline vůbec nic
     await Promise.allSettled(CORE.map((u) => seed(cache, u)));
-    // Chybí-li něco, bez čeho se hra nespustí, instalace SCHVÁLNĚ selže:
-    // nová verze se neaktivuje, `activate` nesmaže starou cache a hráč dál
-    // hraje tu dosavadní. Dřív se aktivovala i poloprázdná cache a stará se
-    // přitom smazala – od té chvíle byla hra rozbitá až do příštího vydání.
-    for (const u of VITAL) {
-      if (!(await cache.match(u))) throw new Error('nestáhlo se: ' + u);
-    }
+    // A instalace se kvůli tomu NESMÍ vzdát – viz třetí pravidlo v hlavičce.
+    // Pokus nechat ji selhat, aby se nepustila ke slovu poloprázdná cache,
+    // dopadl mnohem hůř: komu vypršel pozvánkový kód, tomu `seed()` dostal
+    // od brány odmítnutí, instalace selhala pokaždé, a on zůstal navždy
+    // na staré verzi – i s rozbitou cache, kvůli které se hra neotevřela.
     await self.skipWaiting();
   })());
 });
 
+// Je v téhle cache všechno, bez čeho se hra nespustí?
+async function complete(name) {
+  try {
+    const cache = await caches.open(name);
+    for (const u of VITAL) {
+      if (!usable(await cache.match(u))) return false;
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* Vyhodit z cache všechno, co přišlo od brány. Jediná taková položka umí hru
+   vypnout úplně (Chrome odmítne `redirected` odpověď u navigace a okno zůstane
+   prázdné), a protože se cache sama nepřepisuje, drží to až do příštího vydání.
+   Uklízí se ve VŠECH cache, ne jen v té aktuální – z těch starších se totiž
+   ještě čte, dokud není ta nová hotová. */
+async function scrub() {
+  const keys = await caches.keys();
+  for (const name of keys) {
+    try {
+      const cache = await caches.open(name);
+      for (const req of await cache.keys()) {
+        const res = await cache.match(req);
+        if (res && !usable(res)) await cache.delete(req);
+      }
+    } catch (e) { /* jednu cache neuklidíme, na ostatní to nemá vliv */ }
+  }
+}
+
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil((async () => {
+    await scrub();
+    // Předchozí cache se smaže, teprve až je ta nová kompletní. Dokud není,
+    // je z čeho brát – `cached()` sáhne i do ní a hra běží dál.
+    if (await complete(CACHE)) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    }
+    await self.clients.claim();
+  })());
 });
 
 // velké soubory, které se prakticky nemění – ty se na pozadí neobnovují,
@@ -160,13 +200,19 @@ function withTimeout(p, ms, ctrl) {
 }
 
 // Společný rám pro obě náhradní stránky. Radši čitelná zpráva s tlačítkem
-// než bílé okno, ve kterém není vidět ani adresa.
+// než bílé okno, ve kterém není vidět ani adresa. Pod tlačítkem je vždycky
+// cesta na /loukarun/oprava — ta stránka leží mimo dosah service workeru, takže
+// se načte i tehdy, když je uložená kopie hry rozbitá. Bez ní se hráč z prázdna
+// nemá jak dostat: stránka hry se nenačte, tedy se nespustí ani nic, co by to
+// spravilo.
 function page(emoji, nadpis, text, tlacitko, odkaz) {
   const akce = odkaz
     ? '<a href="' + odkaz + '" style="font:inherit;padding:10px 18px;border-radius:999px;' +
       'background:#0d3b1e;color:#fff;text-decoration:none">' + tlacitko + '</a>'
     : '<button style="font:inherit;padding:10px 18px;border:0;border-radius:999px;' +
       'background:#0d3b1e;color:#fff" onclick="location.reload()">' + tlacitko + '</button>';
+  const zachrana = '<a href="/loukarun/oprava" style="font:inherit;font-size:14px;opacity:.8;' +
+    'color:#0d3b1e">Hra se pořád neotvírá? Zkus opravu</a>';
   return new Response(
     '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -175,7 +221,7 @@ function page(emoji, nadpis, text, tlacitko, odkaz) {
     'gap:12px;align-items:center;justify-content:center;text-align:center;padding:24px">' +
     '<div style="font-size:44px">' + emoji + '</div>' +
     '<strong style="font-size:20px">' + nadpis + '</strong>' +
-    '<p style="margin:0;max-width:34ch">' + text + '</p>' + akce +
+    '<p style="margin:0;max-width:34ch">' + text + '</p>' + akce + zachrana +
     '</body></html>',
     { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
   );
@@ -203,12 +249,45 @@ function fromGate(res) {
   return !!res && (res.redirected || res.type === 'opaqueredirect' || res.status === 403);
 }
 
+/* Uložená kopie, ať leží kdekoli. Přednost má aktuální cache; když v ní soubor
+   ještě není (nová verze se nestihla dostáhnout, nebo ji odmítla brána), sáhne
+   se do té předchozí. Hrát chvíli starou verzi je nesrovnatelně lepší než
+   koukat do prázdného okna, a `refresh()` tu novou mezitím doplní. */
+async function cached(url) {
+  const cache = await caches.open(CACHE);
+  const hit = usable(await cache.match(url));
+  if (hit) return hit;
+  return usable(await caches.match(url));
+}
+
+/* Doplnění nové cache na pozadí. `install` mohl skončit s poloprázdnou cache —
+   komu zrovna vypršel pozvánkový kód, tomu brána odmítla všechno kromě ikon —
+   a podruhé se nespustí, protože `sw.js` se od té doby nezměnil. Bez tohohle by
+   hra napořád běžela z předchozí verze a ta by se nikdy neuklidila. Jakmile je
+   nová cache kompletní, ta předchozí jde pryč; do té doby je z čeho brát. */
+let doplnujeSe = false;
+async function topUp() {
+  if (doplnujeSe || (await complete(CACHE))) return;
+  doplnujeSe = true;
+  try {
+    const cache = await caches.open(CACHE);
+    for (const u of CORE) {
+      if (usable(await cache.match(u))) continue;
+      try { await seed(cache, u); } catch (e) { /* brána nebo offline – zkusí se při dalším startu */ }
+    }
+    if (await complete(CACHE)) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    }
+  } catch (e) { /* nevadí, hra běží z toho, co má */ }
+  doplnujeSe = false;
+}
+
 // Spuštění hry (ťuknutí na ikonu na ploše). Uložená kopie má přednost před
 // sítí – jinak start visí na tom, jak rychle se probudí mobilní připojení.
 async function handleNavigate(req) {
   const key = isShell(req.url) ? SHELL_URL : req.url;
-  const cache = await caches.open(CACHE);
-  const hit = usable(await cache.match(key));
+  const hit = await cached(key);
   if (hit) {
     refresh(key);
     return hit;
@@ -232,8 +311,7 @@ async function handleNavigate(req) {
    `install` stáhne všechno znovu a teprve pak se nová verze aktivuje. Stránka
    hry se z cache brala odjakživa, tímhle se k ní jen srovnaly i skripty. */
 async function staleFirst(req) {
-  const cache = await caches.open(CACHE);
-  const hit = usable(await cache.match(req.url));
+  const hit = await cached(req.url);
   if (hit) {
     refresh(req.url);
     return hit;
@@ -247,7 +325,7 @@ async function staleFirst(req) {
       // Prázdná chyba aspoň spustí hlídač spuštění v index.html.
       return new Response('', { status: 504, statusText: 'Nedostupné' });
     }
-    cache.put(req.url, res.clone()).catch(() => { /* plná paměť */ });
+    store(req.url, res);
     return res;
   } catch (e) {
     return new Response('', { status: 504, statusText: 'Offline' });
@@ -257,8 +335,7 @@ async function staleFirst(req) {
 // Hudba, písma a obrázky se prakticky nemění a jsou velké – z cache hned
 // a na pozadí se znovu nestahují, ať hra nežere data při každém spuštění.
 async function cacheFirst(req) {
-  const cache = await caches.open(CACHE);
-  const hit = usable(await cache.match(req.url));
+  const hit = await cached(req.url);
   if (hit) return hit;
   try {
     const res = await fetch(req.url);
@@ -275,7 +352,7 @@ async function cacheFirst(req) {
 async function rangeResponse(req) {
   const cache = await caches.open(CACHE);
   const keyReq = new Request(req.url); // klíč bez Range → sedí na uložený plný soubor
-  let full = usable(await cache.match(keyReq));
+  let full = await cached(req.url);
   if (!full) {
     try {
       const net = await fetch(keyReq);
@@ -313,7 +390,9 @@ self.addEventListener('fetch', (e) => {
   try { url = new URL(req.url); } catch (err) { return; }
   if (url.origin !== location.origin) return;
 
-  if (req.mode === 'navigate') { e.respondWith(handleNavigate(req)); return; }
+  // Doplňuje se jen při startu hry, ne u každého souboru – jednou za spuštění
+  // stačí a na rozdíl od odpovědi se na to nečeká.
+  if (req.mode === 'navigate') { e.respondWith(handleNavigate(req)); e.waitUntil(topUp()); return; }
 
   // Range požadavek (typicky iOS audio) obsloužíme jako 206 Partial Content
   if (req.headers.has('range')) { e.respondWith(rangeResponse(req)); return; }
