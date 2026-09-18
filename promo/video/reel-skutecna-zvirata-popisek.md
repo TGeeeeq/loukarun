@@ -27,36 +27,54 @@ Changelog patří do popisku, ne do obrazu.
 Video **záměrně neuvádí cenu.** Cena se právě přehodnocuje a video se
 slíbenou částkou se dá opravit jedině přetočením.
 
-## Popisek k příspěvku
+## Popisek k příspěvku — verze pro osmidenní akci zdarma
 
-> Osel Karel neběhá pro zábavu. Běhá pro seno. 🥕
+Psaný Karlovým hlasem, protože ve videu mluví on. Jeho styl je suchý,
+sebeironický a **nikdy neprosí** — „výtěžek jde na seno" ano, „prosíme,
+podpořte nás" ne. Pointa patří na konec věty.
+
+> **Osm dní jsem zadarmo. Pak si zase začnu říkat o peníze.**
 >
-> Louka Run je hra, ve které hrajete za skutečná zvířata z našeho azylu —
-> osla Karla, ovečku Pogo, krávu Avalu, prasátko Flíčka, muflona Yakula
-> a krávu Květu. Všichni doopravdy žijí na Louce a je nás tu přes stovku.
+> Jmenuju se Karel. Osel. Ne jako nadávka, jako druh. Žiju v azylu Nech mě
+> růst a do **[DOPLŇ DATUM]** se dám stáhnout z Google Play za nula korun.
 >
-> V nové verzi má každý z nich v deníčku vlastní stránku — zajímavosti,
-> historky, kdo odkud je a co provedl. K tomu se dá ovládání nastavit podle
-> sebe (větší tlačítka, hlasitosti zvlášť, klidnější efekty) a hra naskočí
-> i tam, kde dřív zlobila.
+> V nové verzi je deníček. O každém z nás je v něm stránka — odkud jsme, co
+> jsme provedli a co nám dodneška nikdo nevěří. Ovečka Pogo jich má stejně
+> jako já, ale nezaslouží si to tak.
 >
-> Bez reklam. Bez sledování. Bez sbírání dat o vás.
+> Reklamy ve hře nejsou. Data o vás nesbíráme, nevěděli bychom, co s nimi.
+> Co se vydělá, jde na seno a na péči — je nás tu přes stovku a seno samo
+> do seníku nenaskáče.
 >
-> ▶️ Odkaz v biu: nechmerust.org/loukarun
+> Osm dní. Pak zase stojím peníze. Nespěchejte, ale zase moc neotálejte.
+>
+> ▶️ Odkaz v biu
 >
 > #nechmerust #loukarun #azylprozvirata #zachranenazvirata #adoptdontshop
-> #ceskahra #czechgamedev #indiegame #mobilnihra #gamedev #osel #neziskovka
-> #zviratanaslouce #hrasesmyslem #darujme
+> #ceskahra #czechgamedev #indiegame #mobilnihra #hrazdarma #googleplay
+> #osel #neziskovka #zviratanaslouce #hrasesmyslem
 
-## Alternativní první věta (A/B test)
+### První řádek — varianty na A/B
 
-Pusť jednu verzi, po třech dnech druhou na stejný čas v týdnu — první věta
-rozhoduje o dokoukání víc než zbytek dohromady.
+Rozhoduje o dokoukání víc než zbytek dohromady. Pusť jednu verzi, po akci
+zkus druhou.
 
-- **A:** „Osel Karel neběhá pro zábavu. Běhá pro seno. 🥕“
-- **B:** „Tahle hra krmí opravdová zvířata. Tohle je jedno z nich.“
+- **A:** „Osm dní jsem zadarmo. Pak si zase začnu říkat o peníze."
+- **B:** „Tohle je Karel. Osm dní se dá stáhnout za nula korun."
+
+### Až akce skončí
+
+**Popisek uprav**, nemaž příspěvek — po osmi dnech tvrdí něco, co neplatí,
+a zůstává na profilu. Stačí přepsat první řádek a odstavec s datem na
+„Akce skončila, ale hrát se dá dál" a odkaz nechat.
 
 ## Kdy publikovat
 
-Nejdřív vyřeš, kam odkaz vede (viz níž) — reel s dosahem v desítkách tisíc
-poslaný na bránu s pozvánkovým kódem je promarněný dosah, ne test trhu.
+**Nejdřív vyřeš, kam odkaz vede.** Po dobu akce musí z bia vést rovnou na
+Google Play, kde je hra zdarma — ne na `nechmerust.org/loukarun`, protože
+tam je webová verze pořád za pozvánkovým kódem a reel s dosahem v desítkách
+tisíc poslaný na bránu s kódem je promarněný dosah, ne test trhu.
+
+Adresa vypálená ve videu tím nevadí: `nechmerust.org/loukarun` je stránka
+azylu o hře a snese, aby po dobu akce nesla nahoře výrazné tlačítko na Play.
+Odkaz v biu ale musí být přímý.
