@@ -33,6 +33,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')
 WORK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, '.promo-work')
 KLIPY = os.path.join(WORK, 'klipy')
 KARTY = os.path.join(WORK, 'karty')
+KAREL = os.path.join(WORK, 'karel')
 DILY = os.path.join(WORK, 'dily-reel')
 OUT = os.path.join(ROOT, 'promo', 'video')
 HUDBA = os.path.join(ROOT, 'assets', 'music', 'menu.mp3')
@@ -42,20 +43,28 @@ W, H = 1080, 1920
 # okno s herním záběrem – musí sedět s OKNO v natoc-karty-reel.js
 OKNO_Y, OKNO_H = 430, 880
 
+# Karel v popředí: široký přes celou plochu a posazený tak, aby stál
+# pod herním oknem a bublina mu vyšla do volného místa pod ním
+KAREL_W, KAREL_X, KAREL_Y = 1320, -150, 800
+
+# Odkud se bere výřez při přiblížení. 0,5 je střed; menší číslo drží
+# záběr víc vlevo, kde běží zvířátko – při souměrném výřezu z něj
+# zůstal na svislém formátu proužek u kraje.
+KRAJ = 0.28
+
 # =========================================================
 #  SCÉNÁŘ  (zdroj, odkud, jak dlouho, který popisek)
 #  První dva díly jsou jeden plynulý záběr rozdělený jen
 #  textem – hook nesmí přerušit střih dřív, než se dočte.
 # =========================================================
 SCENAR = [
-    dict(zdroj='louka',    od=5.0,  delka=3.0, popisek=1, nazev='hook'),
-    dict(zdroj='louka',    od=8.0,  delka=2.8, popisek=2, nazev='kdo-to-je'),
-    dict(zdroj='sad',      od=5.5,  delka=2.8, popisek=3, nazev='proc'),
-    dict(zdroj='les',      od=5.5,  delka=2.8, popisek=5, nazev='svety'),
-    # věta o šesti zvířatech patří k jedinému záběru, kde jsou vidět všechna
-    # zoom=1.0: karty zvířátek jdou až ke krajům, přiblížení by je uřízlo
-    dict(zdroj='zviratka', od=5.2,  delka=3.4, popisek=4, nazev='zvirata', zoom=1.0),
-    dict(zdroj='noc',      od=6.8,  delka=2.8, popisek=6, nazev='nova-verze'),
+    dict(zdroj='louka',    od=5.0,  delka=2.8, popisek=1, nazev='hook'),
+    # Karel se vynoří portálem PŘED běžící hrou a mluví za sebe – proto
+    # tyhle díly nemají popisek, text nese jeho bublina
+    dict(zdroj='louka',    od=7.8,  delka=3.5, popisek=None, karel='prichod', nazev='karel-kdo'),
+    dict(zdroj='sad',      od=5.5,  delka=4.0, popisek=None, karel='denicek', nazev='karel-denicek'),
+    dict(zdroj='denicek',  od=7.2,  delka=3.2, popisek=7, nazev='denicek', zoom=1.0),
+    dict(zdroj='zviratka', od=5.2,  delka=3.0, popisek=4, nazev='zvirata', zoom=1.0),
     dict(zdroj='karta:reel-konec', od=0, delka=4.0, popisek=None, nazev='konec'),
 ]
 
@@ -120,19 +129,32 @@ def dil(s, i):
         f'[poz]scale={W}:{H}:force_original_aspect_ratio=increase,'
         f'crop={W}:{H},boxblur=28:2,eq=brightness=-0.10:saturation=1.05,setsar=1[bg];'
         f'[hra]scale={int(W * zoom)}:{OKNO_H}:flags=lanczos,'
-        f'crop={W}:{OKNO_H}:{int(W * (zoom - 1) / 2)}:0,setsar=1[fg];'
+        f'crop={W}:{OKNO_H}:{int(W * (zoom - 1) * KRAJ)}:0,setsar=1[fg];'
         f'[bg][fg]overlay=0:{OKNO_Y}[b];'
         f'[b][1:v]overlay=0:0[r]'
     )
     posl = '[r]'
+    idx = 2
+
+    # Karel na průhledném pozadí (sekvence PNG z natoc-karla.js) se pokládá
+    # PŘES hotový záběr, takže stojí v popředí a hra mu běží za zády.
+    if s.get('karel'):
+        seq = os.path.join(KAREL, s['karel'], '%04d.png')
+        args += ['-framerate', str(FPS), '-i', seq]
+        fc += (f';[{idx}:v]fps={FPS},scale={KAREL_W}:-1,'
+               f'fade=t=in:st=0:d=0.3:alpha=1[kr];'
+               f'{posl}[kr]overlay={KAREL_X}:{KAREL_Y}:shortest=0[v3]')
+        posl = '[v3]'
+        idx += 1
+
     if s['popisek']:
         args += ['-loop', '1', '-t', str(s['delka']),
                  '-i', os.path.join(KARTY, f'reel-popisek-{s["popisek"]}.png')]
-        fc += ';' + popisek_filtr(2, s['delka'], posl) + '[v2]'
+        fc += ';' + popisek_filtr(idx, s['delka'], posl) + '[v2]'
         posl = '[v2]'
     args += ['-filter_complex', fc, '-map', posl, '-an',
              '-c:v', 'libx264', '-crf', '18', '-preset', 'medium',
-             '-pix_fmt', 'yuv420p', '-r', str(FPS), cesta]
+             '-pix_fmt', 'yuv420p', '-r', str(FPS), '-t', str(s['delka']), cesta]
     run(args)
     return cesta
 

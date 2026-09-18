@@ -7,7 +7,7 @@ nahrané ze hry běžící v prohlížeči, žádná animace „jak by to mohlo 
 |--------|--------|-------|-----------|
 | `loukarun-promo-16x9.mp4` | 1920×1080, 30 fps | 50 s | YouTube, Google Play, web, prezentace |
 | `loukarun-promo-9x16.mp4` | 1080×1920, 30 fps | 50 s | Reels, Stories, TikTok, YouTube Shorts |
-| `loukarun-reel-skutecna-zvirata-9x16.mp4` | 1080×1920, 30 fps | 22 s | Reels a TikTok pro lidi, kteří hru **neznají** |
+| `loukarun-reel-skutecna-zvirata-9x16.mp4` | 1080×1920, 30 fps | 20,5 s | Reels a TikTok pro lidi, kteří hru **neznají** |
 
 Hudba: `assets/music/menu.mp3` — vlastní znělka hry.
 
@@ -55,19 +55,36 @@ scénář i střihový soupis v jednom.
 
 Celý řetěz je skriptovaný, hra se kvůli němu nijak nemění.
 
-### Reel (22 s, jen svisle)
+### Reel (20 s, jen svisle)
 
 ```bash
 NODE_PATH=$PW node promo/video/sablona/natoc-zabery.js $WORK   # sdílí klipy s promem
+NODE_PATH=$PW node promo/video/sablona/natoc-karla.js $WORK    # Karel s alfou
 python3 -m http.server 8777 &
 NODE_PATH=$PW node promo/video/sablona/natoc-karty-reel.js $WORK
 python3 promo/video/sablona/sestav-reel.py $WORK
 ```
 
+**`natoc-karla.js` je na tom reelu to nejzajímavější.** Natočí Karlovu scénu
+ze hry tak, že z ní zbude jen on a jeho bublina na průhledném pozadí — ve
+střihu pak stojí v popředí a hra mu běží za zády. Dělá to tím, že v pracovní
+kopii zapne plátnu alfa a `render()` místo pozadí plochu jen vymaže; bublina
+je v DOM, takže se veze se screenshotem stránky (`omitBackground`).
+
+Čas se přitom **nekrokuje reálný, ale po 1/30 s** (`window.__STEP`). Bez toho
+by pomalý screenshot dělal nepravidelné mezery a Karel by v záběru poskakoval.
+Snímá se na dvojnásobném rozlišení, aby snesl zvětšení na svislý formát.
+
+- **co Karel říká** → pole `REPLIKY` v `natoc-karla.js` (`snimku` je délka
+  ve snímcích; text se vypisuje po znacích, takže dlouhá věta v krátké
+  replice se nestihne dopsat)
+- **jak velký a kde stojí** → `KAREL_W` / `KAREL_X` / `KAREL_Y` v `sestav-reel.py`
 - **texty na obrazovce** → pole `POPISKY` v `natoc-karty-reel.js`
 - **pořadí a délky záběrů** → pole `SCENAR` v `sestav-reel.py`
 - **přiblížení jednoho záběru** → klíč `zoom` v `SCENAR` (výchozí 1,45×;
-  u obrazovek s obsahem až u krajů, jako je karusel zvířátek, musí být 1,0)
+  u obrazovek s obsahem až u krajů, jako je karusel zvířátek nebo deníček,
+  musí být 1,0)
+
 
 ### Promo (50 s, obě verze)
 
@@ -127,6 +144,12 @@ záběry podíváš:
   stejně.
 - **hra stojí na úvodním obrázku** — přibyla startovní brána (`#start-go`),
   kterou je potřeba odkliknout.
+- **deníček v záběru je prázdný** — zápisky se odemykají po třech bězích
+  s danou postavou (`diaryUnlocked`), takže save potřebuje `charRuns`.
+  A otevírá se přes kartu v obchodě, ne přes `showScreen('diary')` —
+  obsah kreslí až `openDiary()`.
+- **Karel stojí v záběru jako duch** — po dosednutí je ještě 1,2 s
+  poloprůhledný, takže se příchod musí přeskočit s rezervou.
 
 Než z klipů stříháš, projdi si je kontaktním listem:
 

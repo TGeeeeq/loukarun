@@ -59,7 +59,7 @@ function pripravKopii() {
   const most = `
   /* ---- most pro natáčení propagačního videa (jen v pracovní kopii) ---- */
   window.__LR = {
-    S, jump, slide, skipIntro,
+    S, jump, slide, skipIntro, showScreen, turnBook,
     px: () => playerX(),
     sirka: () => W,
     /* přesune běh na daný metr, ať se točí v konkrétním prostředí */
@@ -161,6 +161,9 @@ const SAVE = JSON.stringify({
   // příznaků se natočila jen ona – osel s bublinou a prázdná louka místo
   // gameplaye, ve všech šesti prostředích stejně.
   karelSeen: true, karelGuideSeen: true,
+  // zápisky v deníčku se odemykají po DIARY_STEP bězích s danou postavou
+  // (diaryUnlocked v js/game.js) – bez tohohle je knížka v záběru prázdná
+  charRuns: { karel: 60, pogo: 60, avala: 60, flicek: 60, yakul: 60, kveta: 60 },
 });
 
 async function pripravStranku(page, { save = true } = {}) {
@@ -239,6 +242,27 @@ async function main() {
         await page.waitForTimeout(1200);
       }
       await ulozKlip(ctx, page, 'zviratka');
+    }
+
+    /* ---------- B3) deníček z azylu ----------
+       Nejnovější věc ve hře, kterou jde ukázat: o každém zvířeti je v něm
+       stránka se zajímavostmi. Otevírá se přes můstek, ne klikáním – cesta
+       k němu vede přes obchod a ta se při každé úpravě menu mění. */
+    {
+      const { ctx, page } = await novyKontext(browser, 'denicek');
+      await pripravStranku(page);
+      await doMenu(page);
+      // deníček se otevírá kliknutím na kartu v obchodě; showScreen('diary')
+      // sám obsah nevykreslí (dělá to openDiary) a knížka by zůstala prázdná
+      await page.click('#btn-shop', { force: true });
+      await page.waitForTimeout(700);
+      await page.click('.diary', { force: true });
+      await page.waitForTimeout(1600);
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(() => __LR.turnBook(1));
+        await page.waitForTimeout(1800);
+      }
+      await ulozKlip(ctx, page, 'denicek');
     }
 
     /* ---------- C) záběry ze všech prostředí ---------- */

@@ -46,6 +46,7 @@ const POPISKY = [
   { id: 4, text: 'Šest zvířat z azylu.<br>Každé se svým trikem.' },
   { id: 5, text: 'Šest světů — od louky po hvězdnou&nbsp;noc.' },
   { id: 6, text: 'Právě vyšla nová&nbsp;verze.' },
+  { id: 7, text: 'Zajímavosti, historky,<br>kdo odkud&nbsp;je.' },
 ];
 
 const HLAVA = `
@@ -110,6 +111,10 @@ function konec() {
   <div style="position:absolute;inset:0;display:flex;flex-direction:column;
        align-items:center;justify-content:center;gap:${H * 0.028}px;padding-bottom:${H * 0.06}px">
     <img src="${LOGO}" style="width:${W * 0.84}px">
+    <div style="font-size:${W * 0.036}px;font-weight:800;letter-spacing:.06em;
+         text-transform:uppercase;color:var(--lr-cream);background:var(--lr-terracotta, #c1653a);
+         border-radius:var(--lr-radius-pill);padding:${H * 0.010}px ${W * 0.042}px">
+      Nová verze je venku</div>
     <div style="font-size:${W * 0.062}px;font-weight:800;color:var(--lr-green-deep);
          text-align:center;line-height:1.2;max-width:${W * 0.86}px">
       Hraj a nakrm skutečné zvíře.</div>
