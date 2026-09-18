@@ -136,6 +136,38 @@ function konec() {
        transform:translateX(-50%);height:${H * 0.15}px">`;
 }
 
+/* ---------- obálka reelu ----------
+   Nahrává se jako 1080×1920, ale v profilové mřížce z ní Instagram ořízne
+   STŘED na 3:4 — a v menších náhledech ještě víc. Všechno nosné proto leží
+   uvnitř centrálního čtverce (y 420–1500); mimo něj smí být jen to, co
+   nevadí ztratit. Malá dlaždice v mřížce unese tři prvky, ne šest — proto
+   tu není podtitulek „Běh se zvířaty z azylu": značka ho nese sama a dvakrát
+   totéž se na dlaždici slilo do jedné nečitelné kaše. */
+const COVER = { ctverec: [420, 1500], ctyriTri: [240, 1680] };
+
+function cover(akce) {
+  const [zac, kon] = COVER.ctverec;
+  return `${HLAVA}
+  <div class="plocha obloha"></div>
+  ${kopce(H)}
+  ${akce ? `
+  <div style="position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);
+       top:${zac + 30}px;font-size:${W * 0.072}px;font-weight:800;letter-spacing:.03em;
+       color:var(--lr-cream);background:#c1653a;border-radius:26px;
+       padding:${H * 0.013}px ${W * 0.055}px;white-space:nowrap;
+       box-shadow:0 16px 36px rgba(20,45,18,.4)">8 DNÍ ZDARMA</div>` : ''}
+  <img src="${LOGO}" style="position:absolute;left:50%;transform:translateX(-50%);
+       top:${zac + (akce ? 185 : 130)}px;width:${W * 0.74}px">
+  <img src="${KAREL}" style="position:absolute;left:50%;transform:translateX(-50%);
+       top:${zac + (akce ? 650 : 600)}px;height:${kon - zac - (akce ? 660 : 610)}px;
+       filter:drop-shadow(0 22px 30px rgba(20,45,18,.32))">
+  <div style="position:absolute;left:50%;transform:translateX(-50%);
+       top:${COVER.ctyriTri[1] - 150}px;
+       font-size:${W * 0.038}px;font-weight:800;letter-spacing:.03em;color:var(--lr-cream);
+       background:var(--lr-green-dark);border-radius:var(--lr-radius-pill);
+       padding:${H * 0.011}px ${W * 0.045}px;white-space:nowrap">nechmerust.org/loukarun 🥕</div>`;
+}
+
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ executablePath: EXE });
@@ -152,6 +184,8 @@ function konec() {
     console.log('→ karty/' + jmeno + '.png');
   }
 
+  await karta('reel-cover-akce', cover(true));
+  await karta('reel-cover', cover(false));
   await karta('reel-ramecek', ramecek(), true);
   await karta('reel-konec', konec());
   for (const p of POPISKY) await karta('reel-popisek-' + p.id, popisek(p.text), true);

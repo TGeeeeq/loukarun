@@ -79,6 +79,16 @@ zkus druhou.
 a zůstává na profilu. Stačí přepsat první řádek a odstavec s datem na
 „Akce skončila, ale hrát se dá dál" a odkaz nechat.
 
+## Obálka
+
+`loukarun-reel-cover-akce.png` po dobu akce, `loukarun-reel-cover.png` po ní
+(obálka jde vyměnit i po publikaci). Formát a proč je taková, viz
+[`README.md`](README.md#obálka-reelu).
+
+**Nahraj ji jako vlastní obálku, nenech Instagram vybrat snímek z videa** —
+první snímek reelu je běžící osel uprostřed louky a v mřížce vypadá jako
+náhodný zelený čtverec.
+
 ## Kdy publikovat
 
 **Nejdřív vyřeš, kam odkaz vede.** Po dobu akce musí z bia vést rovnou na

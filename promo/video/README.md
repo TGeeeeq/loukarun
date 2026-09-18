@@ -8,6 +8,8 @@ nahrané ze hry běžící v prohlížeči, žádná animace „jak by to mohlo 
 | `loukarun-promo-16x9.mp4` | 1920×1080, 30 fps | 50 s | YouTube, Google Play, web, prezentace |
 | `loukarun-promo-9x16.mp4` | 1080×1920, 30 fps | 50 s | Reels, Stories, TikTok, YouTube Shorts |
 | `loukarun-reel-skutecna-zvirata-9x16.mp4` | 1080×1920, 30 fps | 20,5 s | Reels a TikTok pro lidi, kteří hru **neznají** |
+| `loukarun-reel-cover-akce.png` | 1080×1920 | — | obálka reelu po dobu akce zdarma |
+| `loukarun-reel-cover.png` | 1080×1920 | — | obálka reelu po skončení akce |
 
 Hudba: `assets/music/menu.mp3` — vlastní znělka hry.
 
@@ -127,6 +129,30 @@ python3 promo/video/sablona/sestav-video.py $WORK
 - **jiná hudba** → konstanta `HUDBA` v `sestav-video.py`
 
 Po změně textů pusť znovu krok 2 a 3; herní záběry se přetáčet nemusí.
+
+## Obálka reelu
+
+Nahrává se jako **1080×1920 (9:16)**, ale v profilové mřížce z ní Instagram
+ořízne **střed na 3:4** a v menších náhledech ještě víc. Všechno nosné proto
+leží uvnitř centrálního čtverce (y 420–1500) a mimo něj je jen adresa, kterou
+není škoda ztratit.
+
+**Obálka jde vyměnit i po publikaci** (Upravit → obálka), takže časově omezený
+text na ní není past — proto jsou dvě: `-akce` s pruhem „8 DNÍ ZDARMA" na dobu
+akce a bez pruhu na potom. Po skončení akce se vymění a příspěvek v mřížce
+přestane slibovat něco, co neplatí.
+
+Generuje je `natoc-karty-reel.js` (funkce `cover()`), takže se překreslí
+společně se zbytkem karet. **Prvků je schválně málo** — pruh, značka, Karel,
+adresa. Podtitulek „Běh se zvířaty z azylu" tam nepatří, značka ho nese sama
+a na dlaždici se dvakrát totéž slilo do nečitelné kaše.
+
+Než obálku pustíš do světa, zkontroluj ji ve všech třech ořezech:
+
+```bash
+ffmpeg -i promo/video/loukarun-reel-cover-akce.png -vf "crop=1080:1440:0:240" /tmp/mrizka.png
+ffmpeg -i promo/video/loukarun-reel-cover-akce.png -vf "crop=1080:1080:0:420" /tmp/ctverec.png
+```
 
 ## Když natáčení přestane fungovat
 
