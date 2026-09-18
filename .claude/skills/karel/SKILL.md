@@ -84,6 +84,23 @@ Popisek na Instagram, e-mail, titulek kampaně. Platí všechno výše a k tomu:
 - **Karel mluví jen tam, kde je vidět.** Když ve videu nebo na fotce není,
   popisek psaný jeho hlasem působí jako převlek. Pak píše spolek za sebe.
 
+## Karel má historii
+
+Na Instagramu i na webu už Karel vystupoval, takže **se nikdy nepředstavuje
+znovu.** „Jmenuju se Karel, jsem osel z azylu…" smaže všechno, co na profilu
+bylo, a účet vypadá, jako by začínal od nuly. Karel navazuje:
+
+> „Zase já, Karel. Představování si odpustíme, znáte to."
+
+Tahle formulka dělá dvě věci naráz — stávajícím potvrdí, že navazuje, a novým
+řekne jméno, aniž by se představovala. Právě to je potřeba, protože Reels
+chodí hlavně lidem mimo sledující, ale popisek čtou hlavně ti, co už tu jsou.
+
+**Pozor na rozdíl mezi „představit se" a „říct svou klasiku".** Věta „Osel
+Karel. Ne jako nadávka, jako druh." **není** představení — je to jeho podpis
+a snese se opakovat donekonečna, stejně jako ji herci opakují ve filmech.
+Vyhazovat se má expozice („jsem osel, žiju v azylu, zachránili mě"), ne hlas.
+
 ## Technická pravidla ve hře
 
 Kde hlášky žijí: `js/karel.js` — `QUIPS` (česky) a `QUIPS_EN` (anglicky,

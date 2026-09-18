@@ -35,12 +35,14 @@ podpořte nás" ne. Pointa patří na konec věty.
 
 > **Osm dní jsem zadarmo. Pak si zase začnu říkat o peníze.**
 >
-> Jmenuju se Karel. Osel. Ne jako nadávka, jako druh. Žiju v azylu Nech mě
-> růst a do **[DOPLŇ DATUM]** se dám stáhnout z Google Play za nula korun.
+> Zase já, Karel. Představování si odpustíme, znáte to.
 >
-> V nové verzi je deníček. O každém z nás je v něm stránka — odkud jsme, co
-> jsme provedli a co nám dodneška nikdo nevěří. Ovečka Pogo jich má stejně
-> jako já, ale nezaslouží si to tak.
+> Do **[DOPLŇ DATUM]** se dám stáhnout z Google Play za nula korun. Hra se
+> jmenuje Louka Run, běhám v ní já a pět dalších odsud.
+>
+> Nově je v ní deníček. O každém z nás je v něm stránka — odkud jsme, co jsme
+> provedli a co nám dodneška nikdo nevěří. Ovečka Pogo jich má stejně jako já,
+> ale nezaslouží si to tak.
 >
 > Reklamy ve hře nejsou. Data o vás nesbíráme, nevěděli bychom, co s nimi.
 > Co se vydělá, jde na seno a na péči — je nás tu přes stovku a seno samo
@@ -53,6 +55,15 @@ podpořte nás" ne. Pointa patří na konec věty.
 > #nechmerust #loukarun #azylprozvirata #zachranenazvirata #adoptdontshop
 > #ceskahra #czechgamedev #indiegame #mobilnihra #hrazdarma #googleplay
 > #osel #neziskovka #zviratanaslouce #hrasesmyslem
+
+**„Zase já, Karel" dělá dvě věci naráz:** stávajícím sledujícím potvrdí, že
+navazuje, a novým řekne jméno, aniž by se představoval. Popisek, který začíná
+„Jmenuju se Karel", maže všechno, co už na profilu bylo.
+
+**Ve videu naopak zůstává „Osel Karel. Ne jako nadávka, jako druh."** — to
+není představení, to je jeho klasika a funguje i na toho, kdo ho zná. Reels
+se navíc ukazuje hlavně lidem mimo sledující, takže obraz smí uvádět víc
+než popisek, který čtou hlavně ti, co už tu jsou.
 
 ### První řádek — varianty na A/B
 
