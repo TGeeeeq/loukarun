@@ -7,8 +7,30 @@ nahrané ze hry běžící v prohlížeči, žádná animace „jak by to mohlo 
 |--------|--------|-------|-----------|
 | `loukarun-promo-16x9.mp4` | 1920×1080, 30 fps | 50 s | YouTube, Google Play, web, prezentace |
 | `loukarun-promo-9x16.mp4` | 1080×1920, 30 fps | 50 s | Reels, Stories, TikTok, YouTube Shorts |
+| `loukarun-reel-skutecna-zvirata-9x16.mp4` | 1080×1920, 30 fps | 22 s | Reels a TikTok pro lidi, kteří hru **neznají** |
 
 Hudba: `assets/music/menu.mp3` — vlastní znělka hry.
+
+## Dvě videa, dva úkoly
+
+**Promo (50 s)** je vizitka: projde celou hru, končí cenou a odkazem. Patří
+tam, kde už si někdo řekl, že ho hra zajímá — na stránku v Google Play, na web,
+do prezentace pro dárce.
+
+**Reel „Tohle zvíře je skutečné" (22 s)** je návnada pro lidi, kteří o hře
+nikdy neslyšeli. Proto se od promo videa liší ve třech věcech, a žádná z nich
+není náhoda:
+
+1. **Začíná rovnou hrou**, ne znělkou ani logem. Na Reels rozhoduje první
+   vteřina; logo v ní je promarněné místo.
+2. **Záběr vyplňuje celou plochu** — pozadí je tentýž záběr zvětšený
+   a rozostřený, ne prázdný rámeček. Letterbox působí na svislém formátu
+   jako přeposlaná reklama.
+3. **Je o polovinu kratší a neuvádí cenu.** Dokoukání je to, podle čeho
+   Instagram video dál ukazuje — a cena se dá opravit jedině přetočením.
+
+Texty, popisek k příspěvku a hashtagy jsou v
+[`reel-skutecna-zvirata-popisek.md`](reel-skutecna-zvirata-popisek.md).
 
 ## Stavba videa
 
@@ -32,6 +54,22 @@ scénář i střihový soupis v jednom.
 ## Jak video vyrobit znovu
 
 Celý řetěz je skriptovaný, hra se kvůli němu nijak nemění.
+
+### Reel (22 s, jen svisle)
+
+```bash
+NODE_PATH=$PW node promo/video/sablona/natoc-zabery.js $WORK   # sdílí klipy s promem
+python3 -m http.server 8777 &
+NODE_PATH=$PW node promo/video/sablona/natoc-karty-reel.js $WORK
+python3 promo/video/sablona/sestav-reel.py $WORK
+```
+
+- **texty na obrazovce** → pole `POPISKY` v `natoc-karty-reel.js`
+- **pořadí a délky záběrů** → pole `SCENAR` v `sestav-reel.py`
+- **přiblížení jednoho záběru** → klíč `zoom` v `SCENAR` (výchozí 1,45×;
+  u obrazovek s obsahem až u krajů, jako je karusel zvířátek, musí být 1,0)
+
+### Promo (50 s, obě verze)
 
 ```bash
 # 0) závislosti (jednou)
@@ -73,6 +111,29 @@ python3 promo/video/sablona/sestav-video.py $WORK
 
 Po změně textů pusť znovu krok 2 a 3; herní záběry se přetáčet nemusí.
 
+## Když natáčení přestane fungovat
+
+`natoc-zabery.js` si dělá pracovní kopii hry a vstřikuje do ní můstek
+`window.__LR`. Dvakrát se kvůli změnám ve hře stalo, že klipy vyšly prázdné —
+a pokaždé to **proběhlo bez chyby**, takže se to pozná jedině tím, že se na
+záběry podíváš:
+
+- **„nenašel jsem konec game.js"** — most se kotví na závěrečnou závorku
+  hlavního IIFE. Dřív se kotvil na řádek herní smyčky a ten se posunul.
+- **ve všech šesti prostředích běží stejná louka s bublinou** — Karlova
+  uvítací scéna se otevře nad menu a do té doby hra polyká klávesy, takže se
+  natočila jen ona. Řeší to `karelSeen: true, karelGuideSeen: true`
+  v konstantě `SAVE`; kdyby přibyla další obrazovka před menu, projeví se to
+  stejně.
+- **hra stojí na úvodním obrázku** — přibyla startovní brána (`#start-go`),
+  kterou je potřeba odkliknout.
+
+Než z klipů stříháš, projdi si je kontaktním listem:
+
+```bash
+ffmpeg -i $WORK/klipy/noc.webm -vf "fps=1/1.5,scale=320:-1,tile=5x2" -frames:v 1 /tmp/kontakt.png
+```
+
 ## Poznámka k faktům v CTA
 
 Závěrečná karta tvrdí:
@@ -85,3 +146,7 @@ Závěrečná karta tvrdí:
 Kdyby se cena, rozdělení částky nebo způsob prodeje změnil, uprav `konec()`
 v `natoc-karty.js` — jinak bude video slibovat něco, co neplatí. Cena musí
 sedět s `googleplay/listing.md`.
+
+> **Pozor, tohle si zkontroluj:** `listing.md` i tohle video uvádějí **269 Kč**,
+> ale v Google Play je cena jiná. Dokud se to nesrovná, promo video slibuje
+> částku, která neplatí. Kratší reel cenu neuvádí schválně — právě proto.

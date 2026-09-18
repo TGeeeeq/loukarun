@@ -107,9 +107,14 @@ function pripravKopii() {
 `;
   const gp = path.join(HRA, 'js', 'game.js');
   let src = fs.readFileSync(gp, 'utf8');
-  const kotva = '  requestAnimationFrame(frame);\n})();';
-  if (!src.includes(kotva)) throw new Error('nenašel jsem konec game.js – uprav kotvu');
-  src = src.replace(kotva, most + '\n' + kotva);
+  // Most musí skončit UVNITŘ hlavního IIFE, jinak nevidí S, jump ani playerX.
+  // Kotvíme se proto na jeho závorku na konci souboru, ne na konkrétní řádek
+  // herní smyčky – ten se při každé větší úpravě hry posune a natáčení pak
+  // spadlo na „nenašel jsem konec game.js“.
+  const kotva = '\n})();';
+  const konec = src.lastIndexOf(kotva);
+  if (konec < 0) throw new Error('nenašel jsem konec hlavního IIFE v game.js – uprav kotvu');
+  src = src.slice(0, konec) + '\n' + most + src.slice(konec);
   fs.writeFileSync(gp, src);
   console.log('· pracovní kopie hry připravena');
 }
@@ -151,6 +156,11 @@ const SAVE = JSON.stringify({
   selected: 'karel', best: 3120, runs: 24, sfx: true, music: true, tutorialDone: true,
   // všechny překážky už „viděné“ – jinak by se běh zastavil na představení novinky
   seenObstacles: ['hay', 'fence', 'mud', 'rock', 'branch', 'chicken', 'goose', 'barrow', 'beeline', 'flock'],
+  // Karlova uvítací scéna se sama otevře nad menu a do té doby hra polyká
+  // klávesy (js/game.js: `if (KAREL.isOpen()) return`). Bez těchhle dvou
+  // příznaků se natočila jen ona – osel s bublinou a prázdná louka místo
+  // gameplaye, ve všech šesti prostředích stejně.
+  karelSeen: true, karelGuideSeen: true,
 });
 
 async function pripravStranku(page, { save = true } = {}) {
@@ -160,6 +170,13 @@ async function pripravStranku(page, { save = true } = {}) {
     }, SAVE);
   }
   await page.goto(`http://127.0.0.1:${PORT}/index.html`, { waitUntil: 'load' });
+  // Od verze 1.9.x stojí před znělkou startovní brána (#start-gate) – teprve
+  // ťuknutí na ni pustí fullscreen, zvuk i intro. Bez ní hra zůstane stát na
+  // úvodním obrázku a natáčení dřív skončilo čekáním na #screen-menu.
+  const gate = page.locator('#start-go');
+  if (await gate.count()) {
+    await gate.click({ force: true, timeout: 5000 }).catch(() => {});
+  }
   await page.waitForTimeout(800);
 }
 
@@ -169,6 +186,11 @@ async function doMenu(page) {
   await page.waitForTimeout(1100);               // znělka odchází prolnutím
   await page.evaluate(() => __LR.skipIntro());   // intro s logem azylu
   await page.waitForSelector('#screen-menu.visible', { timeout: 10000 });
+  // pojistka, kdyby se Karel přesto otevřel – jinak by klávesa Space
+  // nespustila běh a natočila by se jeho scéna
+  await page.evaluate(() => {
+    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) KAREL.close && KAREL.close();
+  }).catch(() => {});
   await page.waitForTimeout(400);
 }
 
@@ -199,6 +221,24 @@ async function main() {
       await doMenu(page);
       await page.waitForTimeout(4200);
       await ulozKlip(ctx, page, 'menu');
+    }
+
+    /* ---------- B2) obchod: karusel zvířátek ----------
+       Menu ukazuje jen vybranou postavu, takže věta „šest zvířat z azylu“
+       nad ním nemá co doložit. Tohle je jediný záběr, kde jsou vidět
+       všechna naráz. */
+    {
+      const { ctx, page } = await novyKontext(browser, 'zviratka');
+      await pripravStranku(page);
+      await doMenu(page);
+      await page.click('#btn-shop', { force: true });
+      await page.waitForTimeout(900);
+      // pomalu prolistovat karusel, ať se v záběru vystřídá víc zvířátek
+      for (let i = 0; i < 4; i++) {
+        await page.keyboard.press('ArrowRight');
+        await page.waitForTimeout(1200);
+      }
+      await ulozKlip(ctx, page, 'zviratka');
     }
 
     /* ---------- C) záběry ze všech prostředí ---------- */
