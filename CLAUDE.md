@@ -59,6 +59,14 @@ Tahle past už jednou zabolela: verze 1.0.5–1.0.13 skončily na větvích
 `claude/*` a `main` zůstal roky pozadu, takže `git pull origin main` stáhl
 starý kód a sestavil starý AAB (viz varování v `RELEASE.md`).
 
+## Karlův hlas
+
+Hlášky osla Karla (`QUIPS`, `CTX`, `GREET` v `js/karel.js`), popisky na sítě,
+e-maily i texty promo videí se píšou podle **`.claude/skills/karel/SKILL.md`**.
+Je to nejcennější věc, kterou hra má, a špatně napsaná hláška se pozná
+okamžitě — zní jako maskot z letáku. Základní pravidlo: **Karel nikdy neprosí
+a nikdy nedojímá**, fakta položí na stůl a jde dál.
+
 ## Čím se hra ověřuje
 
 Hra je **statická, bez buildu** — stačí HTTP server a prohlížeč. Jak ji
