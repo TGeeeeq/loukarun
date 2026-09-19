@@ -67,6 +67,16 @@ Je to nejcennější věc, kterou hra má, a špatně napsaná hláška se pozn�
 okamžitě — zní jako maskot z letáku. Základní pravidlo: **Karel nikdy neprosí
 a nikdy nedojímá**, fakta položí na stůl a jde dál.
 
+**Karel od září 2026 vystupuje i na webu mimo stránku o hře** — na
+`nechmerust.org/zazitky` vylézá z okraje obrazovky, hlásí, že se stránka teprve
+staví, a nosí ozdoby ze zdejšího šatníku. Kreslí ho `web/components/karel/KarelSvg.tsx`
+v repozitáři `TGeeeeq/NMRStranky1.0` a je to **doslovný překlad `drawCharacter`
+odsud** (`js/gfx.js`, větev `species === 'osel'`), včetně `drawWear` a tabulky
+`WEAR_AT`. Kdo tady Karlovi změní barvy nebo siluetu, musí tu komponentu srovnat —
+jinak se z „jedné postavy napříč platformami" stanou dva různí osli. Ověřuje se
+překryvem plátna a SVG v témže měřítku; postup je popsaný v `CLAUDE.md` toho
+repozitáře v sekci *Karel na webu*.
+
 ## Čím se hra ověřuje
 
 Hra je **statická, bez buildu** — stačí HTTP server a prohlížeč. Jak ji
