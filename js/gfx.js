@@ -41,6 +41,21 @@ const GFX = (() => {
     return FONTS[k] || (FONTS[k] = 'bold ' + k + 'px "Baloo 2", sans-serif');
   }
 
+  /* Ouško jako kapka, ne elipsa. Elipsa je tupá na obou koncích a právě
+     špička dělá z osla osla. Stejná křivka je na webu v `AnimalSvg.tsx`. */
+  function earShape(ctx, x, y, rx, ry) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + ry);
+    ctx.bezierCurveTo(x - rx, y + ry * 0.55, x - rx * 0.95, y - ry * 0.55, x, y - ry);
+    ctx.bezierCurveTo(x + rx * 0.95, y - ry * 0.55, x + rx, y + ry * 0.55, x, y + ry);
+    ctx.closePath();
+  }
+
+  function rgba(hex, a) { // hex + průhlednost, pro měkké okraje přechodů
+    const [r, g, b] = hexToRgb(hex);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+
   function rr(ctx, x, y, w, h, r) { // rounded rect
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -3039,6 +3054,16 @@ const GFX = (() => {
      POSTAVY – parametrický čtyřnožec
      pose: { runPhase, jumpT, sliding, stumble, squash }
      ========================================================= */
+  /* Zdobné tahy navíc (odlesk na hřbetě, obrys, stín pod čumákem, hřebeny
+     na rohu, vroubky hřívy). Stojí ~0,17 ms na postavu, což je u jediného
+     běžce nic — ale ve scéně „shromážděte se" kreslí Karlovo plátno celé
+     stádo najednou, a **právě tam už jednou hra sekala** (viz shadowBlur
+     v portálu). Vypíná to `setLowFx()` v `js/game.js`, stejným signálem
+     jako ostatní ozdoby; stavba těla a nohy se nevypínají nikdy, protože
+     bez nich vypadají nohy jako čtyři chůdy. */
+  let detail = true;
+  function setDetail(on) { detail = !!on; }
+
   const bodyGradCache = new Map(); // gradienty těl postav (pár kusů, viz níže)
 
   function drawCharacter(ctx, ch, x, y, scale, pose, t) {
@@ -3075,20 +3100,40 @@ const GFX = (() => {
     // --- nohy (za tělem) ---
     const legLen = slim ? 33 : 26;
     const legY = slim ? -25 : -18;
+    const legRX = slim ? 4.5 : 5;
     function leg(offX, phase, back) {
       const a = airborne
         ? (back ? 0.6 : -0.5)
         : Math.sin(run + phase) * 0.9;
+      const legCol = c.legs || c.body;
+      const flat = back ? shade(legCol, -0.08) : legCol;
+      // kyčel — kousek stehna, který se NEOTÁČÍ a zacelí spáru mezi trupem
+      // a nohou. Bez něj vypadaly nohy jako čtyři chůdy postavené pod elipsu.
+      ctx.fillStyle = flat;
+      ell(ctx, offX, legY + 1, legRX + 2.2, 7); ctx.fill();
+
       ctx.save();
       ctx.translate(offX, legY);
       ctx.rotate(a * (sliding ? 0.2 : 1));
-      const legCol = c.legs || c.body;
-      ctx.fillStyle = back ? shade(legCol, -0.08) : legCol;
-      rr(ctx, slim ? -4.5 : -5, 0, slim ? 9 : 10, legLen, slim ? 4.5 : 5);
+      // svislý přechod na noze, ať tmavá noha nesplývá v jeden pruh
+      const lgKey = 'l|' + flat + '|' + legLen;
+      let legGrad = bodyGradCache.get(lgKey);
+      if (!legGrad) {
+        legGrad = ctx.createLinearGradient(0, 0, 0, legLen);
+        legGrad.addColorStop(0, shade(flat, 0.06));
+        legGrad.addColorStop(1, shade(flat, -0.05));
+        bodyGradCache.set(lgKey, legGrad);
+      }
+      ctx.fillStyle = legGrad;
+      rr(ctx, -legRX, 0, legRX * 2, legLen, legRX);
       ctx.fill();
-      // kopýtko
-      ctx.fillStyle = c.hoof || shade(c.mane, -0.1);
+      // kopýtko a nad ním světlá hrana — bez ní kopyto splývá s nohou
+      const hoofCol = c.hoof || shade(c.mane, -0.1);
+      ctx.fillStyle = hoofCol;
       rr(ctx, -5.5, legLen - 7, 11, 8, 3);
+      ctx.fill();
+      ctx.fillStyle = shade(hoofCol, 0.09);
+      rr(ctx, -5, legLen - 7, 10, 1.6, 0.8);
       ctx.fill();
       ctx.restore();
     }
@@ -3128,7 +3173,9 @@ const GFX = (() => {
       bodyGrad.addColorStop(1, shade(c.body, -0.07));
       bodyGradCache.set(gradKey, bodyGrad);
     }
-    if (species === 'ovce') { // vlněné obláčky po obvodu
+    ctx.fillStyle = bodyGrad;
+    ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.fill();
+    if (species === 'ovce') { // vlněné obláčky po obvodu, AŽ NA trupu
       for (let i = 0; i < 10; i++) {
         const a = i / 10 * Math.PI * 2;
         ctx.fillStyle = i % 2 ? shade(c.body, 0.04) : shade(c.body, -0.03);
@@ -3139,12 +3186,23 @@ const GFX = (() => {
         ctx.fill();
       }
     }
-    ctx.fillStyle = bodyGrad;
-    ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.fill();
-    // bříško
-    ctx.fillStyle = c.belly;
-    if (slim) { ell(ctx, 2, -37, 21, 9); ctx.fill(); }
-    else { ell(ctx, 2, -30, 26, 13); ctx.fill(); }
+    // bříško – měkkým přechodem, ať na trupu nesedí jako záplata
+    const bX = 2, bY = slim ? -37 : -30, bRX = slim ? 21 : 26, bRY = slim ? 9 : 13;
+    const belKey = 'b|' + c.belly + '|' + bRX;
+    let bellyGrad = bodyGradCache.get(belKey);
+    if (!bellyGrad) {
+      bellyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, bRX);
+      bellyGrad.addColorStop(0, c.belly);
+      bellyGrad.addColorStop(0.62, rgba(c.belly, 0.92));
+      bellyGrad.addColorStop(1, rgba(c.belly, 0));
+      bodyGradCache.set(belKey, bellyGrad);
+    }
+    ctx.save();
+    ctx.translate(bX, bY);
+    ctx.scale(1, bRY / bRX);
+    ctx.fillStyle = bellyGrad;
+    ctx.beginPath(); ctx.arc(0, 0, bRX, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
     // vzory srsti – oříznuté na tělo, ať nikam nepřečuhují
     if (c.pattern && c.spots) {
       ctx.save();
@@ -3171,10 +3229,38 @@ const GFX = (() => {
       }
       ctx.restore();
     }
-    // oslí hříva podél hřbetu
+    // odlesk na hřbetě – jediná věc, která z ploché elipsy udělá objem.
+    // Křivka je celá uvnitř elipsy, takže se nemusí ořezávat.
+    if (detail) {
+    ctx.strokeStyle = shade(c.body, 0.13);
+    ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(-bodyRX * 0.74, bodyY - bodyRY * 0.5);
+    ctx.quadraticCurveTo(0, bodyY - bodyRY * 1.12, bodyRX * 0.68, bodyY - bodyRY * 0.56);
+    ctx.stroke();
+    // obrys – nízký kontrast schválně: má oddělit tvary, ne obkreslit omalovánku
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = shade(c.body, -0.16);
+    ctx.lineWidth = 1.2;
+    ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.stroke();
+    ctx.globalAlpha = 1;
+    }
+
+    // oslí hříva podél hřbetu – s vroubky, ne hladká elipsa
     if (species === 'osel') {
       ctx.fillStyle = c.mane;
-      ell(ctx, 6, bodyY - bodyRY + 3, 26, 5.5, -0.05); ctx.fill();
+      const mY = bodyY - bodyRY + 3;
+      ctx.save();
+      ctx.translate(6, mY); ctx.rotate(-0.05);
+      ell(ctx, 0, 0, 26, 5.5); ctx.fill();
+      if (detail) for (let i = -16; i <= 16; i += 8) {
+        ctx.beginPath();
+        ctx.moveTo(i - 3.4, -1);
+        ctx.quadraticCurveTo(i, -8.5, i + 3.4, -1);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
     }
 
     // --- přední nohy ---
@@ -3204,6 +3290,13 @@ const GFX = (() => {
     ctx.fillStyle = c.body;
     if (species === 'ovce') { ctx.fillStyle = c.muzzle; }
     ell(ctx, 6, -6, 18, 15, 0.15); ctx.fill();
+    if (detail) { // odlesk na čele
+      ctx.strokeStyle = shade(species === 'ovce' ? c.muzzle : c.body, 0.12);
+      ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(-5, -14); ctx.quadraticCurveTo(6, -22, 17, -13); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     if (species === 'ovce') { // vlna na čele
       ctx.fillStyle = c.body;
@@ -3223,6 +3316,13 @@ const GFX = (() => {
     } else {
       ctx.fillStyle = c.muzzle;
       ell(ctx, 16, -1, 11, 9, 0.15); ctx.fill();
+      if (detail) { // stín tam, kde čumák dosedá na hlavu
+        ctx.strokeStyle = shade(c.muzzle, -0.1);
+        ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(7, -7); ctx.quadraticCurveTo(9, 2, 13, 7); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = shade(c.muzzle, -0.25);
       ell(ctx, 20, -4, 2, 2.6, 0.3); ctx.fill();
       if (species === 'kráva') { ell(ctx, 14, -3, 2, 2.6, 0.1); ctx.fill(); }
@@ -3251,6 +3351,11 @@ const GFX = (() => {
     ell(ctx, 6, -10, 3.2, 4); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(7, -11.5, 1.3, 0, Math.PI * 2); ctx.fill();
+    if (detail) {
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.arc(4.9, -8.2, 0.7, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     if (p.blink) { // mrknutí
       ctx.fillStyle = c.eyePatch || c.body;
       if (species === 'ovce') ctx.fillStyle = c.muzzle;
@@ -3267,9 +3372,9 @@ const GFX = (() => {
         ctx.translate(-2 + i * 8, -16);
         ctx.rotate(rot + earFlap);
         ctx.fillStyle = c.ear;
-        ell(ctx, 0, -16, 6, 17); ctx.fill();
+        earShape(ctx, 0, -16, 6, 17); ctx.fill();
         ctx.fillStyle = c.earIn;
-        ell(ctx, 0, -14, 3, 11); ctx.fill();
+        earShape(ctx, 0, -14, 3, 11); ctx.fill();
         ctx.restore();
       });
     } else if (species === 'muflon') {
@@ -3284,6 +3389,16 @@ const GFX = (() => {
       ctx.beginPath();
       ctx.arc(-4, -2, 12, -0.2, Math.PI * 1.1);
       ctx.stroke();
+      // příčné hřebeny – podle nich se rohu věří, že je z rohoviny
+      ctx.strokeStyle = shade(c.horns, -0.1);
+      ctx.lineWidth = 1.5; ctx.globalAlpha = 0.75;
+      if (detail) for (let a = 0.05; a < 2.4; a += 0.37) {
+        ctx.beginPath();
+        ctx.moveTo(-4 + Math.cos(a) * 7.6, -2 + Math.sin(a) * 7.6);
+        ctx.lineTo(-4 + Math.cos(a) * 16, -2 + Math.sin(a) * 16);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
       ctx.restore();
       // ouško
       ctx.fillStyle = c.ear;
@@ -3534,6 +3649,6 @@ const GFX = (() => {
     lerp, lerpColor, shade, hexA, hash, rr, ell,
     drawSky, drawClouds, drawHills, drawGround, drawGodRays,
     drawProp, drawObstacle, drawFlyer, drawCarrot, drawCoin, drawClover, drawMajestic, drawStep, drawCharacter, headBox,
-    PROPS,
+    PROPS, setDetail,
   };
 })();

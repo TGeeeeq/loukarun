@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.13';
+  const GAME_VERSION = '1.9.14';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -112,6 +112,9 @@
     if (lowFx || fxPinned) return;
     lowFx = true;
     document.documentElement.classList.add('low-fx');
+    // zdobné tahy na postavách jdou pryč spolu s ostatními ozdobami –
+    // ve scéně „shromážděte se" se kreslí celé stádo najednou
+    GFX.setDetail(false);
   }
   function menuFxWatch(rawDt) {
     if (lowFx) return;
