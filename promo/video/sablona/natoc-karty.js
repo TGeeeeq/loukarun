@@ -122,7 +122,7 @@ function konec(w, h, svisle) {
          padding:${h * 0.020}px ${w * 0.030}px;box-shadow:var(--lr-stin-karta)">
       <img src="${LOGO_AZYL}" style="height:${h * (svisle ? 0.080 : 0.125)}px">
       <div style="font-size:${male}px;font-weight:700;color:var(--lr-ink);line-height:1.25">
-        Na Google Play za <span style="font-weight:800">269 Kč</span>
+        Na Google Play za <span style="font-weight:800">239,99 Kč</span>
         <br><span style="color:var(--lr-green-deep);font-weight:800">
         z toho 149 Kč jde azylu</span>
       </div>

@@ -1,6 +1,6 @@
 # Osm dní zdarma — publikační plán (20.–28. 9. 2026)
 
-Louka Run je od 20. do 28. září na Google Play **zdarma** (jinak 269 Kč).
+Louka Run je od 20. do 28. září na Google Play **zdarma** (jinak 239,99 Kč).
 Tenhle soubor je plán kolem toho; **popisek k reelu a jeho obálka už existují**
 a nekopírují se sem:
 
@@ -25,7 +25,7 @@ akce sama nese nahoře **terracottový pruh „Osm dní zdarma" s tlačítkem na
 (vypne se 29. 9. sám, `lib/loukarun-akce.ts` na webu).
 
 Zkontroluj před prvním příspěvkem: v Play Console je akce opravdu nastavená a
-stránka aplikace ukazuje cenu 0 Kč. Slíbit zdarma a poslat lidi na 269 Kč je
+stránka aplikace ukazuje cenu 0 Kč. Slíbit zdarma a poslat lidi na 239,99 Kč je
 jediná chyba, ze které se tahle kampaň nevzpamatuje.
 
 ---

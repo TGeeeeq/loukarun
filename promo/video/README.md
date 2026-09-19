@@ -48,7 +48,7 @@ Texty, popisek k příspěvku a hashtagy jsou v
 | 0:31–0:35 | západ | „Šest zvířátek, každé se svým trikem“ |
 | 0:35–0:40 | noc | „Každý běh končí vtipným příběhem“ |
 | 0:40–0:43 | menu | výběr postavy |
-| 0:43–0:50 | konec | CTA: Google Play za 269 Kč (149 Kč azylu), webová verze za příspěvek nad 200 Kč, nechmerust.org/loukarun |
+| 0:43–0:50 | konec | CTA: Google Play za 239,99 Kč (149 Kč azylu), webová verze za příspěvek nad 200 Kč, nechmerust.org/loukarun |
 
 Přesné hodnoty jsou v poli `SCENAR` v `sablona/sestav-video.py` — to je
 scénář i střihový soupis v jednom.
@@ -187,7 +187,7 @@ ffmpeg -i $WORK/klipy/noc.webm -vf "fps=1/1.5,scale=320:-1,tile=5x2" -frames:v 1
 
 Závěrečná karta tvrdí:
 
-- **Google Play, 269 Kč**, z toho **149 Kč jde azylu**
+- **Google Play, 239,99 Kč**, z toho **149 Kč jde azylu**
 - za **příspěvek vyšší než 200 Kč** si jde o hru požádat ve **webové verzi**,
   která běží na každém zařízení
 - **nechmerust.org/loukarun**
@@ -196,6 +196,10 @@ Kdyby se cena, rozdělení částky nebo způsob prodeje změnil, uprav `konec()
 v `natoc-karty.js` — jinak bude video slibovat něco, co neplatí. Cena musí
 sedět s `googleplay/listing.md`.
 
-> **Pozor, tohle si zkontroluj:** `listing.md` i tohle video uvádějí **269 Kč**,
-> ale v Google Play je cena jiná. Dokud se to nesrovná, promo video slibuje
-> částku, která neplatí. Kratší reel cenu neuvádí schválně — právě proto.
+> **Zdroje jsou srovnané na 239,99 Kč** (potvrzená cena v Play, září 2026) —
+> `listing.md`, `googleplay/README.md`, tenhle soubor i `natoc-karty.js`.
+> **Hotová videa `loukarun-promo-16x9.mp4` a `loukarun-promo-9x16.mp4` ale
+> pořád nesou vypálených 269 Kč**: karta je obrázek, ne text, takže se srovná
+> jedině přegenerováním (`natoc-karty.js` → `sestav-video.py`). Než se to
+> stane, ta dvě videa nepouštěj ven. Kratší reel cenu neuvádí schválně —
+> právě proto ho akce zdarma může použít beze změny.

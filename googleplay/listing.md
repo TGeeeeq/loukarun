@@ -9,7 +9,7 @@ Vyplněno pro první vydání. Aktuální AAB: v1.0.2 (versionCode 3) — `app-r
 | Název aplikace | Louka Run |
 | Balíček | org.nechmerust.loukarun |
 | Kategorie | Hry → Arkádové |
-| Cena | 269 Kč (placená, bez reklam, bez nákupů v aplikaci) — z toho 149 Kč jde azylu |
+| Cena | 239,99 Kč (placená, bez reklam, bez nákupů v aplikaci) — z toho 149 Kč jde azylu |
 | Web | https://www.nechmerust.org/loukarun |
 | Zásady ochrany soukromí | https://www.nechmerust.org/loukarun/app/soukromi.html |
 | Kontaktní e-mail | info@nechmerust.org |

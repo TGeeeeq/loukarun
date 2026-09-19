@@ -22,7 +22,7 @@ upload klíčem (viz „Nový build“ níže).
 1. **Vytvořit aplikaci** — play.google.com/console → Create app → název „Louka Run", jazyk čeština, Hra, Placená.
 2. **Store listing** (Grow → Store presence → Main store listing) — zkopírovat texty z `listing.md`, nahrát `icon-512.png`, `feature-graphic-1024x500.png` a snímky ze `screenshots/`.
 3. **Dotazníky** (Policy → App content) — hodnocení obsahu, bezpečnost dat, cílová skupina, přístup k aplikaci; odpovědi jsou připravené v `listing.md`.
-4. **Cena a distribuce** — 269 Kč, země dle `listing.md`.
+4. **Cena a distribuce** — 239,99 Kč, země dle `listing.md`.
 5. **Nahrát AAB** — Release → Production → Create new release → nahrát `app-release.aab`. Při prvním nahrání potvrdit **Play App Signing**.
 6. Odeslat ke kontrole.
 
