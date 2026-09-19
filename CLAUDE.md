@@ -4,6 +4,13 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
+> **Hra 1.9.14 překreslila zvířata.** Postavy se dosud kreslily plochými
+> elipsami a nohy vypadaly jako čtyři tmavé chůdy postavené pod trup; teď mají
+> kyčle, přechody, odlesk na hřbetě, špičatá ouška a hřebeny na rohu —
+> podrobně v *Na co si dát pozor*, odstavec o zdobných tazích. Je to
+> **jen na webu** (cache `loukarun-v63`); do Google Play se to dostane až
+> s dalším AAB.
+>
 > **Hra 1.9.13 opravuje spouštění nainstalované PWA z plochy** (ikona po
 > ťuknutí neotevřela nic, na Xiaomi i po desítkách pokusů). Příčina byla
 > v service workeru — podrobně v *Na co si dát pozor*, odstavce o pozvánkové
@@ -18,6 +25,9 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 > **AAB v1.0.15 (versionCode 16, hra 1.9.11) je sestavený, podepsaný a leží
 > v `googleplay/app-release.aab`. Zbývá ho ručně nahrát do Play Console**
 > (Louka Run → Production → Create new release). V produkci je zatím v1.0.14.
+> **Pozor: ten AAB nese hru 1.9.11**, takže v něm není ani oprava PWA (té se
+> aplikace z Play netýká), ani nová kresba zvířat z 1.9.14. Nová kresba je
+> důvod postavit další AAB, až bude 1.9.14 odzkoušená na webu.
 >
 > Hra 1.9.11 je na webu (nechmerust.org/loukarun) nasazená a odzkoušená —
 > proto se AAB stavěl. **Pořadí platí i příště: nejdřív web, teprve po
@@ -68,14 +78,19 @@ okamžitě — zní jako maskot z letáku. Základní pravidlo: **Karel nikdy ne
 a nikdy nedojímá**, fakta položí na stůl a jde dál.
 
 **Karel od září 2026 vystupuje i na webu mimo stránku o hře** — na
-`nechmerust.org/zazitky` vylézá z okraje obrazovky, hlásí, že se stránka teprve
-staví, a nosí ozdoby ze zdejšího šatníku. Kreslí ho `web/components/karel/KarelSvg.tsx`
-v repozitáři `TGeeeeq/NMRStranky1.0` a je to **doslovný překlad `drawCharacter`
-odsud** (`js/gfx.js`, větev `species === 'osel'`), včetně `drawWear` a tabulky
-`WEAR_AT`. Kdo tady Karlovi změní barvy nebo siluetu, musí tu komponentu srovnat —
-jinak se z „jedné postavy napříč platformami" stanou dva různí osli. Ověřuje se
-překryvem plátna a SVG v témže měřítku; postup je popsaný v `CLAUDE.md` toho
-repozitáře v sekci *Karel na webu*.
+`nechmerust.org/zazitky` vylézá z okraje obrazovky a na `nechmerust.org/loukarun`
+dělá průvodce. Kreslí ho `web/components/karel/AnimalSvg.tsx` v repozitáři
+`TGeeeeq/NMRStranky1.0` **ze stejných čísel jako `drawCharacter` odsud**
+(`js/gfx.js`), včetně `drawWear` a tabulky `WEAR_AT`; web je má opsané
+v `web/lib/karel/anatomy.ts`. Kdo tady zvířatům změní barvy nebo stavbu těla,
+musí tu tabulku srovnat — jinak se z „jedné postavy napříč platformami" stanou
+dva různí osli.
+
+**Spoléhat se na to, že si někdo vzpomene, nejde, a tak na to je test.**
+`tests/unit/karel-anatomy.test.ts` v tom repozitáři čte nasynchronizovanou
+kopii hry z `public/loukarun/app/js/` a porovnává ji s tabulkou. Ruční překryv
+plátna a SVG je pořád nejpřesnější kontrola siluety, ale jako pravidelná
+pojistka je k ničemu, protože se na ni zapomene.
 
 ## Čím se hra ověřuje
 
@@ -116,6 +131,18 @@ Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
 
 ## Na co si dát pozor
 
+- **Zdobné tahy na postavách vypíná `setLowFx()`.** Kresba zvířat dostala
+  v 1.9.14 objem (kyčle, přechody na nohou, odlesk na hřbetě a na čele, obrys,
+  vroubky hřívy, hřebeny na rohu, stín pod čumákem). **Změřeno, ne odhadnuto:**
+  jedna postava stoupla z 0,230 ms na 0,405 ms. U jediného běžce je to nic,
+  ale ve scéně „shromážděte se" kreslí Karlovo plátno celé stádo naráz — a
+  **právě tam hra už jednou sekala** (viz `shadowBlur` v portálu níž). Zdobné
+  tahy proto jdou pryč stejným signálem jako ostatní ozdoby, přes
+  `GFX.setDetail(false)`; **stavba těla a nohy se nevypínají nikdy**, bez nich
+  vypadají nohy jako čtyři chůdy postavené pod elipsu.
+- **Stín na zemi postava nemá a nesmí mít.** Kreslil by se v jejích
+  souřadnicích, takže by při skoku vylétl s ní do vzduchu. Na webu stín je,
+  protože tam postava stojí — je to součást scény, ne postavy.
 - **Save je jeden JSON** pod `loukarun_save_v1` a nemá schéma. Nová pole se
   lazy-inicializují u prvního použití (`if (!save.x) save.x = {}`), migrace
   se nepíšou. Nikdy nesmí přestat fungovat starý save bez nových polí.
