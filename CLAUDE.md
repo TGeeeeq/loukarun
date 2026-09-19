@@ -4,12 +4,16 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
-> **Hra 1.9.14 překreslila zvířata.** Postavy se dosud kreslily plochými
+> **Hra 1.9.15 překreslila zvířata.** Postavy se dosud kreslily plochými
 > elipsami a nohy vypadaly jako čtyři tmavé chůdy postavené pod trup; teď mají
 > kyčle, přechody, odlesk na hřbetě, špičatá ouška a hřebeny na rohu —
 > podrobně v *Na co si dát pozor*, odstavec o zdobných tazích. Je to
-> **jen na webu** (cache `loukarun-v63`); do Google Play se to dostane až
+> **jen na webu** (cache `loukarun-v64`); do Google Play se to dostane až
 > s dalším AAB.
+>
+> Mezikrok 1.9.14 měl **obrys těla kreslený až po vlně**, takže ovci
+> přepůlila šedá elipsa. Poučení je obecné: **vlna je u ovce sama siluetou**,
+> takže se musí kreslit až nad obrysem a odleskem, ne pod nimi.
 >
 > **Hra 1.9.13 opravuje spouštění nainstalované PWA z plochy** (ikona po
 > ťuknutí neotevřela nic, na Xiaomi i po desítkách pokusů). Příčina byla

@@ -3175,17 +3175,6 @@ const GFX = (() => {
     }
     ctx.fillStyle = bodyGrad;
     ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.fill();
-    if (species === 'ovce') { // vlněné obláčky po obvodu, AŽ NA trupu
-      for (let i = 0; i < 10; i++) {
-        const a = i / 10 * Math.PI * 2;
-        ctx.fillStyle = i % 2 ? shade(c.body, 0.04) : shade(c.body, -0.03);
-        ctx.beginPath();
-        // vlna se při skoku a dopadu rozvlní – každý chomáč se opozdí trochu jinak
-        const lag = sway * 3.2 * Math.sin(a + run * 0.5);
-        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 19 + lag, 13, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
     // bříško – měkkým přechodem, ať na trupu nesedí jako záplata
     const bX = 2, bY = slim ? -37 : -30, bRX = slim ? 21 : 26, bRY = slim ? 9 : 13;
     const belKey = 'b|' + c.belly + '|' + bRX;
@@ -3245,6 +3234,20 @@ const GFX = (() => {
     ctx.lineWidth = 1.2;
     ell(ctx, 0, bodyY, bodyRX, bodyRY); ctx.stroke();
     ctx.globalAlpha = 1;
+    }
+
+    // Vlna až NAD obrysem a odleskem – kdyby se kreslila dřív, vedla by přes
+    // ni šedá elipsa obrysu. U ovce je vlna sama siluetou.
+    if (species === 'ovce') { // vlněné obláčky po obvodu, AŽ NA trupu
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * Math.PI * 2;
+        ctx.fillStyle = i % 2 ? shade(c.body, 0.04) : shade(c.body, -0.03);
+        ctx.beginPath();
+        // vlna se při skoku a dopadu rozvlní – každý chomáč se opozdí trochu jinak
+        const lag = sway * 3.2 * Math.sin(a + run * 0.5);
+        ctx.arc(Math.cos(a) * 36, -40 + Math.sin(a) * 19 + lag, 13, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // oslí hříva podél hřbetu – s vroubky, ne hladká elipsa

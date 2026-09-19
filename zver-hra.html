@@ -7,9 +7,7 @@
 <script>
 const chs = DATA.CHARACTERS;
 const box = document.getElementById('w');
-let half = 0;
 for (const ch of chs) {
-  if (half++ === 3) GFX.setDetail(false);
   const d = document.createElement('div'); d.className = 'c';
   const cv = document.createElement('canvas'); cv.width = 380; cv.height = 330;
   const x = cv.getContext('2d'); x.scale(2, 2);
