@@ -89,6 +89,13 @@ a zůstává na profilu. Stačí přepsat první řádek a odstavec s datem na
 první snímek reelu je běžící osel uprostřed louky a v mřížce vypadá jako
 náhodný zelený čtverec.
 
+## Zbytek kampaně
+
+Tenhle soubor je popisek k jednomu reelu. Co kolem něj vyjde za osm dní —
+plán den po dni, post doprostřed akce, post na poslední den, kuchařka odpovědí
+do komentářů a co po akci změřit — je v
+[`../karel-kampan/osmidenni-akce.md`](../karel-kampan/osmidenni-akce.md).
+
 ## Kdy publikovat
 
 **Nejdřív vyřeš, kam odkaz vede.** Po dobu akce musí z bia vést rovnou na

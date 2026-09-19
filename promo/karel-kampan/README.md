@@ -13,6 +13,7 @@ mluví v první osobě za osla Karla — drze, kousavě, se srdcem.
 | `popisky.md` | popisky ke každé grafice ve 4 stylech + hashtagy + launch-day post + kuchařka odpovědí do komentářů |
 | `video-scenare.md` | 5 scénářů na Reels/TikTok, záběr po záběru |
 | `strategie.md` | publikační plán (před vydáním → launch → týden po) + nástroje zdarma |
+| `osmidenni-akce.md` | plán osmidenní akce „hra zdarma" (20.–28. 9. 2026): den po dni, post doprostřed a na konec akce, kuchařka odpovědí, co změřit |
 | `zabery/` | čerstvé screenshoty z gameplaye (1920×1080), surovina pro další tvorbu |
 | `sablona/` | HTML šablona + render skript — další grafiky ve stejném stylu |
 
