@@ -410,6 +410,9 @@
   <script src="js/platform.js"></script>
   <script src="js/comfort.js"></script>
   <script src="js/karel.js"></script>
+  <!-- Vývojářský režim. Musí být PŘED game.js (ten si na konci sáhne po
+       window.DEVTOOLS) a zároveň smí kdykoli chybět – hra si ho nevynucuje. -->
+  <script src="js/dev.js"></script>
   <script src="js/game.js"></script>
   <script>
     // HLÍDAČ SPUŠTĚNÍ

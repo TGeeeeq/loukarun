@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.15';
+  const GAME_VERSION = '1.9.16';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -108,6 +108,11 @@
      (audit rozvržení, snímky obrazovek) snímky vždycky padají, útlum se
      zapne během vteřiny a ozdoby ani otáčení listu by pak nešlo vůbec vidět. */
   const fxPinned = new URLSearchParams(location.search).get('fx') === 'full';
+
+  /* Příznaky vývojářského režimu. Objekt je tu vždycky, i když se `js/dev.js`
+     vůbec nenačte – herní smyčka ho pak čte s věčnou nulou a nic to nestojí.
+     Zapisuje do něj jedině `DEVTOOLS`; viz most na konci inicializace. */
+  const DEV_FLAGS = { god: false };
   function setLowFx() {
     if (lowFx || fxPinned) return;
     lowFx = true;
@@ -2508,9 +2513,13 @@
       const ramp = 1 + speedFactor * 0.45 + distRamp;
       // ve škole běhu ubývá energie poloviční rychlostí a nikdy neklesne
       // pod rezervu – lekce není test výdrže a nedá se při ní umřít
-      S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt * (S.tut ? 0.5 : 1);
-      if (S.tut) S.energy = Math.max(S.energy, 15);
-      if (S.energy <= 0) { S.energy = 0; endRun(); return; }
+      // vývojářská nesmrtelnost musí zastavit i odčerpávání, ne jen nárazy:
+      // jinak běh po pár minutách stejně skončí a nedá se dojet nikam daleko
+      if (!DEV_FLAGS.god) {
+        S.energy -= ECONOMY.drainPerSecond * S.stats.drain * ramp * dt * (S.tut ? 0.5 : 1);
+        if (S.tut) S.energy = Math.max(S.energy, 15);
+        if (S.energy <= 0) { S.energy = 0; endRun(); return; }
+      }
 
       collide(dt);
       quotes(dt);
@@ -2613,7 +2622,7 @@
       }
     }
 
-    if (S.invuln > 0) return;
+    if (S.invuln > 0 || DEV_FLAGS.god) return;
     for (const o of S.obstacles) {
       if (o.broken) continue;
       const sx = o.x - S.worldX + px;
@@ -5761,6 +5770,62 @@
   initMenu();
   initIntro();
   showScreen('intro'); // schová menu i HUD, vidět je jen canvas
+
+  /* ---------- most do vývojářského režimu ----------
+     `js/dev.js` je samostatný soubor a nemusí tu vůbec být (chybí v cache,
+     vystřihl ho build). Proto se po něm jen sáhne; když není, nestane se nic.
+     Ven jde jediný objekt, ne globální herní stav: `save` a `S` proto, že
+     na ně panel sahá, a tři funkce, které umí jen hra – zvenku by se
+     neposkládaly, protože tohle celé je jedno IIFE. */
+  if (window.DEVTOOLS) {
+    DEVTOOLS.attach({
+      version: GAME_VERSION,
+      flags: DEV_FLAGS,
+      save, persist, S,
+      CHARACTERS, ITEMS,
+      refreshMenu() {
+        initMenu();
+        if ($('screen-shop').classList.contains('visible')) setShopTab(shopTab);
+      },
+      refill() {
+        if (S.mode !== 'run') return false;
+        S.energy = 100;
+        updateHud(true);
+        return true;
+      },
+      finish() {
+        if (S.mode !== 'run') return false;
+        endRun();
+        return true;
+      },
+      teleport(meters) {
+        if (S.mode !== 'run') return false;
+        const to = Math.max(0, meters) * PX_PER_M;
+        S.worldX = to;
+        // co bylo vygenerované pro původní vzdálenost, na hráče dojede
+        // v nesmyslné podobě – svět se proto zahodí a spawnery posadí znovu
+        S.obstacles = []; S.pickups = []; S.decor = []; S.fg = []; S.flyers = [];
+        S.nextObstacleX = to + 1600;
+        S.nextPickupX = to + 650;
+        S.nextDecorX = to;
+        S.nextFgX = to;
+        S.nextFlyerX = to + 400;
+        // kotva rychlosti zpátky na nulu: po skoku na 5 km má hra běžet jako
+        // po odběhnutých 5 km, jinak by teleport testoval jinou obtížnost,
+        // než jakou tam hráč potká
+        S.speedAnchorX = 0;
+        // bez přesunutí těchhle dvou se hned po dosednutí spustí lavina
+        // milníků a na každém 2,5 km rovnou Zvířecí koncert
+        const distM = to / PX_PER_M;
+        S.lastMilestone = Math.floor(distM / 500) * 500;
+        S.lastSpecial = Math.floor(distM / 2500) * 2500;
+        S.milestone = null;
+        S.cleanFrom = to;
+        S.cleanDist = 0;
+        return true;
+      },
+    });
+  }
 
   /* ---------- start: znělka, intro a hudba až po gestu ----------
      Fullscreen ani zvuk prohlížeč bez uživatelského gesta nepustí. Dokud hra

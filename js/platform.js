@@ -239,5 +239,20 @@ window.STORE = (() => {
     }).catch(() => {});
   }
 
-  return { getSync, set, recover, native: NATIVE };
+  /* Smazání musí zasáhnout OBĚ úložiště. Kdo smaže jen localStorage, toho
+     `recover()` při dalším spuštění vrátí přesně tam, kde byl – nativní
+     záloha je totiž rychlejší než jeho překvapení. Značka `lr_recovered`
+     jde pryč taky, jinak by se záchrana v témže sezení už nespustila.
+
+     Vrací slib: nativní Preferences mažou asynchronně a volající (reset
+     postupu ve vývojářském režimu) musí počkat, než stránku načte znovu. */
+  function remove(key) {
+    try { localStorage.removeItem(key); } catch (e) { /* úložiště nedostupné */ }
+    try { sessionStorage.removeItem('lr_recovered'); } catch (e) {}
+    if (!Prefs) return Promise.resolve();
+    try { return Promise.resolve(Prefs.remove({ key })).catch(() => {}); }
+    catch (e) { return Promise.resolve(); }
+  }
+
+  return { getSync, set, remove, recover, native: NATIVE };
 })();

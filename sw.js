@@ -30,7 +30,7 @@
    úplnosti cache, je jen úklid té předchozí (`activate`).
    ========================================================= */
 
-const CACHE = 'loukarun-v64';
+const CACHE = 'loukarun-v65';
 
 const CORE = [
   './',
@@ -45,6 +45,10 @@ const CORE = [
   'js/platform.js',
   'js/comfort.js',
   'js/karel.js',
+  // Vývojářský režim patří do CORE (ať je i offline), ale NIKDY do VITAL:
+  // bez něj se hra hraje úplně stejně a jeho nestažení nesmí zdržet
+  // úklid předchozí cache.
+  'js/dev.js',
   'js/game.js',
   'assets/logo.png',
   'assets/start.png',
