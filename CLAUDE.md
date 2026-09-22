@@ -74,8 +74,9 @@ v gitu nejsou. V sessioně v prohlížeči to nejde.
 
 **Všechno patří do `main`.** Když práci vynutí session v prohlížeči na větev
 `claude/*`, ber tu větev jako jednorázovou: po dokončení ji slouč do `main`,
-`main` pushni a větev smaž lokálně i na GitHubu. Cílový stav je vždycky
-jediný `main` s nejnovějším kódem.
+`main` pushni a větev smaž **jen lokálně**. **Na GitHubu se větve nemažou** —
+zůstávají jako záznam práce, jen se z nich nic nevydává. Cílový stav je
+vždycky `main` s nejnovějším kódem.
 
 Tahle past už jednou zabolela: verze 1.0.5–1.0.13 skončily na větvích
 `claude/*` a `main` zůstal roky pozadu, takže `git pull origin main` stáhl
