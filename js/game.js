@@ -578,7 +578,7 @@
       ctx.textAlign = 'center';
       ctx.font = '600 15px "Baloo 2", sans-serif';
       ctx.fillStyle = '#fff';
-      ctx.fillText('ťukni pro přeskočení', W / 2, H - 16);
+      ctx.fillText(I18N.t('intro.skip'), W / 2, H - 16);
       ctx.restore();
     }
   }
@@ -818,8 +818,13 @@
      aplikací chodí jako `visibilitychange`, takže to pokryje i případy,
      o kterých hra jinak neví. */
   function forgetFsFails() { fsFails = 0; lastFsFail = 0; lastFsTry = 0; }
+  /* Odchod do pozadí (hovor, přepnutí aplikace, zhasnutí displeje) běh
+     pozastaví. frame() sice ořízne dt, takže svět neposkočí, ale bez pauzy
+     se po návratu běželo rovnou dál a první překážka hráče trefila dřív,
+     než se vůbec rozkoukal. */
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) forgetFsFails();
+    if (document.hidden) { if (S.mode === 'run') togglePause(); }
+    else forgetFsFails();
   });
   window.addEventListener('appinstalled', forgetFsFails);
 
@@ -880,6 +885,7 @@
   }
 
   function startRun() {
+    laterClear();
     AUDIO.ensureCtx();
     goLandscapeFullscreen();
     S.char = charById(save.selected) || CHARACTERS[0];
@@ -983,7 +989,7 @@
        něj předtím vybral něco jiného, tomu se vzhled nezmění a „nosí
        klobouk" by byla lež. Do truhly ale ozdoba padne vždycky. */
     if (wonTrophy) {
-      setTimeout(() => {
+      later(() => {
         toast(I18N.t('toast.itemEarned', {
           name: I18N.pick(S.char.name), item: I18N.pick(S.char.trophy.name),
         }));
@@ -991,7 +997,7 @@
       }, 900);
     } else {
       freshTasks.forEach((t, i) => {
-        setTimeout(() => toast(`${t.icon} ${I18N.t('task.done')}`), 900 + i * 2600);
+        later(() => toast(`${t.icon} ${I18N.t('task.done')}`), 900 + i * 2600);
       });
     }
     toastAchievements(syncAchievements(), (wonTrophy ? 1 : freshTasks.length) * 2600);
@@ -4456,9 +4462,16 @@
   }
 
   // krátce oznámí čerstvě získané odznaky (po jednom, ať si je hráč přečte)
+  /* Toasty z konce běhu chodí postupně i několik vteřin. Kdo hned ťukne na
+     Běžet znovu, dostal je přes HUD uprostřed dalšího běhu – startRun()
+     proto nevyřízené zruší (laterClear). */
+  const laterTimers = [];
+  function later(fn, ms) { laterTimers.push(setTimeout(fn, ms)); }
+  function laterClear() { while (laterTimers.length) clearTimeout(laterTimers.pop()); }
+
   function toastAchievements(fresh, delay = 0) {
     fresh.forEach((a, i) => {
-      setTimeout(() => toast(`🎖️ ${I18N.t('ach.new')}: ${a.icon} ${I18N.pick(a.title)}`), 700 + delay + i * 2800);
+      later(() => toast(`🎖️ ${I18N.t('ach.new')}: ${a.icon} ${I18N.pick(a.title)}`), 700 + delay + i * 2800);
     });
   }
 
@@ -5442,12 +5455,22 @@
      to zdržovalo. V šetrném režimu i na slabém telefonu se přeskočí. */
   const LAUNCH_MS = 180;
   const reduceMotionMq = { get matches() { return COMFORT.reducedMotion; } };
+  /* Během těch 180 ms je menu pořád „menu", takže druhé ťuknutí nebo
+     mezerník spustily běh podruhé (restart i se školou běhu) a ťuknutí na
+     Obchod rozjelo běh z obchodu. Proto zámek a kontrola obrazovky. */
+  let launching = false;
   $('btn-play').addEventListener('click', () => {
+    if (launching) return;
     if (lowFx || reduceMotionMq.matches) { startRun(); return; }
+    launching = true;
     const menu = $('screen-menu');
     menu.classList.add('launching');
     AUDIO.play('click');
-    setTimeout(() => { menu.classList.remove('launching'); startRun(); }, LAUNCH_MS);
+    setTimeout(() => {
+      launching = false;
+      menu.classList.remove('launching');
+      if (S.mode === 'menu' && curScreen === 'menu') startRun();
+    }, LAUNCH_MS);
   });
   // obchod se vždy otevírá na zvířátkách – setShopTab si mřížku postaví sám
   $('btn-shop').addEventListener('click', () => { setShopTab('animals'); showScreen('shop'); AUDIO.play('click'); });

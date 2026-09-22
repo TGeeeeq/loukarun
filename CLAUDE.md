@@ -207,6 +207,15 @@ bez odehrávání. Celý je v `js/dev.js` (`window.DEVTOOLS`, jediný vstup
   tahy proto jdou pryč stejným signálem jako ostatní ozdoby, přes
   `GFX.setDetail(false)`; **stavba těla a nohy se nevypínají nikdy**, bez nich
   vypadají nohy jako čtyři chůdy postavené pod elipsu.
+- **Odchod do pozadí běh pozastaví** (`visibilitychange` → `togglePause()`).
+  `frame()` jen ořízne dt, takže bez pauzy se po hovoru nebo přepnutí
+  aplikace běželo rovnou dál do první překážky.
+- **Toasty z konce běhu jdou přes `later()`, ne holý `setTimeout`.** Chodí
+  postupně i několik vteřin a `startRun()` je přes `laterClear()` zruší —
+  jinak vyskakovaly přes HUD uprostřed dalšího běhu.
+- **Tlačítko Běžet má zámek `launching`** na dobu nástupové animace (180 ms).
+  Menu je během ní pořád „menu", takže druhé ťuknutí běh restartovalo
+  a ťuknutí na Obchod ho rozjelo z obchodu.
 - **Stín na zemi postava nemá a nesmí mít.** Kreslil by se v jejích
   souřadnicích, takže by při skoku vylétl s ní do vzduchu. Na webu stín je,
   protože tam postava stojí — je to součást scény, ne postavy.
