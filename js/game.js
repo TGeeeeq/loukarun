@@ -5810,6 +5810,8 @@
         S.nextDecorX = to;
         S.nextFgX = to;
         S.nextFlyerX = to + 400;
+        // škola běhu si překážky a mince pouští sama po lekcích
+        if (S.tut) { S.nextObstacleX = Infinity; S.nextPickupX = Infinity; }
         // kotva rychlosti zpátky na nulu: po skoku na 5 km má hra běžet jako
         // po odběhnutých 5 km, jinak by teleport testoval jinou obtížnost,
         // než jakou tam hráč potká

@@ -4,6 +4,14 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
+> **Hra 1.9.16 přidala vývojářský režim** (reset postupu, mince, odemykání,
+> nesmrtelnost, skok na metr) — podrobně v sekci *Vývojářský režim* níž.
+> **Reset v aplikaci z Google Play je potřeba vyzkoušet na telefonu.**
+> Headless prohlížeč nativní Preferences nemá, takže ověřená je jen webová
+> větev a to, že se `STORE.remove()` nativní větve dovolá. Dokud to
+> zadavatel nezkusí, netvrdit, že reset na Androidu funguje. Na webu cache
+> `loukarun-v65`; do Play až s dalším AAB.
+
 > **Hra 1.9.15 překreslila zvířata.** Postavy se dosud kreslily plochými
 > elipsami a nohy vypadaly jako čtyři tmavé chůdy postavené pod trup; teď mají
 > kyčle, přechody, odlesk na hřbetě, špičatá ouška a hřebeny na rohu —
@@ -129,9 +137,63 @@ Veškerá grafika se kreslí procedurálně do canvasu, zvuky generuje WebAudio.
 | `js/karel.js` | uvítací scéna s Karlem (vlastní canvas, hlášky, portál) |
 | `js/i18n.js` | čeština a angličtina; oba jazyky musí mít stejné klíče |
 | `js/audio.js`, `js/platform.js` | zvuk; nativní vrstva (haptika, tlačítko Zpět, záloha savu) |
+| `js/dev.js` | vývojářský režim (panel, gesto, reset postupu) — viz *Vývojářský režim* |
 | `sw.js` | service worker — **při vydání zvedni číslo v `CACHE`** a doplň nové soubory do `CORE` |
 
 Verze hry je na jednom místě: `GAME_VERSION` v `js/game.js`.
+
+## Vývojářský režim
+
+Nástroj pro jednoho člověka: vrátit se do kůže nového hráče a zkoušet obsah
+bez odehrávání. Celý je v `js/dev.js` (`window.DEVTOOLS`, jediný vstup
+`attach(most)`); `game.js` mu na konci inicializace předá most — `save`,
+`persist`, `S`, `CHARACTERS`, `ITEMS`, objekt `DEV_FLAGS` a funkce
+`refreshMenu`, `refill`, `finish`, `teleport`.
+
+- **Je ve všech buildech, i na ostrém webu a v AAB pro Play**, za tajným
+  gestem: **7 ťuknutí na číslo verze v Nastavení** (do 3 s mezi ťuknutími),
+  na počítači `Ctrl+Shift+D`, zkratky `?dev=1` / `?dev=0`. **Rozhodnutí
+  zadavatele**, vědomě proti „vystřihnout z produkce" — chce zkoušet přímo
+  na ostrém webu a na appce z Play. Nepředělávat bez jeho svolení.
+- **Není to ochrana a nesmí se za ni vydávat.** Kdo má konzoli, nastaví si
+  příznak sám; gesto brání jen náhodnému objevení. Za režim proto nikdy
+  nesmí přibýt nic jiného než vlastní postup hráče — žádná cizí data, klíče.
+- **Rozsah panelu** (reset postupu, mince a odemykání, zásahy do běhu) volil
+  zadavatel; Karla/deníček a denní mise výslovně nechtěl. Co tam je navíc,
+  je vedlejší produkt resetu. Rozšiřovat dál jen po zeptání.
+- **Příznak bydlí pod vlastním klíčem `loukarun_dev_v1`**, ne v savu:
+  „úplně nový hráč" maže `loukarun_save_v1` a režim by se tím vypnul sám.
+- **„Vymazat cache" ≠ „být novým hráčem".** Postup leží v savu a v aplikaci
+  z Play **ještě v nativních Preferences**; `STORE.recover()` při startu
+  obnoví save z Preferences, když je localStorage prázdný. **Kdo smaže jen
+  localStorage, uvidí po načtení přesně ten postup, kterého se chtěl
+  zbavit.** Mazání proto jde vždycky přes `STORE.remove()` (maže obojí
+  a vrací slib — reload až po něm) a do reloadu `wipe()` zahazuje zápisy
+  mazaných klíčů, ať je nevrátí `persist()` z běžící hry. Cache service
+  workeru je třetí, nezávislá věc: kopie hry, ne data; v appce žádná není.
+- **`js/dev.js` je v `CORE`, NIKDY ve `VITAL`** — chybějící panel nesmí
+  bránit aktivaci nové verze (poučení z 1.9.12). `game.js` po něm sahá jen
+  přes `if (window.DEVTOOLS)`, soubor smí chybět.
+- **Nesmrtelnost musí zastavit i úbytek energie**, ne jen nárazy — jinak
+  běh po pár minutách stejně skončí. `teleport()` posouvá i `lastMilestone`
+  a `lastSpecial`, jinak se po skoku spustí lavina milníků a koncert.
+- **Plovoucí tlačítko 🛠 sedí na `left:6px; top:30%`** a ta poloha je
+  **naměřená** (plocha průniku s každým viditelným klikatelným prvkem, menu
+  i běh, šest rozlišení včetně otočeného telefonu) — rohy jsou všechny
+  obsazené. Svítí jen v menu a za běhu a jen když přes ně neleží jiná
+  obrazovka (Karlova scéna se přes menu otevírá sama a má vpravo nahoře
+  křížek). Kdo přidá tlačítko k levému okraji menu nebo HUD, přeměří.
+- **Při měření překryvu: `getBoundingClientRect()` prvku s `hidden` vrací
+  nuly** a nulový obdélník „nic nepřekrývá". Přesně tohle kdysi dalo dvě
+  protichůdná měření. Druhá past: odznak denních misí přijíždí zpoza okraje,
+  takže měření v první půlvteřině po otevření menu ho najde jinde. Měří se
+  s viditelným prvkem, po doběhnutí nástupu, a se zavřenou Karlovou scénou.
+- **Číslo se zadává řádkem v panelu, ne `window.prompt()`** — nativní dialog
+  se s otočenou hrou neotáčí. Psaní do pole zastavuje propagaci kláves, jinak
+  by mezerník skákal a Escape couval z obrazovky.
+- `node --check js/dev.js` po každé úpravě: zpětný apostrof v komentáři
+  uvnitř CSS (template literal) soubor rozbije. Statické invarianty hlídá
+  `tests/dev-mode.test.cjs`.
 
 ## Na co si dát pozor
 

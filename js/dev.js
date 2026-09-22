@@ -38,6 +38,8 @@ window.DEVTOOLS = (() => {
   let opener = null;
   let taps = 0;
   let lastTap = 0;
+  let pending = null;      // rozepsaný dotaz na číslo, viz ask()
+  let paint = () => {};    // přebarví plovoucí tlačítko, viz watchScreens()
 
   /* ---------- příznak ----------
      Čte se přes STORE, aby se na Androidu vezl i v nativní záloze: kdo si
@@ -56,6 +58,11 @@ window.DEVTOOLS = (() => {
      přesně ten postup, kterého se chtěl zbavit, a bude to považovat za
      chybu resetu. Čeká se na slib, teprve pak se stránka načte znovu. */
   function wipe(keys) {
+    // Mezi smazáním a načtením stránky běží hra dál a kterékoli persist()
+    // by save zapsalo zpátky – do localStorage i do nativní zálohy. Zápis
+    // mazaných klíčů se proto do reloadu zahazuje.
+    const set = STORE.set;
+    STORE.set = (k, v) => (keys.includes(k) ? false : set(k, v));
     return Promise.all(keys.map((k) => {
       try { return Promise.resolve(STORE.remove(k)); } catch (e) { return Promise.resolve(); }
     }));
@@ -88,7 +95,7 @@ window.DEVTOOLS = (() => {
      `html.force-landscape` s ním a text je čitelný. Styl se vkládá odsud,
      ať se do produkčního stylopisu nepřidává nic, co hráč nikdy neuvidí. */
   const CSS = `
-  #dev-open{position:fixed;right:6px;top:6px;z-index:9998;width:34px;height:34px;
+  #dev-open{position:fixed;left:6px;top:30%;z-index:9998;width:34px;height:34px;
     border:0;border-radius:50%;background:rgba(20,26,16,.62);color:#cdf5a0;
     font-size:17px;line-height:34px;padding:0;cursor:pointer;opacity:.5}
   #dev-open:active{opacity:1}
@@ -115,6 +122,11 @@ window.DEVTOOLS = (() => {
   .dev-row button.warn{border-color:#7a3b2a;color:#f0b8a6}
   #dev-close{position:absolute;top:8px;right:10px;background:none;border:0;color:#8fae76;
     font-size:20px;line-height:1;cursor:pointer;padding:4px}
+  #dev-ask{margin:10px 0 0;padding:8px;border:1px solid #6ca63a;border-radius:8px;background:#1d2717}
+  #dev-ask[hidden]{display:none}
+  #dev-ask label{display:block;font-size:12px;margin:0 0 5px;color:#cdf5a0}
+  #dev-ask input{width:100%;box-sizing:border-box;margin:0 0 6px;padding:6px 8px;font:inherit;font-size:16px;
+    background:#0e130b;color:#e8f3dc;border:1px solid #3c5230;border-radius:6px}
   #dev-msg{margin:9px 0 0;min-height:15px;font-size:11px;color:#cdf5a0}`;
 
   function say(text) {
@@ -122,14 +134,53 @@ window.DEVTOOLS = (() => {
     if (el) el.textContent = text || '';
   }
 
-  // Nativní prompt() je v nainstalované PWA i ve WebView nespolehlivý
-  // (Android ho v aplikaci umí ignorovat úplně), takže se ptáme vlastním
-  // řádkem uvnitř panelu. Vrací null, když člověk nic nezadal.
+  /* Číslo se zadává řádkem uvnitř panelu, ne přes window.prompt(): hra je
+     na telefonu na výšku otočená o 90°, kdežto nativní dialog ne, takže by
+     vyskočil napříč hrou. Vrací slib s číslem, nebo null, když člověk
+     zrušil nebo nezadal nic rozumného. */
   function ask(label, preset) {
-    const raw = window.prompt(label, preset == null ? '' : String(preset));
-    if (raw === null) return null;
-    const n = Number(String(raw).replace(',', '.').trim());
-    return Number.isFinite(n) ? n : null;
+    const box = document.getElementById('dev-ask');
+    const lab = document.getElementById('dev-ask-label');
+    const inp = document.getElementById('dev-ask-input');
+    if (pending) pending(null);
+    lab.textContent = label;
+    inp.value = preset == null ? '' : String(preset);
+    box.hidden = false;
+    box.scrollIntoView({ block: 'nearest' });
+    inp.focus();
+    inp.select();
+    return new Promise((resolve) => {
+      pending = (v) => { pending = null; box.hidden = true; resolve(v); };
+    });
+  }
+  function answer(ok) {
+    if (!pending) return;
+    if (!ok) { pending(null); return; }
+    const n = Number(String(document.getElementById('dev-ask-input').value).replace(',', '.').trim());
+    pending(Number.isFinite(n) ? n : null);
+  }
+
+  function buildAsk(card) {
+    const box = document.createElement('form');
+    box.id = 'dev-ask';
+    box.hidden = true;
+    box.addEventListener('submit', (e) => { e.preventDefault(); answer(true); });
+    const lab = document.createElement('label');
+    lab.id = 'dev-ask-label';
+    lab.htmlFor = 'dev-ask-input';
+    const inp = document.createElement('input');
+    inp.id = 'dev-ask-input';
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.autocomplete = 'off';
+    // psaní do pole nesmí dojít ke hře (mezerník = skok, Escape = zpět)
+    inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') answer(false); });
+    const row = document.createElement('div');
+    row.className = 'dev-row';
+    button(row, 'OK', () => answer(true));
+    button(row, 'Zrušit', () => answer(false));
+    box.append(lab, inp, row);
+    card.appendChild(box);
   }
 
   function button(row, label, onClick, cls) {
@@ -196,6 +247,7 @@ window.DEVTOOLS = (() => {
     buildMoney(card);
     buildRun(card);
     buildFooter(card);
+    buildAsk(card);
 
     const msg = document.createElement('p');
     msg.id = 'dev-msg';
@@ -257,8 +309,8 @@ window.DEVTOOLS = (() => {
       say('Mincí: ' + api.save.coins);
     });
 
-    button(row, '🪙 Nastavit…', () => {
-      const n = ask('Kolik mincí?', api.save.coins);
+    button(row, '🪙 Nastavit…', async () => {
+      const n = await ask('Kolik mincí?', api.save.coins);
       if (n === null) return;
       api.save.coins = Math.max(0, Math.round(n));
       api.persist();
@@ -304,8 +356,8 @@ window.DEVTOOLS = (() => {
     });
     god.classList.toggle('on', api.flags.god);
 
-    button(row, '📏 Skočit na…', () => {
-      const m = ask('Na kolikátý metr?', 2500);
+    button(row, '📏 Skočit na…', async () => {
+      const m = await ask('Na kolikátý metr?', 2500);
       if (m === null) return;
       const to = Math.max(0, Math.round(m));
       const done = api.teleport(to);
@@ -342,11 +394,23 @@ window.DEVTOOLS = (() => {
   }
 
   /* ---------- kde smí plovoucí tlačítko svítit ----------
-     Změřeno, ne odhadnuto: v menu leží dole odznak denních misí a v obchodě
-     i v nastavení je nahoře kruhové Zpět – žádný roh není volný na všech
-     obrazovkách naráz. Tlačítko proto svítí jen v menu a za běhu (tam je
-     pravý horní roh prázdný na všech testovaných rozlišeních) a jinde se
-     schová; z obchodu se panel otevře ťuknutím na verzi v Nastavení.
+     Poloha `left:6px; top:30%` je NAMĚŘENÁ jako plocha průniku obdélníků
+     s každým viditelným klikatelným prvkem, v menu i za běhu, na 320×568,
+     360×640, 390×844, 412×915, 844×390 a 1280×800 – a vyšla nulová všude.
+     Rohy neprojdou: vpravo nahoře leží jazyk v menu a pauza za běhu,
+     vlevo dole denní mise, vlevo nahoře ikona energie a `?perf` měřák,
+     vpravo dole na některých displejích obchod. Kdo přidá do menu nebo do
+     HUD tlačítko u levého okraje, musí to přeměřit.
+
+     Měřit se musí s VIDITELNÝM tlačítkem a po doběhnutí nástupu menu:
+     `getBoundingClientRect()` prvku s `hidden` vrací nuly a nulový obdélník
+     nic nepřekrývá, takže měření tiše ohlásí „volno". A odznak denních misí
+     přijíždí zpoza okraje, takže měření v první půlvteřině ho najde jinde.
+
+     Tlačítko svítí jen v menu a za běhu, a i tam jen když přes ně neleží
+     jiná obrazovka – hlavně Karlova scéna, která se přes menu otevírá sama
+     a má vpravo nahoře svůj křížek. Z obchodu a odjinud se panel otevře
+     ťuknutím na verzi v Nastavení.
 
      Hlídá to pozorovatel místo volání z hry: `showScreen()` je uvnitř IIFE
      a rozšiřovat kvůli tomu most by znamenalo dva zdroje pravdy o tom,
@@ -355,10 +419,15 @@ window.DEVTOOLS = (() => {
     const shown = () => {
       const hud = document.getElementById('hud');
       const menu = document.getElementById('screen-menu');
-      return (menu && menu.classList.contains('visible'))
+      const base = (menu && menu.classList.contains('visible'))
         || (hud && hud.classList.contains('visible'));
+      if (!base) return false;
+      for (const el of document.querySelectorAll('.screen.visible')) {
+        if (el !== menu) return false;
+      }
+      return true;
     };
-    const paint = () => { if (opener && enabled) opener.hidden = !shown(); };
+    paint = () => { if (opener) opener.hidden = !enabled || !shown(); };
     const obs = new MutationObserver(paint);
     for (const el of document.querySelectorAll('.screen, #hud')) {
       obs.observe(el, { attributes: true, attributeFilter: ['class'] });
@@ -373,6 +442,7 @@ window.DEVTOOLS = (() => {
     say('');
   }
   function close() {
+    if (pending) pending(null);
     if (panel) panel.hidden = true;
   }
 
@@ -381,7 +451,7 @@ window.DEVTOOLS = (() => {
     enabled = true;
     writeFlag(true);
     if (!panel) { build(); watchScreens(); }
-    if (opener) opener.hidden = false;
+    paint();
     if (!quiet) open();
   }
 
@@ -389,7 +459,7 @@ window.DEVTOOLS = (() => {
     enabled = false;
     writeFlag(false);
     close();
-    if (opener) opener.hidden = true;
+    paint();
   }
 
   /* ---------- gesto ----------
