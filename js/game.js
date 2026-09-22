@@ -601,6 +601,7 @@
       S.jumpImpulse = jumpPower;
       S.airborne = true;
       S.jumps = 1;
+      S.jumpAt = performance.now();
       S.squash = -0.6;
       puffs(6);
       AUDIO.play('jump');
@@ -640,6 +641,13 @@
     if (S.mode !== 'run') return;
     if (lessonPaused()) return; // zastavená lekce – rozjede ji jen Pokračovat
     if (S.special && S.special.phase === 'challenge') return; // koncert řídí jen ťukání
+    /* Švih dolů začíná doteknutím, a dotek na plátně rovnou skáče – skluz
+       přijde až po 38 px pohybu prstu. Bez tohohle zrušení byl hráč, který
+       se včas přikrčil, v tu chvíli 40–70 px ve vzduchu a hlavou narazil
+       do větve nebo včel. Skok starší než 120 ms už byl záměrný. */
+    if (S.airborne && S.jumps === 1 && performance.now() - (S.jumpAt || 0) < 120) {
+      S.py = 0; S.vy = 0; S.airborne = false; S.jumps = 0; S.jumpImpulse = 0;
+    }
     if (S.airborne) { S.vy = Math.max(S.vy, 1500); } // rychlý sešup
     S.sliding = 0.8; // dřep po svajpu dolů drží nepatrně déle
     AUDIO.play('slide');
@@ -910,7 +918,12 @@
 
   function togglePause() {
     if (S.mode === 'run') { S.mode = 'paused'; showScreen('pause'); }
-    else if (S.mode === 'paused') { S.mode = 'run'; showScreen(null); }
+    else if (S.mode === 'paused') {
+      S.mode = 'run'; showScreen(null);
+      // po pauze může překážka stát přímo před zvířetem – chvilka milosti
+      // (zvíře bliká stejně jako po nárazu, takže je vidět proč)
+      S.invuln = Math.max(S.invuln, 1);
+    }
   }
 
   // celkové mince za běh včetně násobiče postavy (Avala: coinMult) –
@@ -3433,7 +3446,7 @@
     const energy = Math.round(Math.max(0, S.energy) * 2) / 2; // po půl procentu stačí
     if (energy !== hudLast.energy) {
       hudLast.energy = energy;
-      $('hud-energy-fill').style.width = energy + '%';
+      $('hud-energy-fill').style.setProperty('--energy', energy);
     }
     const low = S.energy < 25;
     if (low !== hudLast.low) {

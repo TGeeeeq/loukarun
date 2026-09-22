@@ -169,27 +169,40 @@ const GFX = (() => {
      překážek. Vykreslují se po kopcích a před zemí, aby vypadaly jako
      světlo prodírající se scénou, ne jako nálepka přes celý obraz.
      amt 0 = nic, 1 = plná síla (západ slunce; v lese jen náznak). */
+  /* Gradient paprsku se kreslí podél osy +y a klín se do směru otáčí,
+     takže stačí jeden pro všechny čtyři a vytváří se znovu jen při změně
+     barvy slunce nebo výšky plátna. Síla (amt) jde přes globalAlpha –
+     v režimu 'lighter' je to totéž jako alfa v zastávkách gradientu. */
+  let rayGrad = null, rayCtx = null, raySun = '', rayLen = 0;
   function drawGodRays(ctx, W, H, pal, groundY, t, amt) {
     if (amt <= 0.01) return;
     const sx = W * 0.78, sy = H * 0.04;
+    const len = H * 1.5;
+    if (rayCtx !== ctx || raySun !== pal.sun || rayLen !== len) {
+      rayGrad = ctx.createLinearGradient(0, 0, 0, len);
+      rayGrad.addColorStop(0, hexA(pal.sun, 0.16));
+      rayGrad.addColorStop(1, hexA(pal.sun, 0));
+      rayCtx = ctx; raySun = pal.sun; rayLen = len;
+    }
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha *= Math.min(1, amt);
+    ctx.fillStyle = rayGrad;
     ctx.translate(sx, sy);
     for (let i = 0; i < 4; i++) {
       // klíny se velmi pomalu rozevírají a zavírají, ať obraz „dýchá“
       const base = -0.95 + i * 0.42 + Math.sin(t * 0.00013 + i) * 0.05;
       const wide = 0.10 + 0.035 * Math.sin(t * 0.00021 + i * 2.1);
-      const len = H * 1.5;
-      const g = ctx.createLinearGradient(0, 0, Math.sin(base) * len, Math.cos(base) * len);
-      g.addColorStop(0, hexA(pal.sun, 0.16 * amt));
-      g.addColorStop(1, hexA(pal.sun, 0));
-      ctx.fillStyle = g;
+      const ex = Math.sin(wide) * len, ey = Math.cos(wide) * len;
+      ctx.save();
+      ctx.rotate(-base);
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(Math.sin(base - wide) * len, Math.cos(base - wide) * len);
-      ctx.lineTo(Math.sin(base + wide) * len, Math.cos(base + wide) * len);
+      ctx.lineTo(-ex, ey);
+      ctx.lineTo(ex, ey);
       ctx.closePath();
       ctx.fill();
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -259,6 +272,36 @@ const GFX = (() => {
   /* =========================================================
      DEKORACE V POZADÍ (vtipné kulisy)
      ========================================================= */
+  /* Okno statku se září. Kulisa se kreslí každý snímek a nesmí alokovat,
+     takže záře je JEDEN gradient na jednotkovém kruhu, vytvořený poprvé
+     a pak jen přeškálovaný na okno; blikání řídí globalAlpha místo
+     skládání 'rgba(…' + flick + ')' řetězců. Vnitřní poloměr 2/(22·1,8)
+     odpovídá dřívějšímu 2·s u okna širokého 22·s. */
+  let farmGlow = null, farmGlowCtx = null;
+  function farmWindow(ctx, s, wx, wy, ww, wh, flick) {
+    if (farmGlowCtx !== ctx) {
+      farmGlow = ctx.createRadialGradient(0, 0, 2 / (22 * 1.8), 0, 0, 1);
+      farmGlow.addColorStop(0, 'rgba(255,206,110,0.9)');
+      farmGlow.addColorStop(1, 'rgba(255,206,110,0)');
+      farmGlowCtx = ctx;
+    }
+    const a = ctx.globalAlpha;
+    const r = ww * 1.8;
+    ctx.save();
+    ctx.translate(wx, wy);
+    ctx.scale(r, r);
+    ctx.globalAlpha = a * flick;
+    ctx.fillStyle = farmGlow;
+    ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#6b4a30'; rr(ctx, wx - ww / 2 - 2 * s, wy - wh / 2 - 2 * s, ww + 4 * s, wh + 4 * s, 2 * s); ctx.fill();
+    ctx.globalAlpha = a * flick;
+    ctx.fillStyle = '#ffe096'; rr(ctx, wx - ww / 2, wy - wh / 2, ww, wh, 1.5 * s); ctx.fill();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = '#6b4a30'; ctx.lineWidth = 1.5 * s;
+    ctx.beginPath(); ctx.moveTo(wx, wy - wh / 2); ctx.lineTo(wx, wy + wh / 2); ctx.moveTo(wx - ww / 2, wy); ctx.lineTo(wx + ww / 2, wy); ctx.stroke();
+  }
+
   const PROPS = {
     sunflower(ctx, s) {
       ctx.strokeStyle = '#4c8a3f'; ctx.lineWidth = 5 * s;
@@ -647,19 +690,8 @@ const GFX = (() => {
         ctx.fill();
       }
       ctx.fillStyle = '#5a3d28'; rr(ctx, -10 * s, -42 * s, 20 * s, 42 * s, 3 * s); ctx.fill();
-      const win = (wx, wy, ww, wh) => {
-        const g = ctx.createRadialGradient(wx, wy, 2 * s, wx, wy, ww * 1.8);
-        g.addColorStop(0, 'rgba(255,206,110,' + (0.9 * flick) + ')');
-        g.addColorStop(1, 'rgba(255,206,110,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(wx, wy, ww * 1.8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#6b4a30'; rr(ctx, wx - ww / 2 - 2 * s, wy - wh / 2 - 2 * s, ww + 4 * s, wh + 4 * s, 2 * s); ctx.fill();
-        ctx.fillStyle = 'rgba(255,224,150,' + flick + ')'; rr(ctx, wx - ww / 2, wy - wh / 2, ww, wh, 1.5 * s); ctx.fill();
-        ctx.strokeStyle = '#6b4a30'; ctx.lineWidth = 1.5 * s;
-        ctx.beginPath(); ctx.moveTo(wx, wy - wh / 2); ctx.lineTo(wx, wy + wh / 2); ctx.moveTo(wx - ww / 2, wy); ctx.lineTo(wx + ww / 2, wy); ctx.stroke();
-      };
-      win(-34 * s, -56 * s, 22 * s, 20 * s);
-      win(34 * s, -56 * s, 22 * s, 20 * s);
+      farmWindow(ctx, s, -34 * s, -56 * s, 22 * s, 20 * s, flick);
+      farmWindow(ctx, s, 34 * s, -56 * s, 22 * s, 20 * s, flick);
     },
     // pasoucí se kravka – klidný obyvatel pastviny, ať je pozadí živější
     grazingcow(ctx, s, extra, t) {

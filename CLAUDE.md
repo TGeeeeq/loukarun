@@ -216,6 +216,17 @@ bez odehrávání. Celý je v `js/dev.js` (`window.DEVTOOLS`, jediný vstup
 - **Tlačítko Běžet má zámek `launching`** na dobu nástupové animace (180 ms).
   Menu je během ní pořád „menu", takže druhé ťuknutí běh restartovalo
   a ťuknutí na Obchod ho rozjelo z obchodu.
+- **Švih dolů do 120 ms po skoku ten skok zruší** (`S.jumpAt` v `jump()`,
+  kontrola v `slide()`). Dotek na plátně skáče hned a skluz přijde až po
+  38 px pohybu prstu, takže hráč, který se včas přikrčil, byl v tu chvíli
+  ve vzduchu a hlavou narazil do větve. Pozdější švih dál jen sráží dolů.
+- **Návrat z pauzy dává 1 s nezranitelnosti** (`S.invuln`), zvíře bliká
+  jako po nárazu. Po pauze může překážka stát přímo před ním.
+- **Záře oken statku a sluneční paprsky mají gradient vytvořený jednou**
+  (`farmWindow`, `drawGodRays` v `js/gfx.js`) a sílu řídí `globalAlpha`.
+  Ověřeno pixelovým srovnáním se starou kresbou (rozdíl ≤ 2/255).
+- **Energie v HUD se kreslí posunem (`--energy` → `translateX`), ne šířkou.**
+  `scaleX` by zaoblený konec zmáčkl do elipsy; posun ho nechá kulatý.
 - **Stín na zemi postava nemá a nesmí mít.** Kreslil by se v jejích
   souřadnicích, takže by při skoku vylétl s ní do vzduchu. Na webu stín je,
   protože tam postava stojí — je to součást scény, ne postavy.
