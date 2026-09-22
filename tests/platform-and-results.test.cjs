@@ -76,16 +76,38 @@ test('skipping the story leaves result counters running and cannot restart typin
   assert.equal(context.overSkip, null);
 });
 
+function speech({ allowed = true, ios = false, runs = 1, step = 0 } = {}) {
+  const said = [];
+  const context = vm.createContext({
+    st: { step }, GUIDE_FROM: 6, IOS: ios,
+    SPEECH: [
+      { cs: 'po běhu', fresh: { cs: 'bez běhu' } },
+      { cs: '1' }, { cs: '2' }, { cs: '3' }, { cs: '4' }, { cs: '5' },
+      { cs: 'android', ios: { cs: 'iphone' }, guide: true },
+      { cs: 'konec' },
+    ],
+    hooks: { getStats: () => ({ runs }) },
+    PLATFORM: { shouldOfferInstall: () => allowed },
+    say(t) { said.push(t.cs); }, react() {}, hearts() {}, toPlay() {},
+  });
+  vm.runInContext(functionBlock(karelSource, '  function speakStep()', '\n  /* ---------- krátké přivítání'), context);
+  context.speakStep();
+  return { step: context.st.step, said: said[0] };
+}
+
 for (const allowed of [false, true]) {
-  test(`Karel installation steps: advice ${allowed ? 'allowed' : 'suppressed'}`, () => {
-    const context = vm.createContext({
-      st: { step: 6 }, GUIDE_FROM: 6,
-      SPEECH: Array.from({ length: 11 }, (_, i) => ({ cs: String(i) })),
-      PLATFORM: { shouldOfferInstall: () => allowed },
-      say() {}, react() {}, hearts() {}, toPlay() {},
-    });
-    vm.runInContext(functionBlock(karelSource, '  function speakStep()', '\n  /* ---------- krátké přivítání'), context);
-    context.speakStep();
-    assert.equal(context.st.step, allowed ? 6 : 9);
+  test(`Karel installation step: advice ${allowed ? 'allowed' : 'suppressed'}`, () => {
+    const r = speech({ allowed, step: 6 });
+    assert.equal(r.step, allowed ? 6 : 7);
+    assert.equal(r.said, allowed ? 'android' : 'konec');
   });
 }
+
+test('Karel installation step shows only the iPhone steps on iOS', () => {
+  assert.equal(speech({ ios: true, step: 6 }).said, 'iphone');
+});
+
+test('Karel welcome does not claim a run the player has not made', () => {
+  assert.equal(speech({ runs: 0 }).said, 'bez běhu');
+  assert.equal(speech({ runs: 1 }).said, 'po běhu');
+});

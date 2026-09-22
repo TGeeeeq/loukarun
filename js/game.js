@@ -7,7 +7,7 @@
   const { CHARACTERS, ITEMS, ENVS, OBSTACLES, BIRD_VARIANTS, HUMANS, SIGNS, EVENTS, ECONOMY, TUTORIAL } = DATA;
 
   /* ---------- verze hry (jediný zdroj; při vydání zvyš i cache v sw.js) ---------- */
-  const GAME_VERSION = '1.9.16';
+  const GAME_VERSION = '1.9.17';
   { const el = document.getElementById('game-version'); if (el) el.textContent = 'v' + GAME_VERSION; }
 
   /* ---------- canvas ---------- */
@@ -448,6 +448,8 @@
   function maybeGreet() {
     if (typeof KAREL === 'undefined') return;
     const again = !!save.karelSeen;
+    // nový hráč, který ještě neběžel: Karel počká na výsledky prvního běhu
+    if (!again && !(save.runs > 0)) return;
     /* Návod na instalaci (přidání hry na plochu) přibyl do řeči až dodatečně,
        a má ho vidět každý – i ten, kdo Karla dávno zná. Takový hráč dostane
        scénu jednou navíc, ale rovnou od návodu (open({guide:true})), ne celou
@@ -1090,7 +1092,22 @@
     });
   }
 
+  /* Uvítání nového hráče přichází PO PRVNÍM BĚHU, na obrazovce výsledků:
+     kdo si hru stáhl, chce nejdřív běžet, a Karlovo „viděl jsem tě" pak
+     má na co navázat. Čeká se, až se výsledky dopočítají a dopíše vtip,
+     ať scéna nepřepadne hráče uprostřed jeho prvního čísla. Když hru
+     zavře dřív, dožene to menu při dalším spuštění (maybeGreet). */
+  const WELCOME_AFTER_MS = 2800;
+  function maybeWelcomeAfterRun() {
+    if (typeof KAREL === 'undefined' || save.karelSeen) return;
+    setTimeout(() => {
+      if (save.karelSeen || curScreen !== 'over' || S.mode !== 'over' || KAREL.isOpen()) return;
+      karelOpen({ lowFx: lowFx || reduceMotionMq.matches, again: false });
+    }, WELCOME_AFTER_MS);
+  }
+
   function revealOver(d) {
+    maybeWelcomeAfterRun();
     const card = document.querySelector('#screen-over .over-card');
     const storyEl = $('over-story');
     const textEl = storyEl.querySelector('.story-text');
@@ -3418,7 +3435,12 @@
      úvodní obrazovce“ – tam se aplikace na Androidu ukončí. */
   function goBack() {
     // Karlova scéna leží nade vším – Zpět ji zavře jako první
-    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) { KAREL.close(); return true; }
+    if (typeof KAREL !== 'undefined' && KAREL.isOpen()) {
+      // povinné uvítání nového hráče nezavře ani systémové Zpět –
+      // tlačítko se jen spolkne, aby appka nespadla do pozadí
+      if (!KAREL.isLocked || !KAREL.isLocked()) KAREL.close();
+      return true;
+    }
     if (S.mode === 'intro') return true;   // během intra se nikam nechodí
     if (S.mode === 'run') { togglePause(); return true; }
     if (S.mode === 'paused') { togglePause(); return true; }

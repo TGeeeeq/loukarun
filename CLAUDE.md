@@ -4,6 +4,11 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 ## Co teď čeká na uživatele
 
+> **Hra 1.9.17 předělala Karlovo uvítání nového hráče** — přichází až po
+> prvním běhu, má 8 krátkých bublin (7 v aplikaci z Play), písmo nejméně
+> 18 px a napoprvé se nedá přeskočit. Podrobně v *Karlův hlas*, odstavec
+> o uvítání. Na webu cache `loukarun-v66`; do Play až s dalším AAB.
+
 > **Hra 1.9.16 přidala vývojářský režim** (reset postupu, mince, odemykání,
 > nesmrtelnost, skok na metr) — podrobně v sekci *Vývojářský režim* níž.
 > K tomu opravy: pauza při odchodu do pozadí + 1 s milosti po návratu,
@@ -108,6 +113,35 @@ dva různí osli.
 kopii hry z `public/loukarun/app/js/` a porovnává ji s tabulkou. Ruční překryv
 plátna a SVG je pořád nejpřesnější kontrola siluety, ale jako pravidelná
 pojistka je k ničemu, protože se na ni zapomene.
+
+### Uvítání nového hráče (`SPEECH` v `js/karel.js`)
+
+- **Přichází PO PRVNÍM BĚHU**, na obrazovce výsledků (`maybeWelcomeAfterRun()`
+  v `js/game.js`, 2,8 s po jejich otevření). Kdo si hru stáhl, chce nejdřív
+  běžet, a Karlovo „viděl jsem tě běžet" pak má na co navázat. Menu novému
+  hráči, který ještě neběžel, Karla nepouští (`maybeGreet`). Kdo hru zavře
+  dřív, než Karel vyleze, dostane ho v menu při dalším spuštění.
+- **Napoprvé se nedá přeskočit** (`st.mustRead`): chybí křížek, Escape ani
+  systémové Zpět scénu nezavřou (`KAREL.isLocked()`) a další bublina se
+  odemkne až `readGate()` po dopsání té současné. Ťuknutí během psaní text
+  pořád rovnou dopíše — rychlý čtenář nemá čekat na animaci, jen nemá
+  proletět bez čtení. **Proto je řeč krátká** (8 bublin, rozhodnutí
+  zadavatele); nepřeskočitelná dvouminutová řeč by lidi vyhnala. Kdo řeč
+  jednou viděl (`karelSeen`), dostane jen krátké přivítání.
+- **Obsah je ve hře natvrdo** (rozhodnutí zadavatele), a proto v něm
+  **nesmí být nic, co zestárne**: žádná jména nových zvířat, poděkování za
+  konkrétní akci ani cíl sbírky v korunách. Každá změna je vydání a v Play
+  nový AAB — dřívější řeč takhle měsíce hlásila „přijely Tonička a Elvíra".
+  Akce, novinky a sbírka jen ukazují odkazem na web.
+- **První bublina má dvě podoby** (`fresh`): kdo Karla otevře tlačítkem 🫏
+  dřív, než vůbec běžel, by jinak slyšel „viděl jsem tě běžet".
+- **Návod na instalaci je jedna bublina podle zařízení** (`ios` / obecná),
+  v appce z Play a v nainstalované hře se přeskočí. `guide: true` je záložka
+  pro starší hráče, kteří uvítání viděli dřív, než návod přibyl.
+- **Písmo bubliny je nejméně 18 px v pixelech**, ne v rem — nový hráč ještě
+  nic nenastavil a kompaktní scéna (každý telefon naležato) ho dřív stahovala
+  na 14 px. Při prvním uvítání má bublina navíc víc šířky (`.karel-screen.first`).
+  Ověřeno na 320×568 až 1280×800, všechny bubliny celé v okně.
 
 ## Čím se hra ověřuje
 

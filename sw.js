@@ -30,7 +30,7 @@
    úplnosti cache, je jen úklid té předchozí (`activate`).
    ========================================================= */
 
-const CACHE = 'loukarun-v65';
+const CACHE = 'loukarun-v66';
 
 const CORE = [
   './',

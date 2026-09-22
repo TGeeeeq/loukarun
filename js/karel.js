@@ -46,83 +46,80 @@ const KAREL = (() => {
      ========================================================= */
 
   /* ---------- úvodní řeč ----------
-     Pět zastávek, mezi nimi se ťuká. Poslední je sbírka na seno –
-     schválně až nakonec, aby zůstala v hlavě jako poslední věta. */
+     Uvítání nového hráče. Pouští se PO PRVNÍM BĚHU (ne hned po spuštění):
+     kdo si hru stáhl, chce nejdřív hrát, a poděkování pak má na co navázat.
+     Napoprvé se nedá přeskočit (viz st.mustRead), a proto je krátká.
+
+     ŽÁDNÝ OBSAH, KTERÝ ZESTÁRNE. Řeč je ve hře natvrdo (rozhodnutí
+     zadavatele), takže každá změna znamená vydání – a v aplikaci z Play
+     nový AAB. Dřív tu stála jména nových oslic, poděkování za konkrétní
+     festival a cíl sbírky v korunách; tohle všechno se po pár týdnech stalo
+     nepravdou. Akce, novinky a sbírka proto jen UKAZUJÍ na web, kde je
+     aktuální obsah – Karel o nich mluví obecně.
+
+     Píše se podle .claude/skills/karel/SKILL.md: neprosí, nedojímá,
+     pointa na konci, nejvýš tři řádky bubliny. */
   const SPEECH = [
     {
-      cs: 'Ahoj! Já jsem Karel. Osel. Ne jako nadávka, jako druh.\nA než se rozběhneš — musím ti něco říct.',
-      en: 'Hi! I\'m Karel. A donkey. Not as an insult, as a species.\nAnd before you run off — I need to tell you something.',
+      /* první bublina má dvě podoby: po prvním běhu (normální cesta) a pro
+         hráče, který Karla otevřel tlačítkem v menu dřív, než vůbec běžel –
+         „viděl jsem tě běžet" by mu lhalo */
+      cs: 'Tak ty jsi ten nový. Karel, osel. Ne jako nadávka, jako druh.\nViděl jsem tě běžet. Na první pokus slušné. …Na můj vkus moc rychle.',
+      en: 'So you\'re the new one. Karel, donkey. Not as an insult, as a species.\nI saw you run. Decent for a first go. …A bit fast for my taste.',
+      fresh: {
+        cs: 'Tak ty jsi ten nový. Karel, osel. Ne jako nadávka, jako druh.\nJeště jsi ani neběžel a už mě otravuješ. To se mi líbí.',
+        en: 'So you\'re the new one. Karel, donkey. Not as an insult, as a species.\nYou haven\'t even run yet and you\'re already bothering me. I like that.',
+      },
     },
     {
-      cs: 'Díky. Fakt díky. Že tuhle hru hraješ, že o nás víš, že jsi tady.\nJe nás na Louce přes stovku a skoro nikdo z nás to jinde neměl lehký. Počítal jsem nás. Dvakrát. Podruhé to vyšlo stejně, což mě překvapilo.',
-      en: 'Thank you. Really. For playing this game, for knowing about us, for being here.\nThere are over a hundred of us at the Meadow and hardly any of us had it easy before. I counted us. Twice. The second time it came out the same, which surprised me.',
+      cs: 'Díky, že tohle hraješ. Vážně.\nTa louka existuje doopravdy a žije na ní přes stovku zvířat, co to jinde lehký neměla. Já taky ne. Kopyta už mám v pořádku, díky za optání.',
+      en: 'Thanks for playing this. Really.\nThe meadow is real, and over a hundred animals live on it who didn\'t have it easy anywhere else. Me neither. The hooves are fine now, thanks for asking.',
     },
     {
-      cs: 'Tohle není jenom hra. Louka je opravdové místo, kde se opravdu žere opravdové seno.\nMrkni na náš web — jsou tam fotky, na kterých vypadám mimořádně dobře.',
-      en: 'This isn\'t just a game. The Meadow is a real place where real hay really gets eaten.\nHave a look at our website — there are photos where I look exceptionally good.',
-      link: { href: URL.web, cs: '🌿 nechmerust.org', en: '🌿 nechmerust.org' },
+      cs: 'Co se v týhle hře vydělá, jde na seno. Doslova.\nTakže až si koupíš ovečku za mince, je to hra. Až si koupíš hru, je to oběd.',
+      en: 'Whatever this game earns goes on hay. Literally.\nSo when you buy a sheep with coins, that\'s a game. When you buy the game, that\'s lunch.',
     },
     {
-      /* ŽÁDNÁ PEVNÁ DATA. Dřív tu stálo „11.–13. září je festival“ a den po
-         festivalu z toho byla ve hře nepravda, o které nikdo nevěděl —
-         verze hry se nevydává po každé akci. Co se zrovna chystá, nese
-         tlačítko s odkazem; text mluví jen o tom, co se opakuje. */
-      cs: 'A přijeď za námi! Pořádáme brigády, festivaly a procházky se zvířaty — a další už chystáme. Loukáda je víkend, kdy se společně pracuje, večer se sedí u ohně a spí se pod nebem.\nNově si u nás jde zamluvit i soukromý čas jen pro sebe: maringotka pod stromy, procházka jen pro vás. Co je zrovna na programu, najdeš na webu. Půjdu vepředu. To je moje pozice.',
-      en: 'And come visit! We run work weekends, festivals and walks with the animals — and more are on the way. Loukáda is a weekend of working together, evenings by the fire and sleeping under the sky.\nAnd now you can book time at the Meadow just for yourselves: a shepherd\'s hut under the trees, a walk for your group alone. Whatever is on right now is on the website. I\'ll be in front. That\'s my position.',
+      cs: 'Louka má i otevřeno. Brigády, festivaly, procházky se zvířaty, maringotka pod stromy.\nCo je zrovna na programu, je na webu. Půjdu vepředu. To je moje pozice.',
+      en: 'The meadow is open, too. Work weekends, festivals, walks with the animals, a shepherd\'s hut under the trees.\nWhat\'s on right now is on the website. I\'ll walk in front. That\'s my position.',
       link: { href: URL.udalosti, cs: '📅 Nadcházející akce', en: '📅 Upcoming events' },
     },
     {
-      /* Povahy obou oslic jsou opsané z popisků na nechmerust.org
-         (lib/animals.ts), ať Karel neříká o vlastních kamarádkách něco
-         jiného než jejich karta na webu. */
-      cs: 'Novinky z Louky? Už nejsem jediný osel — přijely Tonička a Elvíra. Tonička si všechno nejdřív pořádně prohlédne, Elvíra u plotu nezmešká vůbec nic.\nA díky všem, kdo dorazili na festival Spolu Mezi Lesy. Uspořádaly ho naše milé Kateřinky a bylo to krásné.',
-      en: 'News from the Meadow? I\'m not the only donkey here any more — Tonička and Elvíra have arrived. Tonička likes to size everything up first; Elvíra never misses a thing at the fence.\nAnd thank you to everyone who came to the Spolu Mezi Lesy festival. Our lovely Kateřinas put it on and it was beautiful.',
+      cs: 'Novinky nepíšu já, na to mám moc velký kopyta.\nPíšou je lidi z Louky. Občas v nich jsem i já. …Vždycky z tý lepší strany.',
+      en: 'I don\'t write the news, my hooves are too big for a keyboard.\nThe people at the meadow do. Sometimes I\'m in it. …Always from my good side.',
       link: { href: URL.novinky, cs: '📰 Novinky z Louky', en: '📰 News from the Meadow' },
     },
     {
-      cs: 'A teď to hlavní, kvůli čemu jsem sem lezl portálem:\nběží sbírka na seno a slámu na zimu. Ceny sena se zdvojnásobily a je nás přes stovku. Cíl je sto tisíc.\nVím, prosit o seno není nic okouzlujícího. Ale zima je zima a seníky se samy neplní.',
-      en: 'And now the main thing I climbed through a portal for:\nour hay and straw winter fundraiser is running. Hay prices have doubled and there are over a hundred of us. The goal is 100,000 CZK.\nI know, begging for hay isn\'t glamorous. But winter is winter and haylofts don\'t fill themselves.',
+      cs: 'A teď krátce o zimě. Přes stovku krků, seno zdražilo a seníky se samy neplní.\nNa seno se u nás skládáme. …To nebyla prosba. To byla předpověď počasí.',
+      en: 'And now, briefly, about winter. Over a hundred mouths, hay got pricier and haylofts don\'t fill themselves.\nWe chip in for hay here. …That wasn\'t a plea. That was a weather forecast.',
       link: { href: URL.seno, cs: '🌾 Přispět na seno', en: '🌾 Donate for hay' },
       warm: true,
     },
     /* ---------- návod na instalaci ----------
-       Přidat hru na plochu je jediná věc, kterou za hráče nikdo neudělá:
-       Chrome nabídne vlastní tlačítko (btn-install v Nastavení), Safari na
-       iPhonu žádné takové API nemá a bez návodu na to nikdo nepřijde. Karel
-       to proto řekne nahlas a po kouskách – jeden krok na jednu bublinu se
-       dá odklikat i na malém displeji.
-
-       `guide: true` na první z těchto zastávek je záložka pro open({guide:true}):
-       kdo celé uvítání už jednou viděl, dostane rovnou tenhle konec, ať se
-       nemusí podruhé poslouchat sedm zastávek o seně. */
+       Jedna bublina místo tří: podle zařízení se ukáže jen postup, který
+       hráč opravdu potřebuje. V aplikaci z Play a v už nainstalované hře
+       se přeskočí (speakStep). `guide: true` je záložka pro open({guide:true}):
+       kdo uvítání viděl dřív, než návod přibyl, dostane jen tenhle konec. */
     {
       guide: true,
-      cs: 'Ještě jedna praktická věc a pak už tě nechám běhat.\nTuhle hru si můžeš přidat na plochu telefonu jako opravdovou aplikaci. Pak běží přes celou obrazovku, naskočí hned a hraje i bez signálu — třeba v autobuse. Je to pár ťuknutí a zadarmo.',
-      en: 'One more practical thing and then I\'ll let you run.\nYou can add this game to your phone\'s home screen like a real app. Then it runs full screen, starts instantly and plays even with no signal — on the bus, say. It\'s a couple of taps and it\'s free.',
+      ios: {
+        cs: 'Chceš mě mít po ruce? Na iPhonu otevři hru v Safari, dole ťukni na Sdílet (čtvereček se šipkou) a dej „Přidat na plochu“.\nPak jedu přes celou obrazovku a i bez signálu. Jako opravdová aplikace. Jen chlupatější.',
+        en: 'Want me handy? On an iPhone, open the game in Safari, tap Share at the bottom (the square with an arrow) and pick “Add to Home Screen”.\nThen I run full screen, even offline. Like a real app. Just hairier.',
+      },
+      cs: 'Chceš mě mít po ruce? V Chromu ťukni na tři tečky vpravo nahoře a dej „Nainstalovat aplikaci“. Nebo v ⚙ Nastavení na 📲 Instalovat.\nPak jedu přes celou obrazovku a i bez signálu. Jako opravdová aplikace. Jen chlupatější.',
+      en: 'Want me handy? In Chrome tap the three dots at the top right and pick “Install app”. Or 📲 Install in ⚙ Settings.\nThen I run full screen, even offline. Like a real app. Just hairier.',
     },
     {
-      cs: '📱 Máš iPhone? Otevři hru v Safari — jinde to Apple nedovolí.\nDole ťukni na Sdílet (čtvereček se šipkou nahoru), sjeď níž na „Přidat na plochu“ a potvrď Přidat. Ikonka pak čeká mezi ostatními aplikacemi.',
-      en: '📱 On an iPhone? Open the game in Safari — Apple won\'t allow it anywhere else.\nTap Share at the bottom (the square with an arrow), scroll down to “Add to Home Screen” and confirm Add. The icon then waits with your other apps.',
-    },
-    {
-      cs: '🤖 Máš Android? V Chromu ťukni na tři tečky vpravo nahoře a vyber „Nainstalovat aplikaci“ (někde se to jmenuje „Přidat na plochu“).\nA v ⚙ Nastavení tady ve hře na to bývá tlačítko 📲 Instalovat. Nebo si nás stáhni z Google Play — jsem oficiálně v obchodě, jak jsem se chlubil.',
-      en: '🤖 On Android? In Chrome tap the three dots at the top right and pick “Install app” (sometimes it\'s called “Add to Home screen”).\nAnd here in ⚙ Settings there\'s usually a 📲 Install button. Or get us from Google Play — I\'m officially in a store, as I bragged.',
-    },
-    {
-      cs: 'A když už se přiznávám: hru děláme na koleni, mezi krmením a úklidem výběhů. Tak se nezlob, když někde něco zlobí — v našich podmínkách je tohle velké sousto a pořád se to všechno učíme.\nKdyby ti něco nešlo nebo tě něco napadlo, napiš nám. Vážně to čteme a máme z toho radost.',
-      en: 'And while I\'m confessing: we make this game on a shoestring, between feeding time and mucking out. So don\'t be cross if something misbehaves — this is a big bite for us and we\'re still learning all of it.\nIf anything breaks or you think of something, write to us. We really do read it and it makes our day.',
-      link: { href: URL.kontakt, cs: '✉️ Napsat nám', en: '✉️ Write to us' },
-      warm: true,
-    },
-    {
-      cs: 'Tak. Poselství předáno, mise splněna, portál zavřený.\nTeď si dělej, co chceš. Můžeš mě pošťouchat, podrbat, nakrmit. Já to vydržím — jsem osel, my jsme na to stavění.',
-      en: 'There. Message delivered, mission accomplished, portal closed.\nNow do whatever you like. Poke me, scratch me, feed me. I can take it — I\'m a donkey, we\'re built for this.',
+      cs: 'Tak. Poselství předáno.\nOd teď bydlím v menu pod 🫏. Drbat, krmit, pošťuchovat. Vydržím to, my osli jsme na to stavění.',
+      en: 'There. Message delivered.\nFrom now on I live in the menu under 🫏. Scratch me, feed me, poke me. I can take it, donkeys are built for this.',
     },
   ];
 
   /* Kde v řeči začíná návod na instalaci. Kdo uvítání už jednou viděl,
      dostane při open({guide:true}) rovnou tenhle konec – návod má vidět
      každý, ale poslouchat kvůli němu podruhé celou přednášku o seně ne. */
+  const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const GUIDE_FROM = Math.max(0, SPEECH.findIndex((s) => s.guide));
 
   /* ---------- hlášky podle toho, kam se ťukne ----------
@@ -572,6 +569,7 @@ const KAREL = (() => {
     // řeč
     bubble: null,         // { text, link, full, shown, done }
     readUntil: 0,         // do kdy je hláška zamčená, ať se dá dočíst
+    mustRead: false,      // první uvítání – nedá se přeskočit, viz advance()
     typeT: 0,
     // prostředí
     fire: [],             // světlušky
@@ -1357,7 +1355,9 @@ const KAREL = (() => {
     /* Šipka „▸" je jediné, co hráči řekne, jestli se dá pokračovat.
        V řeči znamená „ťukni na další větu", ve hře „hlášku máš přečtenou,
        můžeš si říct o novou". Během zámku schválně nesvítí. */
-    if (nx) nx.hidden = !(ready && (st.phase === 'speech' || (st.phase === 'play' && !speechLocked())));
+    const gated = gateClosed();
+    b.gated = gated;
+    if (nx) nx.hidden = !(ready && ((st.phase === 'speech' && !gated) || (st.phase === 'play' && !speechLocked())));
   }
 
   function hideBubble() {
@@ -1416,19 +1416,23 @@ const KAREL = (() => {
      ŘEČ – posun po zastávkách
      ========================================================= */
   function speakStep() {
-    // Installation is a web-only topic, not part of the native welcome.
-    if (st.step >= GUIDE_FROM && st.step < GUIDE_FROM + 3
-        && !PLATFORM.shouldOfferInstall()) st.step = GUIDE_FROM + 3;
+    // instalace je téma jen pro prohlížeč – v appce z Play i v nainstalované
+    // hře by radila udělat něco, co už je hotové
+    if (st.step === GUIDE_FROM && !PLATFORM.shouldOfferInstall()) st.step++;
     const s = SPEECH[st.step];
     if (!s) { toPlay(); return; }
-    say(s, { link: s.link, warm: s.warm });
+    let text = s;
+    if (s.fresh && !((hooks.getStats && hooks.getStats().runs) > 0)) text = s.fresh;
+    else if (s.ios && IOS) text = s.ios;
+    say(text, { link: s.link, warm: s.warm });
     // ke každé zastávce něco malého, ať to není mluvící socha
-    if (st.step === 1) react('nod');
+    if (st.step === 1) { react('nod'); hearts(2); }
+    else if (st.step === 2) react('hop');
     else if (st.step === 3) react('hop');
+    else if (st.step === 4) react('laugh');
     else if (st.step === 5) { react('nod'); hearts(3); }
     else if (st.step === GUIDE_FROM) react('nod');
-    else if (st.step === GUIDE_FROM + 3) { react('nod'); hearts(2); }
-    else if (st.step === SPEECH.length - 1) react('laugh');
+    else if (st.step === SPEECH.length - 1) { react('laugh'); hearts(2); }
   }
 
   /* ---------- krátké přivítání „už se známe" ----------
@@ -1488,14 +1492,24 @@ const KAREL = (() => {
     applyQuip({ ...q, text: { cs, en }, react: tail ? tail.react : q.react, warm: tail ? tail.warm : q.warm });
   }
 
+  /* Při prvním setkání se řeč nedá přeskočit (st.mustRead): chybí křížek,
+     Escape i systémové Zpět, a další bublina se odemkne až chvíli po
+     dopsání té současné. Ťuknutí během psaní text pořád rovnou dopíše –
+     rychlý čtenář nemá čekat na animaci, jen nemá proletět bez čtení. */
+  const readGate = (n) => Math.min(3200, 1200 + n * 11);
+  const gateClosed = () => st.mustRead && st.phase === 'speech'
+    && !!st.bubble && performance.now() < (st.bubble.openAt || Infinity);
+
   function advance() {
     const b = st.bubble;
     if (b && !b.done && b.shown < b.full.length) { // dopsat hned
       b.shown = b.full.length; b.done = true;
       st.readUntil = performance.now() + readMs(b.full.length);
+      b.openAt = performance.now() + readGate(b.full.length);
       renderBubble(); placeBubble();
       return;
     }
+    if (gateClosed()) { react('nod'); return; }
     // kdo dočetl dřív, nečeká na zámek
     st.readUntil = 0;
     st.step++;
@@ -1515,7 +1529,9 @@ const KAREL = (() => {
     const hint = $('karel-hint');
     if (hint) hint.hidden = false;
     const skip = $('karel-skip');
-    if (skip) skip.setAttribute('aria-label', I18N.t('karel.close'));
+    if (skip) { skip.hidden = false; skip.setAttribute('aria-label', I18N.t('karel.close')); }
+    st.mustRead = false;
+    const scr = $('screen-karel'); if (scr) scr.classList.remove('first');
     hooks.onSeen();
   }
 
@@ -1822,8 +1838,11 @@ const KAREL = (() => {
         b.shown = b.full.length; b.done = true;
         // hláška je dopsaná – teď teprve začíná běžet čas na přečtení
         st.readUntil = performance.now() + readMs(b.full.length);
+        b.openAt = performance.now() + readGate(b.full.length);
       }
       renderBubble();
+    } else if (b && st.mustRead && st.phase === 'speech' && b.gated && !gateClosed()) {
+      renderBubble();   // zámek právě povolil – rozsvítit šipku „dál"
     }
 
     updateParts(dt);
@@ -1978,6 +1997,8 @@ const KAREL = (() => {
     st.t = 0; st.pt = 0; st.step = st.speechFrom;
     st.phase = 'portal';
     st.again = !!o.again;   // už se známe → po portálu jen krátké přivítání
+    // první celé uvítání se nedá přeskočit; návod pro starší hráče ano
+    st.mustRead = !o.again && !o.guide;
     st.react = null; st.props = {}; st.parts.length = 0; st.portals.length = 0;
     st.crowd.length = 0; st.assembled = false;
     st.pokes = 0; st.carrots = 0; st.petT = 0; st.holding = false;
@@ -1989,6 +2010,8 @@ const KAREL = (() => {
     document.documentElement.classList.add('karel-open');
     const bar = $('karel-bar'); if (bar) { bar.hidden = true; bar.classList.remove('in'); }
     const hint = $('karel-hint'); if (hint) hint.hidden = true;
+    const skipBtn = $('karel-skip'); if (skipBtn) skipBtn.hidden = st.mustRead;
+    scr.classList.toggle('first', st.mustRead);
     hideBubble();
 
     resize();
@@ -2049,7 +2072,7 @@ const KAREL = (() => {
     // klávesnice: mezerník/enter posouvá řeč, Escape zavírá
     window.addEventListener('keydown', (e) => {
       if (!st.open) return;
-      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Escape') { if (!locked()) close(); return; }
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         if (st.phase === 'portal') skipPortal();
@@ -2059,7 +2082,10 @@ const KAREL = (() => {
     });
 
     const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
-    on('karel-skip', () => { if (st.phase === 'speech' || st.phase === 'portal') { skipPortal(); toPlay(); } else close(); });
+    on('karel-skip', () => {
+      if (locked()) return;
+      if (st.phase === 'speech' || st.phase === 'portal') { skipPortal(); toPlay(); } else close();
+    });
     /* Zámek na dočtení platí pro ŤUKNUTÍ NA KARLA – tam je opakování
        nechtěné. Tlačítko v liště je naopak vědomý požadavek „řekni něco
        dalšího", takže zámek ruší: tlačítko, které chvílemi nedělá nic,
@@ -2091,6 +2117,9 @@ const KAREL = (() => {
     syncAlways();
   }
 
+  // dokud běží povinné uvítání, scénu nezavře nic (křížek, Escape, Zpět)
+  function locked() { return st.open && st.mustRead && st.phase !== 'play'; }
+
   function syncAlways() {
     const b = $('karel-always');
     if (!b || typeof hooks.getAlways !== 'function') return;
@@ -2102,5 +2131,5 @@ const KAREL = (() => {
 
   // `pos` je tu kvůli ověřování: kde Karel zrovna stojí a jak je velký,
   // aby šlo z testu ťuknout přesně na ucho a ne vedle
-  return { init, open, close, isOpen: () => st.open, syncAlways, pos: () => ({ x: st.kx, y: st.ky, sc: st.sc, face: st.face }) };
+  return { init, open, close, isOpen: () => st.open, isLocked: locked, syncAlways, pos: () => ({ x: st.kx, y: st.ky, sc: st.sc, face: st.face }) };
 })();
