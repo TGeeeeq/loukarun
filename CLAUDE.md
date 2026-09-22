@@ -6,6 +6,10 @@ Pokyny pro Claude Code v repozitáři hry **Louka Run**.
 
 > **Hra 1.9.16 přidala vývojářský režim** (reset postupu, mince, odemykání,
 > nesmrtelnost, skok na metr) — podrobně v sekci *Vývojářský režim* níž.
+> K tomu opravy: pauza při odchodu do pozadí + 1 s milosti po návratu,
+> švih dolů hned po doteku už nevyskočí, tlačítko Běžet nejde spustit dvakrát,
+> toasty z konce běhu nevyskakují v dalším, anglické intro; kulisy statku
+> a paprsky bez gradientů za snímek (vše v *Na co si dát pozor*).
 > **Reset v aplikaci z Google Play je potřeba vyzkoušet na telefonu.**
 > Headless prohlížeč nativní Preferences nemá, takže ověřená je jen webová
 > větev a to, že se `STORE.remove()` nativní větve dovolá. Dokud to
